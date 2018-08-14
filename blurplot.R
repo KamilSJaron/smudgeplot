@@ -17,13 +17,12 @@ total_pair_cov <- total_pair_cov[high_cov_filt]
 
 h1 <- hist(minor_variant_rel_cov, breaks = 100, plot = F)
 h2 <- hist(total_pair_cov, breaks = 100, plot = F)
-# plot(minor_variant_rel_cov[1:50000], total_pair_cov[1:50000], pch = 20, cex = 0.2)
 
 top <- max(h1$counts, h2$counts)
 k <- kde2d(minor_variant_rel_cov, total_pair_cov, n=30)
 k$z <- sqrt(k$z)
 
-png('~/Desktop/Mflo_kmer_pair_coverage.png')
+png('~/Desktop/Avag1_kmer_pair_coverage.png')
 # margins 'c(bottom, left, top, right)'
 par(mar=c(4.8,4.8,1,1))
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
@@ -35,7 +34,7 @@ image(k, col = r,
 )
 # TODO image ticks by the coverage counts 2n, 3n, 4n, 5n, 6n, 7n, 8n...
 
-n <- 207
+n <- 92
 # for(i in 2:6){
 #       lines(c(0, 0.6), rep(i * n, 2), lwd = 1.4)
 #       text(0.1, i * n, paste0(i,'x'), pos = 3)
@@ -64,11 +63,11 @@ par(mar=c(0,0,2,1))
 plot.new()
 title('Coverage (^2 scale)')
 for(i in 1:32){
-      rect(0,i / 32, 0.5, i + 1 / 32, col = r[i])
+      rect(0,(i - 0.01) / 33, 0.5, (i + 0.99) / 33, col = r[i])
 }
 kmer_max <- (length(total_pair_cov) * max((k$z)^2)) / sum((k$z)^2)
 for(i in 0:6){
-      text(0.75, i / 6, round((sqrt(kmer_max) * i)^2 / 6000) * 1000)
+      text(0.75, i / 6, round((sqrt(kmer_max) * i)^2 / 6000) * 1000, offset = 0)
 }
 
 dev.off()
