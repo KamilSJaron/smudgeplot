@@ -2,16 +2,16 @@
 
 args = commandArgs(trailingOnly=TRUE)
 # args[1] - input tsv file
-# args[2] - output [default: blurplot.png]
+# args[2] - output [default: smudgeplot.png]
 
 if(length(args) < 1) {
-      stop("No arguments supplied.\nUsage: blurplot.R haplod_cov [input.tsv] [output.png]", call.=FALSE)
+      stop("No arguments supplied.\nUsage: smudgeplot.R haplod_cov [input.tsv] [output.png]", call.=FALSE)
 } else {
       n <- as.numeric( args[1] )
 }
 
 infile <- ifelse(length(args) < 2, 'coverages_2.tsv', args[2])
-outfile <- ifelse(length(args) < 3, 'blurplot.png', args[3])
+outfile <- ifelse(length(args) < 3, 'smudgeplot.png', args[3])
 
 library(methods)
 library(MASS) # smoothing
