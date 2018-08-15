@@ -12,6 +12,7 @@ if(length(args) < 1) {
 
 infile <- ifelse(length(args) < 2, 'coverages_2.tsv', args[2])
 outfile <- ifelse(length(args) < 3, 'smudgeplot.png', args[3])
+fig_title <- ifelse(length(args) < 4, NA, args[4])
 
 library(methods)
 library(MASS) # smoothing
@@ -39,7 +40,10 @@ h1 <- hist(minor_variant_rel_cov, breaks = 100, plot = F)
 h2 <- hist(total_pair_cov, breaks = 100, plot = F)
 
 top <- max(h1$counts, h2$counts)
-k <- kde2d(minor_variant_rel_cov, total_pair_cov, n=10)
+# the lims trick will make sure that the last column of squares will have the same width as the other squares
+k <- kde2d(minor_variant_rel_cov, total_pair_cov, n=30,
+           lims = c(0.02, 0.48, min(total_pair_cov), max(total_pair_cov)))
+# to display densities on squared root scale (bit like log scale but less agressive)
 k$z <- sqrt(k$z)
 
 png(outfile)
@@ -48,12 +52,18 @@ png(outfile)
       layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 
       # 2D HISTOGRAM
-      # TODO image ticks by the coverage counts 2n, 3n, 4n, 5n, 6n, 7n, 8n...
       image(k, col = r,
-            xlab = 'Normalized minor kmer coverage',
-            ylab = 'Total coverage of the kmer pair', cex.lab = 1.4
+            xlab = 'Normalized minor kmer coverage: B / (A + B)',
+            ylab = 'Total coverage of the kmer pair: A + B', cex.lab = 1.4,
+            axes=F
       )
 
+    axis(2, at=2:8 * n)
+
+    xlab_ticks <- c(1/5, 1/4, 1/3, 2/5, 0.487)
+    axis(1, at=xlab_ticks, labels = F)
+    text(xlab_ticks, par("usr")[3] - 30, pos = 1, xpd = TRUE,
+         labels = c('1:4', '1:3', '1:2', '2:3', '1:1'))
       # TEST plot lines at expected coverages
       # for(i in 2:6){
       #       lines(c(0, 0.6), rep(i * n, 2), lwd = 1.4)
@@ -61,28 +71,32 @@ png(outfile)
       # }
 
       # EXPECTED COMPOSITIONS - bettern than lines
-      text(1/2 - 0.01, 2 * n, 'AB', offset = 0, cex = 1.4)
+      text(1/2 - 0.027, 2 * n, 'AB', offset = 0, cex = 1.4)
       text(1/3, 3 * n, 'AAB', offset = 0, cex = 1.4)
       text(1/4, 4 * n, 'AAAB', offset = 0, cex = 1.4)
-      text(1/2 - 0.022, 4 * n, 'AABB', offset = 0, cex = 1.4)
+      text(1/2 - 0.04, 4 * n, 'AABB', offset = 0, cex = 1.4)
       text(2/5, 5 * n, 'AAABB', offset = 0, cex = 1.4)
       text(1/5, 5 * n, 'AAAAB', offset = 0, cex = 1.4)
-      text(3/6 - 0.035, 6 * n, 'AAABBB', offset = 0, cex = 1.4)
+      text(3/6 - 0.055, 6 * n, 'AAABBB', offset = 0, cex = 1.4)
       text(2/6, 6 * n, 'AAAABB', offset = 0, cex = 1.4)
       text(1/6, 6 * n, 'AAAAAB', offset = 0, cex = 1.4)
 
       # minor_variant_rel_cov HISTOGRAM - top
       par(mar=c(0,3.8,1,0))
       barplot(h1$counts, axes=F, ylim=c(0, top), space=0, col = pal[2])
+      if(!(is.na(fig_title))){
+            mtext(bquote(italic(.(fig_title))), side=3, adj=0, line=-3, cex=1.6)
+      }
 
       # total pair coverage HISTOGRAM - right
       par(mar=c(3.8,0,0.5,1))
       barplot(h2$counts, axes=F, xlim=c(0, top), space=0, col = pal[2], horiz=T)
+      mtext(paste('1n = ', n), side=1, adj=0.8, line=-2, cex=1.4)
 
       # LEGEND (topright corener)
       par(mar=c(0,0,2,1))
       plot.new()
-      title('coverage (^2 scale)')
+      title('kmers pairs')
       for(i in 1:32){
             rect(0,(i - 0.01) / 33, 0.5, (i + 0.99) / 33, col = r[i])
       }
