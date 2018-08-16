@@ -35,13 +35,7 @@ jellyfish dump -c -L 40 -U 600 kmer_counts.jf | hetkmers.py -o kmer_pairs
 Now finally generate smudgeplot using coverages of the kmer pairs. You need to supply the haploid kmer coverage (reported by GenomeScope). If GenomeScope correctly identified the peak of haplod kmers, the expected positions of haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider to adjust both GenomeScope model and redo the plod with the better estimate of the haploid coverage.
 
 ```
-smudgeplot.R <haploid_coverage> kmer_pairs
+smudgeplot.R [input.tsv] [output.png] [plot_title] [haplod_cov]
 ```
 
 The smudgeplot uses colouration on squared scale, the legend indicate approximate kmer pairs per tile densities. Note that single polymorphism generates multiple heterozygous kmers, these numbers do not directly correspond to variants, but should be fairly correlated.
-
-## TODO
-
-- nicer scale on the y axis (display ticks on 2n, 3n, 4n, ...)
-- quantify relative proportions of smudges
-- generate summary report
