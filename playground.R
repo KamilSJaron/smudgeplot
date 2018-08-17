@@ -1,78 +1,66 @@
 files <- c('data/Avag1/coverages_2.tsv',
            'data/Lcla1/Lcla1_pairs_coverages_2.tsv',
            'data/Mflo2/coverages_2.tsv',
-           'data/Rvar1/Rvar1_pairs_coverages_2.tsv')
+           'data/Rvar1/Rvar1_pairs_coverages_2.tsv',
+           'data/Ps791/Ps791_pairs_coverages_2.tsv')
 
 cov <- lapply(files, read.table)
-i <- 3
+i <- 5
+
+######
+# INPUT PROCESSING
+######
 # calcualte relative coverage of the minor allele
 minor_variant_rel_cov <- cov[[i]]$V1 / (cov[[i]]$V1 + cov[[i]]$V2)
 # total covarate of the kmer pair
 total_pair_cov <- cov[[i]]$V1 + cov[[i]]$V2
 
+# source all the functions
+
 high_cov_filt <- quantile(total_pair_cov, 0.99) > total_pair_cov
 minor_variant_rel_cov <- minor_variant_rel_cov[high_cov_filt]
 total_pair_cov <- total_pair_cov[high_cov_filt]
+
+######
+# SUMMARY CALCULATION
+######
 
 # estimation method 1 - using weighted mean of all detected peaks and their expected ploidy
 n <- round(estimate_1n_coverage(),1)
 
 # estimation method 2 - using global maxima in the 2d plot
 k <- kde2d(minor_variant_rel_cov, total_pair_cov, n=30,
-           lims = c(0.02, 0.48, min(total_pair_cov), max(total_pair_cov)))
+           lims = c(0.02, 0.48, min(total_pair_cov), min(10*n, max(total_pair_cov))))
 
-peak_points <- data.frame(vals = as.vector(k$z), x = rep(1:30, each = 30), y = rep(1:30, 30))
-peak_points$peak <- NA
-peak_points$summit <- NA
-peak_points <- peak_points[order(peak_points$vals, decreasing = T),]
-# mark the first
-peak_points$peak[1] <- 1
-peak_points$summit[1] <- T
+peak_points <- peak_agregation(k)
+peak_sizes <- get_peak_sizes(peak_points)
 
-for(point in 2:nrow(peak_points)){
-    parsed_points <- peak_points[1:point-1,]
-    x_n <- abs(parsed_points[,'x'] - peak_points[point,'x']) <= 1
-    y_n <- abs(parsed_points[,'y'] - peak_points[point,'y']) <= 1
-    if(any(x_n & y_n)){
-        tiles_around <- parsed_points[x_n & y_n,]
-        peak_points$peak[point] <- tiles_around$peak[which.max(tiles_around$vals)]
-        peak_points$summit[point] <- F
-    } else {
-        peak_points$peak[point] <- max(parsed_points$peak) + 1
-        peak_points$summit[point] <- T
-    }
-}
+# filt_peak_points <- filter_peaks(peak_points, peak_sizes)
+# filt_peak_sizes <- filter_peak_sizes(peak_sizes)
 
-peak_sizes <- c()
-for (peak in unique(peak_points$peak)){
-    peak_sizes <- c(peak_sizes, sum(peak_points[peak_points$peak == peak, 'vals'], na.rm = T))
-}
-peak_sizes <- peak_sizes / sum(peak_sizes)
+#######
+# PLOT
+#######
 
-to_filter <- peak_points$peak %in% which(peak_sizes < 0.005)
-peak_sizes <- peak_sizes[!peak_sizes < 0.005]
+k_toplot <- k
+k_toplot$z <- sqrt(k_toplot$z)
 
-peak_points$peak[to_filter] <- NA
-peak_points$summit[to_filter] <- F
-# unique(peak_points$peak)
+layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
+# 1 smudge plot
+plot_smudgeplot(k_toplot, n, colour_ramp)
+plot_expected_haplotype_structure(n)
+annotate_peaks(peak_points, total_pair_cov)
+annotate_summits(peak_points, peak_sizes, total_pair_cov)
+# TODO fix plot_seq_error_line(total_pair_cov)
+# 2,3 hist
+plot_histograms(minor_variant_rel_cov, total_pair_cov)
+# 4 legend
+plot_legend(k_toplot, total_pair_cov, colour_ramp)
 
-peak_points <- peak_points[with(peak_points, order(x,y)),]
-# still works if x goes 1 1 ... 1 1 2 2 ... 2 2 3 3... 3 3 4 4 4 ... 30 30 30
-# and y is              1 2 3 4 5 ... 30 1 2 3 4 5 ... 30 ... 1 2 3 4  ... 30
-image(matrix(peak_points$vals^0.25, ncol = 30))
 
-for (summit in which(peak_points$summit == T)){
-     peak <- peak_points$peak[summit]
-     text(peak_points$y[summit] / 30 ,
-          peak_points$x[summit] / 30,
-          round(peak_sizes[peak], 3),
-          pos = 2)
-
-    to_plot <- peak_points[peak_points$peak == peak, c('x','y')]
-    to_plot <- to_plot[!is.na(to_plot$x),]
-    points(to_plot$y / 30, to_plot$x / 30, pch = peak)
-}
-
+##########################################################
+## TEST
+## idea here was to propagate from the highest point and expand the peak till it's monotonic
 # starting_point <- which(dens_m == max(dens_m), arr.ind = TRUE)
 # starting_val <- dens_m[starting_point]
 # peak_points <- data.frame(x = starting_point[,2], y = starting_point[,1], value = starting_val)
@@ -108,3 +96,11 @@ for (summit in which(peak_points$summit == T)){
 # # h@count <- sqrt(h@count)
 # plot(h, colramp=rf)
 # gplot.hexbin(h, colorcut=10, colramp=rf)
+
+
+### TEST  plot lines at expected coverages
+#
+# for(i in 2:6){
+#       lines(c(0, 0.6), rep(i * n, 2), lwd = 1.4)
+#       text(0.1, i * n, paste0(i,'x'), pos = 3)
+# }
