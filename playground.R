@@ -2,10 +2,21 @@ files <- c('data/Avag1/coverages_2.tsv',
            'data/Lcla1/Lcla1_pairs_coverages_2.tsv',
            'data/Mflo2/coverages_2.tsv',
            'data/Rvar1/Rvar1_pairs_coverages_2.tsv',
-           'data/Ps791/Ps791_pairs_coverages_2.tsv')
+           'data/Ps791/Ps791_pairs_coverages_2.tsv',
+           'data/Aric1/Aric1_pairs_coverages_2.tsv')
 
 cov <- lapply(files, read.table)
-i <- 5
+i <- 3
+
+source('R/functions_dump.R')
+library(methods)
+library(MASS) # smoothing
+library(RColorBrewer)
+
+# prepare colours
+pal <- brewer.pal(11,'Spectral')
+rf <- colorRampPalette(rev(pal[3:11]))
+colour_ramp <- rf(32)
 
 ######
 # INPUT PROCESSING
@@ -27,16 +38,79 @@ total_pair_cov <- total_pair_cov[high_cov_filt]
 
 # estimation method 1 - using weighted mean of all detected peaks and their expected ploidy
 n <- round(estimate_1n_coverage(),1)
+ymax <- min(10*n, max(total_pair_cov))
+ymin <- min(total_pair_cov)
 
 # estimation method 2 - using global maxima in the 2d plot
 k <- kde2d(minor_variant_rel_cov, total_pair_cov, n=30,
-           lims = c(0.02, 0.48, min(total_pair_cov), min(10*n, max(total_pair_cov))))
+           lims = c(0.02, 0.48, ymin, ymax))
 
 peak_points <- peak_agregation(k)
 peak_sizes <- get_peak_sizes(peak_points)
 
-# filt_peak_points <- filter_peaks(peak_points, peak_sizes)
-# filt_peak_sizes <- filter_peak_sizes(peak_sizes)
+filt_peak_points <- filter_peaks(peak_points, peak_sizes)
+filt_peak_sizes <- filter_peak_sizes(peak_sizes)
+
+highest_peak <- which.max(filt_peak_sizes$rel_size)
+filt_peak_sizes <- merge(filt_peak_sizes, filt_peak_points[filt_peak_points$summit == T,])
+filt_peak_sizes$minor_variant_cov <- transform_x(filt_peak_sizes$y, for_plot = F)
+filt_peak_sizes$pair_cov <- transform_y(filt_peak_sizes$x, ymin, ymax)
+
+genome_copy_nuber <- round(filt_peak_sizes$pair_cov / (min(filt_peak_sizes$pair_cov) / 2))
+
+freq_to_test <- filt_peak_sizes$minor_variant_cov[i]
+
+# 0.5   0.4   0.333   0.25   0.2
+# 1/2   2/5   1/3     1/4    1/5
+#
+# TODO TEST
+#
+round_minor_variant_cov <- function(min_cov){
+    expected_freq <- c(0.5, 0.4, 0.333, 0.25, 0.2)
+    expected_freq[which.min(abs(expected_freq - min_cov))]
+}
+filt_peak_sizes$minor_variant_cov_rounded <- sapply(filt_peak_sizes$minor_variant_cov, round_minor_variant_cov)
+##
+
+
+get_n_from_peaks <- function(min_cov, cov, min_tri_cov){
+        expected_freq <- c(0.5, 0.4, 0.333, 0.25, 0.2)
+        closest_ratio <- which.min(abs(expected_freq - min_cov))
+        if(closest_ratio %in% c(2,5)){
+            cov / 5
+        } else if(closest_ratio == 4) {
+            cov / 4
+        } else if(closest_ratio == 3) {
+            cov / 3
+        } else {
+            if(min_tri_cov < cov){
+                cov / 4
+            } else {
+                cov / 2
+            }
+        }
+}
+
+guess_structure <- function(min_cov, cov, n){
+    both_count_in_genome <- round(cov / n)
+    minor_count_in_genome <- round(min_cov * both_count_in_genome)
+    return(c(both_count_in_genome, minor_count_in_genome))
+}
+
+AAB_subset <- minor_variant_rel_cov < 0.35 & minor_variant_rel_cov > 0.31
+triplid_peaks <- get_1d_peaks(AAB_subset, 2)
+
+# 3 indications
+# AAB is presumabely highest
+# AAB is has the lowest coverages that correspondents to mutliples of two
+# the is not other peak around 1/6 and 1/2
+
+#
+# AB_subset <- minor_variant_rel_cov > 0.41
+# diploid_peaks <- get_1d_peaks(AAB_subset, 4)
+# d <- density(total_pair_cov[AAB_subset], adjust = 1) # returns the density data
+# plot(d)
+#
 
 #######
 # PLOT
@@ -49,10 +123,11 @@ layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(k_toplot, n, colour_ramp)
 plot_expected_haplotype_structure(n)
-annotate_peaks(peak_points, total_pair_cov)
-annotate_summits(peak_points, peak_sizes, total_pair_cov)
+# annotate_peaks(peak_points, ymin, ymax)
+# annotate_summits(peak_points, peak_sizes, ymin, ymax, 'black')
 # TODO fix plot_seq_error_line(total_pair_cov)
 # 2,3 hist
+# TODO rescale histogram axis by the scale of the smudgeplot
 plot_histograms(minor_variant_rel_cov, total_pair_cov)
 # 4 legend
 plot_legend(k_toplot, total_pair_cov, colour_ramp)
