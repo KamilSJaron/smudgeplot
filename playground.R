@@ -8,10 +8,7 @@ files <- c('data/Avag1/coverages_2.tsv',
 cov <- lapply(files, read.table)
 i <- 3
 
-source('R/functions_dump.R')
-library(methods)
-library(MASS) # smoothing
-library(RColorBrewer)
+library(smudgeplot)
 
 # prepare colours
 pal <- brewer.pal(11,'Spectral')
@@ -178,4 +175,32 @@ plot_legend(k_toplot, total_pair_cov, colour_ramp)
 # for(i in 2:6){
 #       lines(c(0, 0.6), rep(i * n, 2), lwd = 1.4)
 #       text(0.1, i * n, paste0(i,'x'), pos = 3)
+# }
+
+# FUTURE - wrapper
+# smudgeplot < - function(.k, .minor_variant_rel_cov, .total_pair_cov, .n,
+#                             .sqrt_scale = T, .cex = 1.4, .fig_title = NA){
+#     if( .sqrt_scale == T ){
+#         # to display densities on squared root scale (bit like log scale but less agressive)
+#         .k$z <- sqrt(.k$z)
+#     }
+#
+#     pal <- brewer.pal(11,'Spectral')
+#     rf <- colorRampPalette(rev(pal[3:11]))
+#     colour_ramp <- rf(32)
+#
+#     layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
+#
+#     # 2D HISTOGRAM
+#     plot_smudgeplot(...)
+#
+#     # 1D historgram - minor_variant_rel_cov on top
+#     plot_histogram(...)
+#
+#     # 1D historgram - total pair coverage - right
+#     plot_histogram(...)
+#
+#     # LEGEND (topright corener)
+#     plot_legend(...)
+#
 # }

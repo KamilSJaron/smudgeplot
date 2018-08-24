@@ -4,18 +4,11 @@ args = commandArgs(trailingOnly=TRUE)
 # args[1] - input tsv file
 # args[2] - output [default: smudgeplot.png]
 
-
 if(length(args) > 0) {
     if ( args[1] == "--help"){
         stop("Usage: smudgeplot.R [input.tsv] [output.png] [plot_title] [haplod_cov]", call.=FALSE)
     }
 }
-
-source('R/functions_dump.R')
-
-####################
-###### SCRIPT ######
-####################
 
 infile <- ifelse(length(args) < 1, 'coverages_2.tsv', args[1])
 outfile <- ifelse(length(args) < 2, 'smudgeplot.png', args[2])
