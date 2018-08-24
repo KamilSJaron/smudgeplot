@@ -5,8 +5,8 @@ Version: 0.23
 Date: 2016-05-31
 Author: Kamil S. Jaron <kamiljaron@gmail.com>
 Maintainer: Kamil S. Jaron <kamiljaron@gmail.com>
-Description: The package is for visualization of the output
-Depends: RColorBrewer
+Description: The package to plot smudgeplot
+Depends: RColorBrewer, MASS
 License: GPL-3
 LazyLoad: yes
 RoxygenNote: 6.0.1

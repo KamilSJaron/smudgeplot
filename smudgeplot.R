@@ -23,8 +23,7 @@ fig_title <- ifelse(length(args) < 3, NA, args[3])
 n <- ifelse(length(args) < 4, NA, args[4])
 
 library(methods)
-library(MASS) # smoothing
-library(RColorBrewer)
+library(smudgeplot)
 
 # prepare colours
 pal <- brewer.pal(11,'Spectral')
