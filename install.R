@@ -1,5 +1,5 @@
 library(devtools)
 
 document()
-# test()
+test()
 install.packages("../sibling_kmers", repos = NULL, type="source")
