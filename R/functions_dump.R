@@ -150,22 +150,6 @@ transform_y <- function(y, min_kmerpair_cov, max_cov_pair){
 #
 # }
 
-# SMUDGEPLOT - 2D histogram - landscape plot - howeveryouwantyoucallthis plot
-# makes a plot
-plot_smudgeplot <- function(.k, .n, .colour_ramp, .cex = 1.4){
-    # margins 'c(bottom, left, top, right)'
-    par(mar=c(4.8,4.8,1,1))
-    # 2D HISTOGRAM
-    image(.k, col = colour_ramp,
-        xlab = 'Normalized minor kmer coverage: B / (A + B)',
-        ylab = 'Total coverage of the kmer pair: A + B', cex.lab = 1.4,
-        axes=F
-    )
-
-    axis(2, at = 2:8 * .n, labels = paste(2:8, 'n'))
-    axis(1, at = c(1/5, 1/4, 1/3, 2/5, 0.487),
-            labels = c('1:4', '1:3', '1:2', '2:3', '1:1'))
-}
 
 # EXPECTED COMPOSITIONS - bettern than lines
 # adds to a plot
