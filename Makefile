@@ -16,5 +16,5 @@ install : $(R_INSTALLATION) $(HET_KMERS_INST) $(SMUDGEPLOT_INST)
 $(INSTAL_PREFIX)/bin/% : %
 	install -C $< $(INSTAL_PREFIX)/bin
 
-$(INSTALLATION) : R/*
+$(R_INSTALLATION) : R/*
 	Rscript install.R
