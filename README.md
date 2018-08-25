@@ -31,25 +31,31 @@ jellyfish count -C -m 21 -s 1000000000 -t 8 *.fastq -o kmer_counts.jf
 jellyfish histo kmer_counts.jf > kmer_k21.hist
 ```
 
-Now feed the histogram to GenomeScope (either run the [genomescope script](https://github.com/schatzlab/genomescope/blob/master/genomescope.R) or use their [web server](http://qb.cshl.edu/genomescope/))
+The next step is to extract genomic kmers using reasonable coverage threshold. You can either inspect the kmer spectra and chose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using script `kmer_cov_cutoff.R <kmer.hist> <L/U>`. Extract kmers in the coverage range from `L` to `U` using `Jellyfish` and pipe it directly to the python script `hetkmers.py`  that will compute set of heterozygous kmers.
 
 ```
-Rscript genomescope.R kmer_k21.hist <k-mer_length> <read_length> <output_dir> [kmer_max] [verbose]
+L=$(kmer_cov_cutoff.R kmer_k21.hist L)
+U=$(kmer_cov_cutoff.R kmer_k21.hist U)
+jellyfish dump -c -L $L -U $U kmer_counts.jf | hetkmers.py -o kmer_pairs
 ```
 
-You just made estimates of genome size, heterozygosity and repetitive fraction of the genome. Look at the fitted model and figure out what is the smallest peak after the error tail. Now you need to decide the low end cutoff that will discard all the kmers that have that small coverage and look like errors (cca 1/2 of the haploid kmer coverage), also check the right side of the graph to find reasonable upped threshold (cca 8x of the haploid kmer coverage). Dump kmers in the coverage range you have defined using jellyfish and pipe it directly to the python script that will compute set of heterozygous kmers.
-
-```
-jellyfish dump -c -L 40 -U 600 kmer_counts.jf | hetkmers.py -o kmer_pairs
-```
-
-Now finally generate smudgeplot using coverages of the kmer pairs. You need to supply the haploid kmer coverage (reported by GenomeScope). If GenomeScope correctly identified the peak of haplod kmers, the expected positions of haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider to adjust both GenomeScope model and redo the plod with the better estimate of the haploid coverage.
+Now finally generate smudgeplot using coverages of the kmer pairs. You can either supply the haploid kmer coverage (reported by GenomeScope) or you can let it to be estimated form directly from the data. If GenomeScope correctly identified the peak of haplod kmers, the expected positions of haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider to adjust both GenomeScope model and redo the plod with the better estimate of the haploid coverage.
 
 ```
 smudgeplot.R [input.tsv] [output.png] [plot_title] [haplod_cov]
 ```
 
 The smudgeplot uses colouration on squared scale, the legend indicate approximate kmer pairs per tile densities. Note that single polymorphism generates multiple heterozygous kmers, these numbers do not directly correspond to variants, but should be fairly correlated.
+
+### GenomeScope for estimation of L/U
+
+You can feed the kmer coverage histogram to GenomeScope. (Either run the [genomescope script](https://github.com/schatzlab/genomescope/blob/master/genomescope.R) or use their [web server](http://qb.cshl.edu/genomescope/))
+
+```
+Rscript genomescope.R kmer_k21.hist <k-mer_length> <read_length> <output_dir> [kmer_max] [verbose]
+```
+
+You just made estimates of genome size, heterozygosity and repetitive fraction of the genome. Look at the fitted model and figure out what is the smallest peak after the error tail. Now you need to decide the low end cutoff that will discard all the kmers that have that small coverage and look like errors (cca 1/2 of the haploid kmer coverage), also check the right side of the graph to find reasonable upped threshold (cca 8x of the haploid kmer coverage).
 
 ## Content
 
