@@ -13,7 +13,7 @@ if(length(args) > 0) {
 infile <- ifelse(length(args) < 1, 'coverages_2.tsv', args[1])
 outfile <- ifelse(length(args) < 2, 'smudgeplot.png', args[2])
 fig_title <- ifelse(length(args) < 3, NA, args[3])
-n <- ifelse(length(args) < 4, NA, args[4])
+n <- ifelse(length(args) < 4, NA, as.numeric(args[4]))
 
 library(methods)
 library(smudgeplot)
