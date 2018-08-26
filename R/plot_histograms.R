@@ -5,8 +5,11 @@
 #'
 #' @export
 
-plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov,
+plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax,
                             .fig_title = NA, .cex = 1.4){
+    to_filter <- .total_pair_cov < ymax
+    .total_pair_cov <- .total_pair_cov[to_filter]
+    .minor_variant_rel_cov <- .minor_variant_rel_cov[to_filter]
     h1 <- hist(.minor_variant_rel_cov, breaks = 100, plot = F)
     h2 <- hist(.total_pair_cov, breaks = 100, plot = F)
     top <- max(h1$counts, h2$counts)
@@ -21,5 +24,5 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov,
     # total pair coverage HISTOGRAM - right
     par(mar=c(3.8,0,0.5,1))
     barplot(h2$counts, axes=F, xlim=c(0, top), space=0, col = pal[2], horiz = T)
-    mtext(paste('1n = ', n), side=1, adj=0.8, line=-2, cex = .cex)
+    mtext(paste('1n = ', round(n)), side=1, adj=0.8, line=-2, cex = .cex)
 }

@@ -1,5 +1,9 @@
 #!/usr/bin/env Rscript
 
+#############
+## SETTING ##
+#############
+
 args = commandArgs(trailingOnly=TRUE)
 # args[1] - input tsv file
 # args[2] - output [default: smudgeplot.png]
@@ -23,6 +27,11 @@ pal <- brewer.pal(11,'Spectral')
 rf <- colorRampPalette(rev(pal[3:11]))
 colour_ramp <- rf(32)
 
+
+######################
+## INPUT PROCESSING ##
+######################
+
 cov <- read.table(infile)
 
 # calcualte relative coverage of the minor allele
@@ -37,12 +46,34 @@ minor_variant_rel_cov <- minor_variant_rel_cov[high_cov_filt]
 total_pair_cov <- total_pair_cov[high_cov_filt]
 
 if( is.na(n) ){
-    n <- round(estimate_1n_coverage(),1)
+    draft_n <- round(estimate_1n_coverage_1d_subsets(total_pair_cov, minor_variant_rel_cov), 1)
+} else {
+    draft_n <- n
 }
+
+ymax <- min(10*draft_n, max(total_pair_cov))
+ymin <- min(total_pair_cov)
 
 # the lims trick will make sure that the last column of squares will have the same width as the other squares
 k <- kde2d(minor_variant_rel_cov, total_pair_cov, n=30,
            lims = c(0.02, 0.48, min(total_pair_cov), max(total_pair_cov)))
+
+#############
+## SUMMARY ##
+#############
+
+peak_points <- peak_agregation(k)
+peak_sizes <- get_peak_summary(peak_points)
+n <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov)
+peak_sizes$structure <- apply(peak_sizes, 1,
+                              function(x){ guess_genome_structure(x, n)})
+peak_sizes$corrected_minor_variant_cov <- sapply(peak_sizes$structure, function(x){round(mean(unlist(strsplit(x, split = '')) == 'B'), 2)})
+peak_sizes$ploidy <- sapply(peak_sizes$structure, nchar)
+
+##########
+## PLOT ##
+##########
+
 k_toplot <- k
 k_toplot$z <- sqrt(k_toplot$z)
 
@@ -51,9 +82,9 @@ png(outfile)
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(k_toplot, n, colour_ramp)
-plot_expected_haplotype_structure(n)
+plot_expected_haplotype_structure(n, peak_sizes, T)
 # 2,3 hist
-plot_histograms(minor_variant_rel_cov, total_pair_cov)
+plot_histograms(minor_variant_rel_cov, total_pair_cov, ymax, fig_title)
 # 4 legend
 plot_legend(k_toplot, total_pair_cov, colour_ramp)
 

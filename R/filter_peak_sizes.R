@@ -6,5 +6,5 @@
 #' @export
 
 filter_peak_sizes <- function(.peak_sizes, .threshold = 0.005){
-    .peak_sizes[!peak_sizes$rel_size < .threshold,]
+    .peak_sizes[!.peak_sizes$rel_size < .threshold,]
 }

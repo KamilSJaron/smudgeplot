@@ -2,19 +2,25 @@
 #'
 #' @description
 #' \code{plot_expected_haplotype_structure} adds to a plot
-#' TODO do automatically till y max? or max plody?
-#' TODO or to annotate only significant peaks
 #'
 #' @export
 
-plot_expected_haplotype_structure <- function(.n, .cex = 1.4){
-    text(1/2 - 0.027, 2 * .n, 'AB', offset = 0, cex = .cex)
-    text(1/3, 3 * .n, 'AAB', offset = 0, cex = .cex)
-    text(1/4, 4 * .n, 'AAAB', offset = 0, cex = .cex)
-    text(1/2 - 0.04, 4 * .n, 'AABB', offset = 0, cex = .cex)
-    text(2/5, 5 * .n, 'AAABB', offset = 0, cex = .cex)
-    text(1/5, 5 * .n, 'AAAAB', offset = 0, cex = .cex)
-    text(3/6 - 0.055, 6 * .n, 'AAABBB', offset = 0, cex = .cex)
-    text(2/6, 6 * .n, 'AAAABB', offset = 0, cex = .cex)
-    text(1/6, 6 * .n, 'AAAAAB', offset = 0, cex = .cex)
+plot_expected_haplotype_structure <- function(.n, .peak_sizes,
+                                              .adjust = F, .cex = 1.3){
+    borercases <- .peak_sizes$corrected_minor_variant_cov == 0.5
+    if(.adjust){
+        # I adjust labels on 0.5 because otherwise they would be out of plot
+        .peak_sizes$corrected_minor_variant_cov[borercases] <-
+              .peak_sizes$corrected_minor_variant_cov[borercases] -
+              ((0.008 * .peak_sizes$ploidy[borercases]) + 0.01)
+    } else {
+        # this is because xlim for even squares (yeah, I don't really like this function)
+        .peak_sizes$corrected_minor_variant_cov[borercases] <- 0.48
+    }
+
+    for(i in 1:nrow(.peak_sizes)){
+        text(.peak_sizes$corrected_minor_variant_cov[i],
+             .peak_sizes$ploidy[i] * .n, .peak_sizes$structure[i],
+             offset = 0, cex = .cex, xpd = T)
+    }
 }
