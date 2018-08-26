@@ -70,6 +70,8 @@ peak_sizes$structure <- apply(peak_sizes, 1,
 peak_sizes$corrected_minor_variant_cov <- sapply(peak_sizes$structure, function(x){round(mean(unlist(strsplit(x, split = '')) == 'B'), 2)})
 peak_sizes$ploidy <- sapply(peak_sizes$structure, nchar)
 
+genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)]
+
 ##########
 ## PLOT ##
 ##########
@@ -84,7 +86,7 @@ layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 plot_smudgeplot(k_toplot, n, colour_ramp)
 plot_expected_haplotype_structure(n, peak_sizes, T)
 # 2,3 hist
-plot_histograms(minor_variant_rel_cov, total_pair_cov, ymax, fig_title)
+plot_histograms(minor_variant_rel_cov, total_pair_cov, ymax, fig_title, genome_ploidy)
 # 4 legend
 plot_legend(k_toplot, total_pair_cov, colour_ramp)
 

@@ -6,7 +6,7 @@
 #' @export
 
 plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax,
-                            .fig_title = NA, .cex = 1.4){
+                            .fig_title = NA, .ploidy = NA, .cex = 1.4){
     to_filter <- .total_pair_cov < ymax
     .total_pair_cov <- .total_pair_cov[to_filter]
     .minor_variant_rel_cov <- .minor_variant_rel_cov[to_filter]
@@ -19,6 +19,19 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax,
     barplot(h1$counts, axes=F, ylim=c(0, top), space=0, col = pal[2])
     if(!(is.na(.fig_title))){
         mtext(bquote(italic(.(.fig_title))), side=3, adj=0, line=-3, cex = .cex + 0.2)
+    }
+
+    ploidytext <- switch(.ploidy - 1,
+                           p2 = 'diploid',
+                           p3 = 'triploid',
+                           p4 = 'tetraploid',
+                           p5 = 'pentaploid',
+                           p6 = 'hexaploid',
+                           p7 = 'heptaploid',
+                           p8 = 'oktatploid')
+
+    if(!(is.na(.ploidy))){
+        mtext(paste('estimated', ploidytext), side=3, adj=0.05, line=-5, cex = .cex - 0.2)
     }
 
     # total pair coverage HISTOGRAM - right
