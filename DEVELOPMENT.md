@@ -1,3 +1,11 @@
+# STANDARDS
+
+## R
+
+- spaces around operators
+- verbose, snakecase variable and function names
+- arguments of functions have variable names starting by `.`
+
 # FUNCTIONS
 
 notes about R functions

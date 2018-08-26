@@ -27,6 +27,6 @@ plot_smudgeplot <- function(.k, .n, .colour_ramp, .cex = 1.4){
     )
 
     axis(2, at = 2:8 * .n, labels = paste(2:8, 'n'))
-    axis(1, at = c(1/5, 1/4, 1/3, 2/5, 0.487),
-            labels = c('1:4', '1:3', '1:2', '2:3', '1:1'))
+    axis(1, at = c(1/5, 1/4, 1/3, 2/5, 1/2) * (0.487 / 0.5),
+            labels = c('1/5', '1/4', '1/3', '2/5', '1/2'))
 }

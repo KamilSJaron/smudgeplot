@@ -6,9 +6,9 @@
 #'
 #' @export
 
-transform_x <- function(x, for_plot = T){
-    orig <- (((x - 1) / 29) / 2)
-    if ( for_plot ){
+transform_x <- function(.x, .for_plot = T){
+    orig <- (((.x - 1) / 29) / 2)
+    if ( .for_plot ){
         ((orig / 0.5) * 0.46) + 0.02
     } else {
         orig
