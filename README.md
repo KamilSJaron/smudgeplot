@@ -1,10 +1,10 @@
 # Sibling kmer analysis
 
-This tool extract heterozygous kmer pairs from jellyfish dump files and does a gymnastics with it. We are able to disentangle genome structure by comparison of the sum of kmer pair coverages and their relative coverage. Such approach allows to analyze also obscure genomes with duplications, various ploidy levels and stuff. it's work in progress but it's already great.
+This tool extract heterozygous kmer pairs from jellyfish dump files and does a gymnastics with it. We are able to disentangle genome structure by comparison of the sum of kmer pair coverages and their relative coverage. Such approach allows to analyze also obscure genomes with duplications, various ploidy levels and stuff. it's a work in progress but it's already great.
 
 ## Installation
 
-You need [jellyfish](https://github.com/gmarcais/Jellyfish) install and to get most of your kmer spectra, also [GenomeScope](https://github.com/schatzlab/genomescope).
+You need [jellyfish](https://github.com/gmarcais/Jellyfish) installed and to get most of your kmer spectra, also [GenomeScope](https://github.com/schatzlab/genomescope).
 
 TODO: add required python libraries and R packages (you can find them in the scripts)
 
@@ -78,3 +78,7 @@ TODO
 ## License
 
 TODO GPL3? MIT? CC-0?
+
+## Acknowledgements
+
+This [blogpost](http://www.everydayanalytics.ca/2014/09/5-ways-to-do-2d-histograms-in-r.html) by Myles Harrison have largely inspired visual of smudgeplots (including colour theme in fact).

@@ -54,9 +54,8 @@ if( is.na(n) ){
 ymax <- min(10*draft_n, max(total_pair_cov))
 ymin <- min(total_pair_cov)
 
-# the lims trick will make sure that the last column of squares will have the same width as the other squares
-k <- kde2d(minor_variant_rel_cov, total_pair_cov, n=30,
-           lims = c(0.02, 0.48, min(total_pair_cov), max(total_pair_cov)))
+k <- get_smudge_container(minor_variant_rel_cov, total_pair_cov, .nbins = 40,
+                          .ylim = c(ymin, ymax))
 
 #############
 ## SUMMARY ##
@@ -76,18 +75,15 @@ genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)]
 ## PLOT ##
 ##########
 
-k_toplot <- k
-k_toplot$z <- sqrt(k_toplot$z)
-
 png(outfile)
 
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
-plot_smudgeplot(k_toplot, n, colour_ramp)
+plot_smudgeplot(k, n, colour_ramp)
 plot_expected_haplotype_structure(n, peak_sizes, T)
 # 2,3 hist
 plot_histograms(minor_variant_rel_cov, total_pair_cov, ymax, fig_title, genome_ploidy)
 # 4 legend
-plot_legend(k_toplot, total_pair_cov, colour_ramp)
+plot_legend(k, total_pair_cov, colour_ramp)
 
 dev.off()

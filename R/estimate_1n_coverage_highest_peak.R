@@ -22,7 +22,7 @@ estimate_1n_coverage_highest_peak <- function(.filt_peak_sizes, .minor_variant_r
 
     highest_min_cov <- .filt_peak_sizes$minor_variant_cov_rounded[highest_peak]
     subset <- .minor_variant_rel_cov < (highest_min_cov + 0.02) & .minor_variant_rel_cov > (highest_min_cov - 0.02)
-    major_peaks <- get_1d_peaks(.total_pair_cov, subset, 5)
+    major_peaks <- get_1d_peaks(.total_pair_cov, subset, 1, 1)
     major_cov <- major_peaks$cov[which.max(major_peaks$height)]
     major_cov / round(major_cov / draft_1n)
 }

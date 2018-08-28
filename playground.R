@@ -3,24 +3,46 @@ files <- c('data/Avag1/coverages_2.tsv',
            'data/Mflo2/coverages_2.tsv',
            'data/Rvar1/Rvar1_pairs_coverages_2.tsv',
            'data/Ps791/Ps791_pairs_coverages_2.tsv',
-           'data/Aric1/Aric1_pairs_coverages_2.tsv')
+           'data/Aric1/Aric1_pairs_coverages_2.tsv',
+           "data/Rmag1/Rmag1_pairs_coverages_2.tsv")
 
-i <- 3
+i <- 7
 n <- NA
 cov <- read.table(files[i])
 
 # run bits of smudgeplot.R to get k, and peak summary
+
+filter <- total_pair_cov < 350
+total_pair_cov_filt <- total_pair_cov[filter]
+minor_variant_rel_cov_filt <- minor_variant_rel_cov[filter]
+
+ymax <- max(total_pair_cov_filt)
+ymin <- min(total_pair_cov_filt)
+
+# the lims trick will make sure that the last column of squares will have the same width as the other squares
+smudge_container <- get_smudge_container(minor_variant_rel_cov, total_pair_cov, .nbins = 40)
+
+image(smudge_container, col = colour_ramp)
+# contour(x.bin, y.bin, freq2D, add=TRUE, col=rgb(1,1,1,.7))
+
 #######
 # PLOT
 #######
 
-k_toplot <- k
-k_toplot$z <- sqrt(k_toplot$z)
+library(plotly)
+packageVersion('plotly')
+
+p <- plot_ly(x = k_toplot$x, y = k_toplot$y, z = k_toplot$z) %>% add_surface()
+htmlwidgets::saveWidget(p, "Ps791_smudge_surface.html")
+# Create a shareable link to your chart
+# Set up API credentials: https://plot.ly/r/getting-started
+chart_link = api_create(p, filename="Ps791_smudge_surface-2")
+chart_link
 
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(k_toplot, n, colour_ramp)
-plot_expected_haplotype_structure(n)
+plot_expected_haplotype_structure(n, peak_sizes, T)
 # annotate_peaks(peak_points, ymin, ymax)
 # annotate_summits(peak_points, peak_sizes, ymin, ymax, 'black')
 # TODO fix plot_seq_error_line(total_pair_cov)
@@ -30,6 +52,7 @@ plot_histograms(minor_variant_rel_cov, total_pair_cov)
 # 4 legend
 plot_legend(k_toplot, total_pair_cov, colour_ramp)
 
+# findInterval(c(0.1, 0.2, 0.33, 0.5), seq(0, 0.5, length = 41))
 
 ##########################################################
 ## TEST
