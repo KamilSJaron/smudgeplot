@@ -6,7 +6,10 @@
 #' @export
 
 peak_agregation <- function(.k){
-    peak_points <- data.frame(vals = as.vector(k$z), x = rep(1:30, each = 30), y = rep(1:30, 30))
+    nbins <- length(.k$x)
+    peak_points <- data.frame(vals = as.vector(.k$dens),
+                              x = rep(1:nbins, each = nbins),
+                              y = rep(1:nbins, nbins))
     peak_points$peak <- NA
     peak_points$summit <- NA
     peak_points <- peak_points[order(peak_points$vals, decreasing = T),]

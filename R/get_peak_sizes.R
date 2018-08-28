@@ -6,8 +6,8 @@
 #' @export
 
 get_peak_sizes <- function(.peak_points){
-    peaks <- .peak_points[peak_points$summit == T,'peak']
-    summits <- .peak_points[peak_points$summit == T,'vals']
+    peaks <- .peak_points[.peak_points$summit == T,'peak']
+    summits <- .peak_points[.peak_points$summit == T,'vals']
     peak_sizes <- sapply(peaks, function(x){sum(.peak_points[.peak_points$peak == x, 'vals'])})
     data.frame(peak = peaks,
                 abs_size = peak_sizes,

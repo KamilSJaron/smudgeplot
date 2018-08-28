@@ -20,7 +20,7 @@ plot_smudgeplot <- function(.k, .n, .colour_ramp, .cex = 1.4){
     # margins 'c(bottom, left, top, right)'
     par(mar=c(4.8,4.8,1,1))
     # 2D HISTOGRAM
-    image(.k, col = colour_ramp,
+    image(.k, col = .colour_ramp,
         xlab = 'Normalized minor kmer coverage: B / (A + B)',
         ylab = 'Total coverage of the kmer pair: A + B', cex.lab = 1.4,
         axes=F
