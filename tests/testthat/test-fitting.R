@@ -2,10 +2,6 @@ context("integration")
 
 cov <- read.table('fmlo_smaple_cov_file.tsv')
 
-pal <- brewer.pal(11,'Spectral')
-rf <- colorRampPalette(rev(pal[3:11]))
-colour_ramp <- rf(32)
-
 minor_variant_rel_cov <- cov$V1 / (cov$V1 + cov$V2)
 total_pair_cov <- cov$V1 + cov$V2
 
@@ -40,6 +36,9 @@ test_that("2d fitting somehow works", {
 #     }
 # )
 
+# pal <- brewer.pal(11,'Spectral')
+# rf <- colorRampPalette(rev(pal[3:11]))
+# colour_ramp <- rf(32)
 # layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # plot_smudgeplot(smudge_container, n, colour_ramp)
 # plot_expected_haplotype_structure(n, peak_sizes, T)

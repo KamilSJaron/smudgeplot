@@ -1,15 +1,19 @@
 #' @title peak_agregation
 #'
 #' @description
-#' \code{peak_agregation}
+#' \code{peak_agregation} is the function that agregates tiles from the smudge_container
+#' into smudges - individual distributions
+#'
+#' @param .smudge_container - a smudge_container object; a list with `x`,`y` axies of the 2d histogram and `dens` matrix of 2h histogram values.
+#'        Usually output of function \code{get_smudge_container}
 #'
 #' @export
 
-peak_agregation <- function(.k){
-    nbins <- length(.k$x)
-    peak_points <- data.frame(vals = as.vector(.k$dens),
-                              x = rep(1:nbins, each = nbins),
-                              y = rep(1:nbins, nbins))
+peak_agregation <- function(.smudge_container){
+    nbins <- length(.smudge_container$x)
+    peak_points <- data.frame(vals = as.vector(.smudge_container$dens),
+                              x = rep(1:nbins, nbins),
+                              y = rep(1:nbins, each = nbins))
     peak_points$peak <- NA
     peak_points$summit <- NA
     peak_points <- peak_points[order(peak_points$vals, decreasing = T),]

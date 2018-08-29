@@ -2,10 +2,10 @@
 #'
 #' @description
 #' \code{transform_pair_cov}
-#' to transform 1 ... 30 coordinates to y coordinates of the 2d hisrtogram
+#' to transform coordinates of smudgeplot to total_pair_cov
 #'
 #' @export
 
-transform_pair_cov <- function(.y, .k){
-    .k$y[.y]
+transform_pair_cov <- function(.y, .smudge_container){
+    .smudge_container$y[.y] + (diff(.smudge_container$y)[1] / 2)
 }

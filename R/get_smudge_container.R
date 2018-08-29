@@ -8,7 +8,7 @@
 get_smudge_container <- function(.minor_variant_rel_cov, .total_pair_cov,
                                  .nbins = 20, .xlim = c(0, 0.5), .ylim = NA){
     if( any(is.na(.ylim)) ){
-        .ylim = c(0,max(.total_pair_cov))
+        .ylim = c(0, max(.total_pair_cov))
     }
     smudge_container <- list()
     smudge_container$x <- seq(.xlim[1], ((.nbins - 1) / .nbins) * .xlim[2], length = .nbins)
