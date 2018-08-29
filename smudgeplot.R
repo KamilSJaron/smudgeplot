@@ -27,7 +27,6 @@ pal <- brewer.pal(11,'Spectral')
 rf <- colorRampPalette(rev(pal[3:11]))
 colour_ramp <- rf(32)
 
-
 ######################
 ## INPUT PROCESSING ##
 ######################
@@ -52,17 +51,17 @@ if( is.na(n) ){
 }
 
 ymax <- min(10*draft_n, max(total_pair_cov))
-ymin <- min(total_pair_cov)
+ymin <- min(total_pair_cov) - 1
 
-k <- get_smudge_container(minor_variant_rel_cov, total_pair_cov, .nbins = 40,
-                          .ylim = c(ymin, ymax))
+smudge_container <- get_smudge_container(minor_variant_rel_cov, total_pair_cov,
+                                         .nbins = 40, .ylim = c(ymin, ymax))
 
 #############
 ## SUMMARY ##
 #############
 
-peak_points <- peak_agregation(k)
-peak_sizes <- get_peak_summary(peak_points)
+peak_points <- peak_agregation(smudge_container)
+peak_sizes <- get_peak_summary(peak_points, smudge_container, 0.02)
 n <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov)
 peak_sizes$structure <- apply(peak_sizes, 1,
                               function(x){ guess_genome_structure(x, n)})
@@ -79,11 +78,11 @@ png(outfile)
 
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
-plot_smudgeplot(k, n, colour_ramp)
+plot_smudgeplot(smudge_container, n, colour_ramp)
 plot_expected_haplotype_structure(n, peak_sizes, T)
 # 2,3 hist
 plot_histograms(minor_variant_rel_cov, total_pair_cov, ymax, fig_title, genome_ploidy)
 # 4 legend
-plot_legend(k, total_pair_cov, colour_ramp)
+plot_legend(smudge_container, total_pair_cov, colour_ramp)
 
 dev.off()
