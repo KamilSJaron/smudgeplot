@@ -4,7 +4,7 @@
 #' \code{plot_smudgeplot} is the core smudgeplot function to plot the core of the smudgeplot
 #' the cental 2D histogram/ landscape plot / heatmap / howeveryouwantyoucallthis plot
 #'
-#' @param .k - the matrix of densities or list of x,y axies and z, the matrix. Usually output of function \code{kde2d}
+#' @param .k - the matrix of densities or list of x,y axies and z, the matrix. Usually output of function
 #'
 #' @param .n - the 1n coverage, the coverage of the haploid genome (can be estimated by TODO function)
 #'
