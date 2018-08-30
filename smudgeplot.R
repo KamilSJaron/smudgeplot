@@ -11,6 +11,8 @@ suppressPackageStartupMessages(library("smudgeplot"))
 parser <- ArgumentParser()
 parser$add_argument("-v", "--version", action="store_true", default = FALSE,
                     help="print the version and exit")
+parser$add_argument("--homozygous", action="store_true", default = F,
+                    help="Assume no heterozygosity in the genome - plotting a paralog structure; [default FALSE]")
 parser$add_argument("-i", "--input", default = "coverages_2.tsv",
                     help="name of the input tsv file with covarages [default \"coverages_2.tsv\"]")
 parser$add_argument("-o", "--output", default = "smudgeplot",
@@ -77,6 +79,22 @@ smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, minor
 
 smudge_summary$n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_peak_est, args$n_cov)
 
+# if the organism is completely homozygous, all the detected kmer pairs are corresponding to paralogs
+# therefore ther inference will confuse AB peak to AABB peak etc.
+# that is recolvable just telling to guess half of the coverage instead
+if( args$homozygous ){
+    smudge_summary$n <- smudge_summary$n / 2
+    smudge_summary$n_subset_est <- smudge_summary$n_subset_est / 2
+}
+
+if( L > (smudge_summary$n / 2) ){
+    smudge_warn(args$output, "!! Careful, your coverage filter on the lower end (L = ", L,
+                ") is higher than half of the 1n coverage estimate ( 1n / 2 = ", round(smudge_summary$n / 2, 2))
+    smudge_warn(args$output, "If the real 1n coverage is half of your estimate you would not picked it up due to the filtering.")
+    smudge_warn(args$output, "Consider reruning the analysis with lover L as well (sothing like (1n / 2) - 5 should do the job)")
+    smudge_warn(args$output, "Another good way for verificaiton would be to compare it to GenomeScope estimate of haploid coverage")
+}
+
 peak_sizes$structure <- apply(peak_sizes, 1,
                               function(x){ guess_genome_structure(x, smudge_summary$n)})
 peak_sizes$corrected_minor_variant_cov <- sapply(peak_sizes$structure, function(x){round(mean(unlist(strsplit(x, split = '')) == 'B'), 2)})
@@ -95,6 +113,12 @@ if( any(to_filter) ){
 peak_sizes$rel_size <- peak_sizes$rel_size / sum(peak_sizes$rel_size)
 smudge_summary$peak_sizes <- peak_sizes
 smudge_summary$genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)]
+
+# this will be probably diploid,
+# but theoretically one can imagine a species that si completely homozygous tetraploid
+if( args$homozygous ){
+    smudge_summary$genome_ploidy <- smudge_summary$genome_ploidy / 2
+}
 
 generate_summary(args, smudge_summary)
 
