@@ -2,6 +2,8 @@
 
 This tool extract heterozygous kmer pairs from jellyfish dump files and does a gymnastics with it. We are able to disentangle genome structure by comparison of the sum of kmer pair coverages and their relative coverage. Such approach allows to analyze also obscure genomes with duplications, various ploidy levels and stuff. it's a work in progress but it's already great.
 
+This tool is planned to be a part of [GenomeScope](https://github.com/schatzlab/genomescope) in future.
+
 ## Installation
 
 You need [jellyfish](https://github.com/gmarcais/Jellyfish) installed and to get most of your kmer spectra, also [GenomeScope](https://github.com/schatzlab/genomescope).
