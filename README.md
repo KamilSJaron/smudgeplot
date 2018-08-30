@@ -2,6 +2,12 @@
 
 This tool extract heterozygous kmer pairs from jellyfish dump files and perform gymnastics with it. We are able to disentangle genome structure by comparison of the sum of kmer pair coverages and their relative coverage. Such approach allows to analyze also obscure genomes with duplications, various ploidy levels and stuff. it's a work in progress but it's already great.
 
+Smudgeplot is computed from raw/trimmed reads and it shows the haplotype structure using heterozygous kmer pairs. It looks like this
+
+![smudgeexample](https://user-images.githubusercontent.com/8181573/44874203-ac45d980-ac9a-11e8-9943-889acbba81cd.png)
+
+Every haplotype structure has a unique smudge on the graph and the heat of the smudge indicates how frequenctly the haplotype structure is represented in the genome compared to the other structures. The image above is an ideal case, where the sequencing coverage was sufficient to beautifelly separate all the smudges, providing very strong and clear evidence of triploidy.
+
 This tool is planned to be a part of [GenomeScope](https://github.com/schatzlab/genomescope) in future.
 
 ## Installation
