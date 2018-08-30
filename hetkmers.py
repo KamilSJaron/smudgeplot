@@ -115,11 +115,11 @@ for one_away_pair in one_away_pairs:
   G.add_edge(*one_away_pair)
 #for two_away_pair in two_away_pairs:
 #  G.add_edge(*two_away_pair)
-pickle.dump(G, open(output_pattern + 'G.p', 'wb'))
+# pickle.dump(G, open(output_pattern + 'G.p', 'wb'))
 
 #get the lengths of the families, save it to a pickle file, and then look at the Counter summary
 component_lengths = [len(x) for x in nx.connected_components(G)]
-pickle.dump(component_lengths, open(output_pattern + '_component_lengths.p', 'wb'))
+# pickle.dump(component_lengths, open(output_pattern + '_component_lengths.p', 'wb'))
 Counter(component_lengths)
 
 #get the families with 2-6 members
@@ -142,11 +142,11 @@ for component in nx.connected_components(G):
     families_6.append(list(component))
 
 #save families_2 to a pickle file
-pickle.dump(families_2, open(output_pattern + '_families_2.p', 'wb'))
+# pickle.dump(families_2, open(output_pattern + '_families_2.p', 'wb'))
 # perhaps faster way how to calculate coverages_2, probably more pythonic
 # coverages_2 = [test_coverages[cov_i1] + test_coverages[cov_i2] for cov_i1, cov_i2 in families_2]
 coverages_2 = [sum([test_coverages[i] for i in family]) for family in families_2]
-pickle.dump(coverages_2, open(output_pattern + '_coverages_2.p', 'wb'))
+# pickle.dump(coverages_2, open(output_pattern + '_coverages_2.p', 'wb'))
 
 with open(output_pattern + '_coverages_2.tsv', 'w') as record_file:
   for (cov_i1, cov_i2) in families_2:
@@ -158,18 +158,18 @@ with open(output_pattern + '_coverages_2.tsv', 'w') as record_file:
       record_file.write(str(cov2) + '\t' + str(cov1) + '\n')
 
 # save families_3 to a pickle file
-pickle.dump(families_3, open(output_pattern + '_families_3.p', 'wb'))
-coverages_3 = [sum([test_coverages[i] for i in family]) for family in families_3]
-
-# save families_4 to a pickle file
-pickle.dump(families_4, open(output_pattern + '_families_4.p', 'wb'))
-coverages_4 = [sum([test_coverages[i] for i in family]) for family in families_4]
-
-# save families_5 to a pickle file
-pickle.dump(families_5, open(output_pattern + '_families_5.p', 'wb'))
-coverages_5 = [sum([test_coverages[i] for i in family]) for family in families_5]
-
-# save families_6 to a pickle file
-pickle.dump(families_6, open(output_pattern + '_families_6.p', 'wb'))
-coverages_6 = [sum([test_coverages[i] for i in family]) for family in families_6]
-
+# pickle.dump(families_3, open(output_pattern + '_families_3.p', 'wb'))
+# coverages_3 = [sum([test_coverages[i] for i in family]) for family in families_3]
+#
+# # save families_4 to a pickle file
+# pickle.dump(families_4, open(output_pattern + '_families_4.p', 'wb'))
+# coverages_4 = [sum([test_coverages[i] for i in family]) for family in families_4]
+#
+# # save families_5 to a pickle file
+# pickle.dump(families_5, open(output_pattern + '_families_5.p', 'wb'))
+# coverages_5 = [sum([test_coverages[i] for i in family]) for family in families_5]
+#
+# # save families_6 to a pickle file
+# pickle.dump(families_6, open(output_pattern + '_families_6.p', 'wb'))
+# coverages_6 = [sum([test_coverages[i] for i in family]) for family in families_6]
+#
