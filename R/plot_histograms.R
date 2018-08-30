@@ -5,10 +5,9 @@
 #'
 #' @export
 
-plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax,
-                            .fig_title = NA, .ploidy = NA, .peak_sizes = NA,
-                            .n = NA, .cex = 1.4, .col = NA){
-    to_filter <- .total_pair_cov < ymax
+plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax, .smudge_summary,
+                            .nbins, .fig_title = NA, .cex = 1.4, .col = NA){
+    to_filter <- .total_pair_cov < .ymax - (.ymax / .nbins)
     .total_pair_cov <- .total_pair_cov[to_filter]
     .minor_variant_rel_cov <- .minor_variant_rel_cov[to_filter]
     h1 <- hist(.minor_variant_rel_cov, breaks = 100, plot = F)
@@ -26,7 +25,7 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax,
         mtext(bquote(italic(.(.fig_title))), side=3, adj=0, line=-3, cex = .cex + 0.2)
     }
 
-    ploidytext <- switch(.ploidy - 1,
+    ploidytext <- switch(.smudge_summary$genome_ploidy - 1,
                            p2 = 'diploid',
                            p3 = 'triploid',
                            p4 = 'tetraploid',
@@ -35,14 +34,16 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax,
                            p7 = 'heptaploid',
                            p8 = 'oktatploid')
 
-    if(!(is.na(.ploidy))){
+    if(!(is.na(.smudge_summary$genome_ploidy))){
         mtext(paste('estimated', ploidytext), side=3, adj=0.05, line=-5, cex = .cex - 0.2)
     }
 
     # total pair coverage HISTOGRAM - right
     par(mar=c(3.8,0,0.5,1))
     barplot(h2$counts, axes=F, xlim=c(0, top), space=0, col = .col, horiz = T)
-    legend('bottomright', bty = 'n', paste('1n = ', round(.n)), cex = .cex - 0.1)
+    legend('bottomright', bty = 'n', paste('1n = ', round(.smudge_summary$n)), cex = .cex - 0.1)
+
+    .peak_sizes <- .smudge_summary$peak_sizes[,c(11,3)]
     if(! any(is.na(.peak_sizes))){
         legend('topleft', bty = 'n', .peak_sizes[,1], cex = 1.3)
         legend('topright', bty = 'n', legend = round(.peak_sizes[,2], 2), cex = .cex - 0.1)

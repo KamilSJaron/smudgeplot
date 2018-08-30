@@ -1,9 +1,17 @@
-#' @title plot_legend
+#' @title rounding
 #'
 #' @description
-#' \code{plot_legend} generate topright corener in the smudgeplot
+#' \code{rounding} rounds to thousands or hundreds if the number is smaller than 1000
 #'
 #' @export
+
+rounding <- function(number){
+    if(number > 1000){
+        round(number / 1000) * 1000
+    } else {
+        round(number / 100) * 100
+    }
+}
 
 plot_legend <- function(.k, .colour_ramp, .sqrt_scale = T){
     par(mar=c(0,0,2,1))

@@ -87,7 +87,7 @@ if( args$homozygous ){
     smudge_summary$n_subset_est <- smudge_summary$n_subset_est / 2
 }
 
-if( L > (smudge_summary$n / 2) ){
+if( L > (smudge_summary$n / 2) & !args$homozygous ){
     smudge_warn(args$output, "!! Careful, your coverage filter on the lower end (L = ", L,
                 ") is higher than half of the 1n coverage estimate ( 1n / 2 = ", round(smudge_summary$n / 2, 2))
     smudge_warn(args$output, "If the real 1n coverage is half of your estimate you would not picked it up due to the filtering.")
@@ -137,9 +137,8 @@ plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
 plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T)
 # 2,3 hist
 plot_histograms(minor_variant_rel_cov, total_pair_cov,
-                ymax, fig_title, smudge_summary$genome_ploidy,
-                peak_sizes[,c(11,3)], smudge_summary$n)
+                ymax, smudge_summary, args$nbins, fig_title)
 # 4 legend
-plot_legend(smudge_container, total_pair_cov, colour_ramp)
+plot_legend(smudge_container, colour_ramp)
 
 dev.off()
