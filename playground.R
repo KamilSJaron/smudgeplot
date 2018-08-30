@@ -6,6 +6,17 @@ files <- c('data/Avag1/coverages_2.tsv',
            'data/Aric1/Aric1_pairs_coverages_2.tsv',
            "data/Rmag1/Rmag1_pairs_coverages_2.tsv")
 
+###
+library(smudgeplot)
+args <- list()
+args$input <- 'data/Mflo2/Mflo2_coverages_2.tsv'
+args$output <- "figures/Mflo2_v0.1.0"
+args$nbins <- 40
+args$kmer_size <- 21
+args$homozygous <- F
+
+###
+
 i <- 7
 n <- NA
 cov <- read.table(files[i])
@@ -21,6 +32,15 @@ ymin <- min(total_pair_cov_filt)
 
 # the lims trick will make sure that the last column of squares will have the same width as the other squares
 smudge_container <- get_smudge_container(minor_variant_rel_cov, total_pair_cov, .nbins = 40)
+
+x <- seq(xlim[1], ((nbins - 1) / nbins) * xlim[2], length = nbins)
+y <- c(seq(ylim[1] - 0.1, ((nbins - 1) / nbins) * ylim[2], length = nbins), ylim[2])
+
+.peak_points <- peak_points
+.smudge_container <- smudge_container
+.total_pair_cov <- total_pair_cov
+.treshold <- 0.05
+fig_title <- 'test'
 
 image(smudge_container, col = colour_ramp)
 # contour(x.bin, y.bin, freq2D, add=TRUE, col=rgb(1,1,1,.7))
