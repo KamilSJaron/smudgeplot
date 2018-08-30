@@ -6,7 +6,8 @@
 #' @export
 
 plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax,
-                            .fig_title = NA, .ploidy = NA, .cex = 1.4){
+                            .fig_title = NA, .ploidy = NA, .peak_sizes = NA,
+                            .cex = 1.4){
     to_filter <- .total_pair_cov < ymax
     .total_pair_cov <- .total_pair_cov[to_filter]
     .minor_variant_rel_cov <- .minor_variant_rel_cov[to_filter]
@@ -37,5 +38,9 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax,
     # total pair coverage HISTOGRAM - right
     par(mar=c(3.8,0,0.5,1))
     barplot(h2$counts, axes=F, xlim=c(0, top), space=0, col = pal[2], horiz = T)
-    mtext(paste('1n = ', round(n)), side=1, adj=0.8, line=-2, cex = .cex)
+    legend('bottomright', bty = 'n', paste('1n = ', round(n)), cex = .cex - 0.1)
+    if(! any(is.na(.peak_sizes))){
+        legend('topleft', bty = 'n', .peak_sizes[,1], cex = 1.3)
+        legend('topright', bty = 'n', legend = round(.peak_sizes[,2], 2), cex = .cex - 0.1)
+    }
 }

@@ -12,7 +12,7 @@ plot_expected_haplotype_structure <- function(.n, .peak_sizes,
         # I adjust labels on 0.5 because otherwise they would be out of plot
         .peak_sizes$corrected_minor_variant_cov[borercases] <-
               .peak_sizes$corrected_minor_variant_cov[borercases] -
-              ((0.008 * .peak_sizes$ploidy[borercases]) + 0.01)
+              ((0.007 * .peak_sizes$ploidy[borercases]) + 0.01)
     } else {
         # this is because xlim for even squares (yeah, I don't really like this function)
         .peak_sizes$corrected_minor_variant_cov[borercases] <- 0.48

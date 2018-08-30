@@ -42,7 +42,33 @@ jellyfish dump -c -L $L -U $U kmer_counts.jf | hetkmers.py -o kmer_pairs
 Now finally generate smudgeplot using coverages of the kmer pairs. You can either supply the haploid kmer coverage (reported by GenomeScope) or you can let it to be estimated form directly from the data. If GenomeScope correctly identified the peak of haplod kmers, the expected positions of haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider to adjust both GenomeScope model and redo the plod with the better estimate of the haploid coverage.
 
 ```
-smudgeplot.R [input.tsv] [output.png] [plot_title] [haplod_cov]
+usage: ./smudgeplot.R [-h] [-v] [-i INPUT] [-o OUTPUT] [-t TITLE] [-n N_COV]
+                      [-L LOW_CUTOFF] [-nbins NBINS] [-k KMER_SIZE]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --version         print the version and exit
+  -i INPUT, --input INPUT
+                        name of the input tsv file with covarages [default
+                        "coverages_2.tsv"]
+  -o OUTPUT, --output OUTPUT
+                        name pattern used for the output files
+                        (OUTPUT_smudgeplot.png, OUTPUT_summary.txt,
+                        OUTPUT_warrnings.txt) [default "smudgeplot"]
+  -t TITLE, --title TITLE
+                        name printed at the top of the smudgeplot [default
+                        none]
+  -n N_COV, --n_cov N_COV
+                        the haploid coverage of the sequencing data [default
+                        inference from data]
+  -L LOW_CUTOFF, --low_cutoff LOW_CUTOFF
+                        the lower boundary used when dumping kmers from
+                        jellyfish [default min(total_pair_cov) / 2]
+  -nbins NBINS          the number of nbins used for smudgeplot matrix (nbins
+                        x nbins) [default 40]
+  -k KMER_SIZE, --kmer_size KMER_SIZE
+                        The kmer size used to calculate kmer spectra [default
+                        21]
 ```
 
 The smudgeplot uses colouration on squared scale, the legend indicate approximate kmer pairs per tile densities. Note that single polymorphism generates multiple heterozygous kmers, these numbers do not directly correspond to variants, but should be fairly correlated.

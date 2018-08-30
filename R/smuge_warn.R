@@ -6,6 +6,6 @@
 #'
 #' @export
 
-smuge_warn <- function(message){
-    write(message, stderr())
+smuge_warn <- function(...){
+    write(paste(..., sep = '\t'), stderr())
 }
