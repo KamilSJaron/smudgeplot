@@ -83,7 +83,8 @@ If using KMC
 L=$(kmer_cov_cutoff.R kmer_k21.hist L)
 U=$(kmer_cov_cutoff.R kmer_k21.hist U)
 echo $L $U # these need to be sane values like 30 800 or so
-kmc_dump kmer_counts -ci$L -cx$U | hetkmers.py -o kmer_pairs
+kmc_dump -ci$L -cx$U kmer_counts kmer_k21.dump
+hetkmers.py -o kmer_pairs < kmer_k21.dump
 ```
 
 After using jellyfish or KMC, generate the smudgeplot using the coverages of the kmer pairs (`*_coverages_2.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data and compare it afterwards. If GenomeScope correctly identifies the peak of haploid kmers, the expected positions of the haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider adjusting the GenomeScope model and redoing the plot with a better estimate of the haploid coverage. Usage of `smudgeplot.R` script is
