@@ -1,20 +1,20 @@
 # Smudgeplot
 
-This tool extract heterozygous kmer pairs from jellyfish dump files and perform gymnastics with it. We are able to disentangle genome structure by comparison of the sum of kmer pair coverages and their relative coverage. Such approach allows to analyze also obscure genomes with duplications, various ploidy levels and stuff. it's a work in progress but it's already great.
+This tool extracts heterozygous kmer pairs from kmer dump files (from jellyfish or KMC) and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovA/(CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc. It's a work in progress but already provides great insights.
 
-Smudgeplot is computed from raw/trimmed reads and it shows the haplotype structure using heterozygous kmer pairs. It looks like this
+Smudgeplots are computed from raw/trimmed reads and show the haplotype structure using heterozygous kmer pairs. For example:
 
 ![smudgeexample](https://user-images.githubusercontent.com/8181573/44874203-ac45d980-ac9a-11e8-9943-889acbba81cd.png)
 
-Every haplotype structure has a unique smudge on the graph and the heat of the smudge indicates how frequenctly the haplotype structure is represented in the genome compared to the other structures. The image above is an ideal case, where the sequencing coverage was sufficient to beautifelly separate all the smudges, providing very strong and clear evidence of triploidy.
+Every haplotype structure has a unique smudge on the graph and the heat of the smudge indicates how frequently the haplotype structure is represented in the genome compared to the other structures. The image above is an ideal case, where the sequencing coverage is sufficient to beautifully separate all the smudges, providing very strong and clear evidence of triploidy.
 
-This tool is planned to be a part of [GenomeScope](https://github.com/schatzlab/genomescope) in future.
+This tool is planned to be a part of [GenomeScope](https://github.com/schatzlab/genomescope) in the near future.
 
 ## Installation
 
-You need [jellyfish](https://github.com/gmarcais/Jellyfish) installed and if you want to get most of your kmer spectra, also consider running [GenomeScope](https://github.com/schatzlab/genomescope).
+You need [jellyfish](https://github.com/gmarcais/Jellyfish) or [KMC](https://github.com/refresh-bio/KMC) installed and if you want to get the most out of your kmer spectra, also consider running [GenomeScope](https://github.com/schatzlab/genomescope).
 
-You will need python libraries `networkx` and `pandas`. Both of them are available in `pip`. Required R libraries are installed together with the R library `smudgeplot`.
+Required R libraries are installed together with the R library `smudgeplot`.
 
 Get this repository
 
@@ -29,7 +29,7 @@ Install the R package `smudgeplot`
 Rscript install.R    # installs R library
 ```
 
-Finally copy this three scripts somewhere where you system will see it (places in `$PATH`)
+Finally copy these three scripts somewhere where your system will see them (places in `$PATH`)
 
 ```
 # copy scripts somewhere where your shell will see them
@@ -45,21 +45,32 @@ echo "export PATH=\$PATH:$(pwd)" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-If the installation procedure does not work, if you encounter any other problem or if you would like to get a help with interpretation of your smudgeplot, please open an [issue](https://github.com/tbenavi1/sibling_kmers/issues/new).
+If the installation procedure does not work, if you encounter any other problem, or if you would like to get help with the interpretation of your smudgeplot, please open an [issue](https://github.com/tbenavi1/sibling_kmers/issues/new).
 
 ## Usage
 
-Right now the workflow is automatic, but it's not fool-proof. It requires some decisions. The first step is to run [jellyfish](https://github.com/gmarcais/Jellyfish) and [GenomeScope](https://github.com/schatzlab/genomescope).
+Right now the workflow is automatic, but it's not fool-proof. It requires some decisions. The first step is to run [jellyfish](https://github.com/gmarcais/Jellyfish) or [KMC](https://github.com/refresh-bio/KMC) and [GenomeScope](https://github.com/schatzlab/genomescope).
 
-Give jellyfish all the files with trimmed reads to calculate kmer frequencies and then generate histogram of kmers:
+If using jellyfish, give jellyfish all the files with trimmed reads to calculate kmer frequencies and then generate a histogram of kmers:
 
 ```
 jellyfish count -C -m 21 -s 1000000000 -t 8 *.fastq -o kmer_counts.jf
 jellyfish histo kmer_counts.jf > kmer_k21.hist
 ```
 
-The next step is to extract genomic kmers using reasonable coverage threshold. You can either inspect the kmer spectra and chose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using script `kmer_cov_cutoff.R <kmer.hist> <L/U>`. Extract kmers in the coverage range from `L` to `U` using `Jellyfish` and pipe it directly to the python script `hetkmers.py`  that will compute set of heterozygous kmers.
+If using KMC, give KMC all the files with trimmed reads to calculate kmer frequencies and then generate a histogram of kmers:
 
+```
+mkdir tmp
+ls *.fastq > FILES
+kmc -k21 -m64 -ci1 -cs10000 @FILES kmer_counts tmp
+kmc_tools transform kmer_counts histogram kmer_k21.hist
+```
+where `-k` is the kmer length, `-m` is the max amount of RAM to use in GB (1 to 1024), `-ci<value>` excludes kmers occurring less than \<value\> times, `-cs` is the maximum value of a counter, `FILES` is a file name with a list of input files, `kmer_counts` is the output file name prefix, and `tmp` is a temporary directory.
+
+The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using the script `kmer_cov_cutoff.R <kmer.hist> <L/U>`. Then, extract kmers in the coverage range from `L` to `U` using `Jellyfish` or `KMC` and pipe them directly to the python script `hetkmers.py` to compute the set of heterozygous kmers.
+
+If using jellyfish
 ```
 L=$(kmer_cov_cutoff.R kmer_k21.hist L)
 U=$(kmer_cov_cutoff.R kmer_k21.hist U)
@@ -67,7 +78,15 @@ echo $L $U # these need to be sane values like 30 800 or so
 jellyfish dump -c -L $L -U $U kmer_counts.jf | hetkmers.py -o kmer_pairs
 ```
 
-Now finally generate smudgeplot using coverages of the kmer pairs (`*_coverages_2.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or you can let it to be estimated form directly from the data and compare it afterwards. If GenomeScope correctly identified the peak of haploid kmers, the expected positions of haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider to adjust both GenomeScope model and redo the plot with the better estimate of the haploid coverage. Usage of `smudgeplot.R` script is
+If using KMC
+```
+L=$(kmer_cov_cutoff.R kmer_k21.hist L)
+U=$(kmer_cov_cutoff.R kmer_k21.hist U)
+echo $L $U # these need to be sane values like 30 800 or so
+kmc_dump kmer_counts -ci$L -cx$U | hetkmers.py -o kmer_pairs
+```
+
+After using jellyfish or KMC, generate the smudgeplot using the coverages of the kmer pairs (`*_coverages_2.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data and compare it afterwards. If GenomeScope correctly identifies the peak of haploid kmers, the expected positions of the haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider adjusting the GenomeScope model and redoing the plot with a better estimate of the haploid coverage. Usage of `smudgeplot.R` script is
 
 ```
 usage: ./smudgeplot.R [-h] [-v] [-i INPUT] [-o OUTPUT] [-t TITLE] [-n N_COV]
@@ -99,27 +118,27 @@ optional arguments:
                         21]
 ```
 
-The smudgeplot uses colouration on squared scale, the legend indicate approximate kmer pairs per tile densities. Note that single polymorphism generates multiple heterozygous kmers, these numbers do not directly correspond to variants, it's approximately kmer size times less. It's important to note that we are obviouslty not fishing out all the heterozygous kmers from the genome, we just get enough to identify relative genome structure. We are also able as well report minimal number of loci that are heterozygous if the inference was correct.
+The smudgeplot uses coloration on a squared scale. The legend indicates approximate kmer pairs per tile densities. Note that a single polymorphism generates multiple heterozygous kmers. As such, the reported numbers do not directly correspond to the number of variants. Instead, the actual number is approximately 1/k times the reported numbers, where k is the kmer size. It's important to note that this process does not exhaustively attempt to find all of the heterozygous kmers from the genome. Instead, only a sufficient sample is obtained in order to identify relative genome structure. You can also report the minimal number of loci that are heterozygous if the inference is correct.
 
 ### GenomeScope for estimation of L/U
 
-You can feed the kmer coverage histogram to GenomeScope. (Either run the [genomescope script](https://github.com/schatzlab/genomescope/blob/master/genomescope.R) or use their [web server](http://qb.cshl.edu/genomescope/))
+You can feed the kmer coverage histogram to GenomeScope. (Either run the [genomescope script](https://github.com/schatzlab/genomescope/blob/master/genomescope.R) or use the [web server](http://qb.cshl.edu/genomescope/))
 
 ```
 Rscript genomescope.R kmer_k21.hist <k-mer_length> <read_length> <output_dir> [kmer_max] [verbose]
 ```
 
-You just made estimates of genome size, heterozygosity and repetitive fraction of the genome. Look at the fitted model and figure out what is the smallest peak after the error tail. Now you need to decide the low end cutoff that will discard all the kmers that have that small coverage and look like errors (cca 1/2 of the haploid kmer coverage), also check the right side of the graph to find reasonable upped threshold (cca 8x of the haploid kmer coverage).
+This script estimates the size, heterozygosity, and repetitive fraction of the genome. By inspecting the fitted model you can determine the location of the smallest peak after the error tail. Then, you can decide the low end cutoff below which all kmers will be discarded as errors (cca 1/2 of the haploid kmer coverage), and the high end cutoff above which all kmers will be discarded (cca 8x of the haploid kmer coverage).
 
 ## Obvious near future
 
-There is one amazing thing we can potentially do with smudges (not implemented yet). We could use smudges to quantify error in the genome assembly. The arch nemesis of variant calling is missmapping mostly because of collapsed paralogs or separately assembled alleles. We can not fix those mistakes, but we can quantify them.
+One important potential feature of smudgeplots (not implemented yet) is to quantify error in the genome assembly. As we know, the arch nemesis of variant calling is missmapping mostly because of collapsed paralogs or separately assembled alleles. Smudgeplots can be used to quantify such mistakes.
 
-Imagine you have diploid organism and supposedly haploid assembly. If we extract kmer pairs with inferred four genomic copies, we expect to find them exactly twice (twice because haplotypes are expected to be collapsed). Therefore we can quantify what is the proportion of four-copy heterozygous kmers was assembled in corrected copy number. Analogically we can extract heterozygous kmers in two copies (those that should be collapsed into one sequence in the assembly) and map them to genome. Those that will be identified two
+For example, imagine you have a diploid organism and a supposedly haploid assembly. If you extract kmer pairs with inferred four genomic copies, you would expect to find them exactly twice (because the haplotypes are expected to be collapsed). Therefore you can quantify the proportion of four-copy heterozygous kmers was assembled in corrected copy number. Analogically we can extract heterozygous kmers in two copies (those that should be collapsed into one sequence in the assembly) and map them to genome. Those that will be identified two
 
 ## Contributions
 
-In file [DEVELOPMENT.md](playground/DEVELOPMENT.md) there are some development notes. Directory [playground](playground) contains some snippets, attempts and stuff that some of us at some point wanted to store.
+The file [DEVELOPMENT.md](playground/DEVELOPMENT.md) contains some development notes. The directory [playground](playground) contains some snippets, attempts, and other items of interest.
 
 TODO
 
@@ -129,4 +148,4 @@ TODO GPL3? MIT? CC-0?
 
 ## Acknowledgements
 
-This [blogpost](http://www.everydayanalytics.ca/2014/09/5-ways-to-do-2d-histograms-in-r.html) by Myles Harrison have largely inspired visual of smudgeplots (including colour theme in fact).
+This [blogpost](http://www.everydayanalytics.ca/2014/09/5-ways-to-do-2d-histograms-in-r.html) by Myles Harrison has largely inspired the visual output of smudgeplots (including the color theme).
