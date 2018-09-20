@@ -102,7 +102,7 @@ peak_sizes$ploidy <- sapply(peak_sizes$structure, nchar)
 
 to_filter <- peak_sizes$ploidy == 1
 if( any(to_filter) ){
-    smudge_warn(args$output, paste(sum(to_filter), "peaks of kmer pairs detected with coverage < (1n_coverage * 2) =", round(n * 2, 1)))
+    smudge_warn(args$output, paste(sum(to_filter), "peaks of kmer pairs detected with coverage < (1n_coverage * 2) =", round(smudge_summary$n * 2, 1)))
     tab_to_print <- peak_sizes[to_filter,c(2,3,8,9)]
     tab_to_print <- round(tab_to_print, 2)
     colnames(tab_to_print) <- c('kmers_in_peak[#]', 'kmers_in_peak[proportion]', 'summit B / (A + B)', 'summit A + B')
