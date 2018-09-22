@@ -66,25 +66,41 @@ draft_n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_subset_est, args$n_c
 ymax <- min(10*draft_n, max(total_pair_cov))
 ymin <- min(total_pair_cov) - 1
 
-smudge_container <- get_smudge_container(minor_variant_rel_cov, total_pair_cov,
-                                         .nbins = args$nbins, .ylim = c(ymin, ymax))
-
 smudge_warn(args$output, "\n#############")
 smudge_warn(args$output, "## SUMMARY ##")
 smudge_warn(args$output, "#############")
 
-peak_points <- peak_agregation(smudge_container)
-peak_sizes <- get_peak_summary(peak_points, smudge_container, 0.02)
-smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov)
+dulpicit_structures <- T
+while( dulpicit_structures ){
+    smudge_container <- get_smudge_container(minor_variant_rel_cov, total_pair_cov,
+                                             .nbins = args$nbins, .ylim = c(ymin, ymax))
 
-smudge_summary$n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_peak_est, args$n_cov)
+    peak_points <- peak_agregation(smudge_container)
+    peak_sizes <- get_peak_summary(peak_points, smudge_container, 0.02)
+    smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov)
 
-# if the organism is completely homozygous, all the detected kmer pairs are corresponding to paralogs
-# therefore ther inference will confuse AB peak to AABB peak etc.
-# that is recolvable just telling to guess half of the coverage instead
-if( args$homozygous ){
-    smudge_summary$n <- smudge_summary$n / 2
-    smudge_summary$n_subset_est <- smudge_summary$n_subset_est / 2
+    smudge_summary$n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_peak_est, args$n_cov)
+
+    # if the organism is completely homozygous, all the detected kmer pairs are corresponding to paralogs
+    # therefore ther inference will confuse AB peak to AABB peak etc.
+    # that is recolvable just telling to guess half of the coverage instead
+    if( args$homozygous ){
+        smudge_summary$n <- smudge_summary$n / 2
+        smudge_summary$n_subset_est <- smudge_summary$n_subset_est / 2
+    }
+
+    peak_sizes$structure <- apply(peak_sizes, 1,
+                                  function(x){ guess_genome_structure(x, smudge_summary$n)})
+
+    dulpicit_structures <- any(table(peak_sizes$structure) > 1)
+    if(dulpicit_structures){
+        if(args$nbins > 20){
+            args$nbins <- args$nbins - 5
+        } else {
+            args$nbins <- args$nbins - 2
+        }
+        smudge_warn(args$output, "detecting two smudges at the same positions, not enough data for this number of bins lowering number of bins to ", args$nbins)
+    }
 }
 
 if( L > (smudge_summary$n / 2) & !args$homozygous ){
@@ -95,8 +111,6 @@ if( L > (smudge_summary$n / 2) & !args$homozygous ){
     smudge_warn(args$output, "Another good way for verificaiton would be to compare it to GenomeScope estimate of haploid coverage")
 }
 
-peak_sizes$structure <- apply(peak_sizes, 1,
-                              function(x){ guess_genome_structure(x, smudge_summary$n)})
 peak_sizes$corrected_minor_variant_cov <- sapply(peak_sizes$structure, function(x){round(mean(unlist(strsplit(x, split = '')) == 'B'), 2)})
 peak_sizes$ploidy <- sapply(peak_sizes$structure, nchar)
 
@@ -111,6 +125,7 @@ if( any(to_filter) ){
 }
 
 peak_sizes$rel_size <- peak_sizes$rel_size / sum(peak_sizes$rel_size)
+peak_sizes <- peak_sizes[order(peak_sizes$rel_size, decreasing = T),]
 smudge_summary$peak_sizes <- peak_sizes
 smudge_summary$genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)]
 
@@ -118,6 +133,10 @@ smudge_summary$genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)
 # but theoretically one can imagine a species that si completely homozygous tetraploid
 if( args$homozygous ){
     smudge_summary$genome_ploidy <- smudge_summary$genome_ploidy / 2
+    if(!smudge_summary$genome_ploidy %in% c(2,4,6,8)){
+        smudge_warn(args$output, "Guessing really strange ploidy", smudge_summary$genome_ploidy, "perhaps there is not enough coverage for a good inference.")
+        smudge_warn(args$output, "You can trust the plot, but guessed ploidy or peak detection might be completely off.")
+    }
 }
 
 generate_summary(args, smudge_summary)

@@ -15,6 +15,7 @@ generate_summary <- function(.args, .smudge_summary){
     smudge_summary(.args$output, "* Estimated ploidy:", .smudge_summary$genome_ploidy)
 
     for_sure_heterozygous <- sapply(.smudge_summary$peak_sizes$structure, function(x){sum(unlist(strsplit(x, split = '')) == 'B') == 1})
+    # THIS LINE
     minimal_number_of_heterozygous_loci <- ceiling(sum(.smudge_summary$peak_sizes$abs_size[for_sure_heterozygous]) / .args$kmer_size)
 
     smudge_summary(.args$output, "* Minimal number of heterozygous loci:", minimal_number_of_heterozygous_loci)
