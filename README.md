@@ -1,6 +1,6 @@
 # Smudgeplot
 
-This tool extracts heterozygous kmer pairs from kmer dump files (from jellyfish or KMC) and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovA/(CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc. It's a work in progress but already provides great insights.
+This tool extracts heterozygous kmer pairs from kmer dump files (from jellyfish or KMC) and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovA / (CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc. It's a work in progress but already provides great insights.
 
 Smudgeplots are computed from raw/trimmed reads and show the haplotype structure using heterozygous kmer pairs. For example:
 
@@ -49,7 +49,9 @@ If the installation procedure does not work, if you encounter any other problem,
 
 ## Usage
 
-Right now the workflow is automatic, but it's not fool-proof. It requires some decisions. The first step is to run [jellyfish](https://github.com/gmarcais/Jellyfish) or [KMC](https://github.com/refresh-bio/KMC) and [GenomeScope](https://github.com/schatzlab/genomescope).
+The input is a set of whole genome sequencing reads, the more coverage the better. The method is designed to process big datasets, don't hesitate to pull all single-end/pair-end libraries together.
+
+Right now the workflow is automatic, but it's not fool-proof. It requires some decisions. The first step is to run [jellyfish](https://github.com/gmarcais/Jellyfish) or [KMC](https://github.com/refresh-bio/KMC) and optionally also [GenomeScope](https://github.com/schatzlab/genomescope).
 
 If using jellyfish, give jellyfish all the files with trimmed reads to calculate kmer frequencies and then generate a histogram of kmers:
 
@@ -66,11 +68,13 @@ ls *.fastq > FILES
 kmc -k21 -m64 -ci1 -cs10000 @FILES kmer_counts tmp
 kmc_tools transform kmer_counts histogram kmer_k21.hist
 ```
+
 where `-k` is the kmer length, `-m` is the max amount of RAM to use in GB (1 to 1024), `-ci<value>` excludes kmers occurring less than \<value\> times, `-cs` is the maximum value of a counter, `FILES` is a file name with a list of input files, `kmer_counts` is the output file name prefix, and `tmp` is a temporary directory.
 
 The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using the script `kmer_cov_cutoff.R <kmer.hist> <L/U>`. Then, extract kmers in the coverage range from `L` to `U` using `Jellyfish` or `KMC` and pipe them directly to the python script `hetkmers.py` to compute the set of heterozygous kmers.
 
 If using jellyfish
+
 ```
 L=$(kmer_cov_cutoff.R kmer_k21.hist L)
 U=$(kmer_cov_cutoff.R kmer_k21.hist U)
@@ -79,6 +83,7 @@ jellyfish dump -c -L $L -U $U kmer_counts.jf | hetkmers.py -k 21 -t 8 -o kmer_pa
 ```
 
 If using KMC
+
 ```
 L=$(kmer_cov_cutoff.R kmer_k21.hist L)
 U=$(kmer_cov_cutoff.R kmer_k21.hist U)

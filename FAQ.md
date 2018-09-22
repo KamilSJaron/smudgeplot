@@ -23,11 +23,11 @@ Yes, because we search for unique pairs, if the pair comes from three haplotypes
 
 This could happen, but under slightly different circumstances. Only if one haplotype would be very diverged and the genome would be ABC (where AB are similar, C is distant), then we would not be able to identify C as the corresponding haplotype and smudgeplot would indeed look like diploid (because the only kmer pairs one SNP away from each other would be kmers heterozygous kmers between A and B). If all thee haplotypes are evenly distant but still close than AAB smudge will be mixture of genomic positions where 1. 2. haplotypes are the same and 3. has a SNP, 1. 3. are the same and 2. is different and 2. 3. are same and 1. is different. Smudgeplots are not phasing haplotypes, so we can not make strong claims about haplotype divergence for triploids (although I am trying to make some guesses).
 
-##### What are the assumptions of smudgeplots?
+##### 5. What are the assumptions of smudgeplots?
 
 We require:
 - single individual (or clonal population)
-- not crazy high coverage variance (this can be compensated with genome coverage, but for instance a 100x genome with whole genome amplification was not enough)
+- not too high coverage variance (this can be compensated with genome coverage, but for instance a 100x genome with whole genome amplification was not enough)
 - low sequencing error rates (<1%)
 
 However, the method should be robust to:
@@ -37,3 +37,12 @@ However, the method should be robust to:
 - presence of adapters (because they are high frequency kmers, but this was not verified yet)
 
 And mainly we do NOT use reference genome, de-novo genome assembly, mapping or base quality scores for the inference. Therefore we are free of all the downstream biases that are coming from the steps above.
+
+##### 6. Can I use mate-pairs?
+
+Theoretically you can. If you have sufficient coverage from pair-end / single end reads (>50x), I would probably try without mate pairs first.
+
+The reason is that mate pair library is constructed using circularization of fragments using linker adapters and subsequent fragmentation and pair-end sequencing.
+This process is way more complicated than simple pair-end sequencing and results in lot of adapters sequenced. For the same reason mate-pairs are rarely used for genome assembly (they are rather used for scaffolding).
+
+However, we have never tried it with mate pairs. Maybe my worry is not in place and maybe it will work just find. If you try, definitely let me know :-).
