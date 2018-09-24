@@ -29,7 +29,7 @@ parser$add_argument("-k", "--kmer_size", type = "integer", default = 21,
                     help="The kmer size used to calculate kmer spectra [default 21]")
 
 args <- parser$parse_args()
-version_message <- "Smudgeplot v0.1.0"
+version_message <- "Smudgeplot v0.1.1"
 
 if ( args$version ) {
     stop(version_message, call.=FALSE)

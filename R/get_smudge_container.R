@@ -25,7 +25,8 @@ get_smudge_container <- function(.minor_variant_rel_cov, .total_pair_cov,
     smudge_container$dens[cbind(freq[,1], freq[,2])] <- freq[,3]
 
     smudge_container$y <- smudge_container$y[1:.nbins]
-    smudge_container$z <- sqrt(smudge_container$dens)
+    smudge_container$z <- log10(smudge_container$dens)
+    smudge_container$z[is.infinite(smudge_container$z)] <- 0
 
     return(smudge_container)
 }

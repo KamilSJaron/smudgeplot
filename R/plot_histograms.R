@@ -15,7 +15,7 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax, .smu
     top <- max(h1$counts, h2$counts)
 
     if( is.na(.col) ){
-        .col <- brewer.pal(11,'Spectral')[2]
+        .col <- rgb(0.8352, 0.2431, 0.3098)
     }
 
     # minor_variant_rel_cov HISTOGRAM - top

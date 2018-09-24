@@ -6,8 +6,6 @@
 #' @export
 
 get_default_col_ramp <- function(){
-    pal <- brewer.pal(11,'Spectral')
-    rf <- colorRampPalette(rev(pal[3:11]))
-    rf(32)
+    pal <- viridis(32)
 }
 

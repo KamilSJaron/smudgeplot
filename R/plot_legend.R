@@ -15,7 +15,7 @@ plot_legend <- function(.k, .colour_ramp, .sqrt_scale = T){
     kmer_max <- max(smudge_container$dens)
     if( .sqrt_scale == T ){
         for(i in 0:6){
-            text(0.75, i / 6, rounding((sqrt(kmer_max) * i / 6)^2), offset = 0)
+            text(0.75, i / 6, rounding(10^(log10(kmer_max) * i / 6)), offset = 0)
         }
     } else {
         for(i in 0:6){
