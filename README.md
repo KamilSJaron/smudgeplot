@@ -4,7 +4,7 @@ This tool extracts heterozygous kmer pairs from kmer dump files (from jellyfish 
 
 Smudgeplots are computed from raw/trimmed reads and show the haplotype structure using heterozygous kmer pairs. For example:
 
-![smudgeexample](https://user-images.githubusercontent.com/8181573/44874203-ac45d980-ac9a-11e8-9943-889acbba81cd.png)
+![smudgeexample](https://user-images.githubusercontent.com/8181573/45959760-f1032d00-c01a-11e8-8576-ff0512c33da9.png)
 
 Every haplotype structure has a unique smudge on the graph and the heat of the smudge indicates how frequently the haplotype structure is represented in the genome compared to the other structures. The image above is an ideal case, where the sequencing coverage is sufficient to beautifully separate all the smudges, providing very strong and clear evidence of triploidy.
 

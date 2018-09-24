@@ -148,7 +148,7 @@ smudge_warn(args$output, "##########")
 fig_title <- ifelse(length(args$title) == 0, NA, args$title[1])
 colour_ramp <- get_default_col_ramp() # get the default colour ramp (Spectral, 11)
 
-png(paste0(args$output,'_smudgeplot.png'))
+png(paste0(args$output,'_smudgeplot_log10.png'))
 
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
@@ -159,5 +159,22 @@ plot_histograms(minor_variant_rel_cov, total_pair_cov,
                 ymax, smudge_summary, args$nbins, fig_title)
 # 4 legend
 plot_legend(smudge_container, colour_ramp)
+
+dev.off()
+
+# replace the log transformed values by non-transformed
+smudge_container$z <- smudge_container$dens
+
+png(paste0(args$output,'_smudgeplot.png'))
+
+layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
+# 1 smudge plot
+plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
+plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T)
+# 2,3 hist
+plot_histograms(minor_variant_rel_cov, total_pair_cov,
+                ymax, smudge_summary, args$nbins, fig_title)
+# 4 legend
+plot_legend(smudge_container, colour_ramp, F)
 
 dev.off()
