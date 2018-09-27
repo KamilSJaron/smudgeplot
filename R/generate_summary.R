@@ -27,7 +27,7 @@ generate_summary <- function(.args, .smudge_summary){
     smudge_summary(.args$output, paste0(capture.output(tab_to_print), collapse = "\n"))
 
     carried_by_paralogs <- sum(.smudge_summary$peak_sizes$rel_size[.smudge_summary$peak_sizes$ploidy > .smudge_summary$genome_ploidy])
-    smudge_summary(.args$output, "* Proportion of heterozygosity carried by paralogs:", carried_by_paralogs)
+    smudge_summary(.args$output, "* Proportion of heterozygosity carried by paralogs:", round(carried_by_paralogs, 3))
 
     smudge_summary(.args$output, "* Summary of all detected peaks (table)")
     tab_to_print <- .smudge_summary$peak_sizes[,c(11,2,3,8,9)]

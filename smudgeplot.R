@@ -23,8 +23,8 @@ parser$add_argument("-n", "--n_cov", type = "integer",
                     help="the haploid coverage of the sequencing data [default inference from data]")
 parser$add_argument("-L", "--low_cutoff", type = "integer",
                     help="the lower boundary used when dumping kmers from jellyfish [default min(total_pair_cov) / 2]")
-parser$add_argument("-nbins", type = "integer", default = 40,
-                    help="the number of nbins used for smudgeplot matrix (nbins x nbins) [default 40]")
+parser$add_argument("-nbins", type = "integer",
+                    help="the number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]")
 parser$add_argument("-k", "--kmer_size", type = "integer", default = 21,
                     help="The kmer size used to calculate kmer spectra [default 21]")
 
@@ -37,12 +37,22 @@ if ( args$version ) {
     smudge_warn(args$output, "running", version_message)
 }
 
+iterative_nbins <- F
+if( is.null(args$nbins) ){
+    args$nbins <- 40
+    iterative_nbins <- T
+}
+
 # for easier manipulation I store estimated things in a list
 smudge_summary <- list()
 
 smudge_warn(args$output, "\n######################")
 smudge_warn(args$output, "## INPUT PROCESSING ##")
 smudge_warn(args$output, "######################")
+
+if ( !file.exists(args$input) ) {
+    stop("The input file not found. Please use --help to get help", call.=FALSE)
+}
 
 cov <- read.table(args$input)
 
@@ -71,7 +81,7 @@ smudge_warn(args$output, "## SUMMARY ##")
 smudge_warn(args$output, "#############")
 
 dulpicit_structures <- T
-while( dulpicit_structures ){
+repeat {
     smudge_container <- get_smudge_container(minor_variant_rel_cov, total_pair_cov,
                                              .nbins = args$nbins, .ylim = c(ymin, ymax))
 
@@ -93,13 +103,16 @@ while( dulpicit_structures ){
                                   function(x){ guess_genome_structure(x, smudge_summary$n)})
 
     dulpicit_structures <- any(table(peak_sizes$structure) > 1)
-    if(dulpicit_structures){
+    # if there are more smudges on the same location & if user have not specified nbins
+    if(dulpicit_structures & iterative_nbins){
         if(args$nbins > 20){
             args$nbins <- args$nbins - 5
         } else {
             args$nbins <- args$nbins - 2
         }
         smudge_warn(args$output, "detecting two smudges at the same positions, not enough data for this number of bins lowering number of bins to ", args$nbins)
+    } else {
+        break
     }
 }
 
@@ -107,7 +120,7 @@ if( L > (smudge_summary$n / 2) & !args$homozygous ){
     smudge_warn(args$output, "!! Careful, your coverage filter on the lower end (L = ", L,
                 ") is higher than half of the 1n coverage estimate ( 1n / 2 = ", round(smudge_summary$n / 2, 2))
     smudge_warn(args$output, "If the real 1n coverage is half of your estimate you would not picked it up due to the filtering.")
-    smudge_warn(args$output, "Consider reruning the analysis with lover L as well (sothing like (1n / 2) - 5 should do the job)")
+    smudge_warn(args$output, "Consider reruning the analysis with lover L as well (something like (1n / 2) - 5 should do the job)")
     smudge_warn(args$output, "Another good way for verificaiton would be to compare it to GenomeScope estimate of haploid coverage")
 }
 

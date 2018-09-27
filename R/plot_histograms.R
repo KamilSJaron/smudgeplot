@@ -44,8 +44,14 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax, .smu
     legend('bottomright', bty = 'n', paste('1n = ', round(.smudge_summary$n)), cex = .cex - 0.1)
 
     .peak_sizes <- .smudge_summary$peak_sizes[,c(11,3)]
+    colnames(.peak_sizes) <- c('peak', 'size')
+    to_remove <- sapply(.peak_sizes[,1], nchar) > 6
+    .peak_sizes <- .peak_sizes[!to_remove, ]
+    if( any(to_remove) ){
+        .peak_sizes <- rbind(.peak_sizes, data.frame(peak = 'others', 'size' = 1 - sum(.peak_sizes[,2])) )
+    }
     if(! any(is.na(.peak_sizes))){
-        legend('topleft', bty = 'n', .peak_sizes[,1], cex = 1.3)
-        legend('topright', bty = 'n', legend = round(.peak_sizes[,2], 2), cex = .cex - 0.1)
+        legend('topleft', bty = 'n', .peak_sizes[,1], cex = .cex - 0.2)
+        legend('topright', bty = 'n', legend = round(.peak_sizes[,2], 2), cex = .cex - 0.2)
     }
 }

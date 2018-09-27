@@ -8,7 +8,8 @@
 plot_legend <- function(.k, .colour_ramp, .log_scale = T){
     par(mar=c(0,0,2,1))
     plot.new()
-    title('kmers pairs')
+    print_title <- ifelse(.log_scale, 'log kmers pairs', 'kmers pairs')
+    title(print_title)
     for(i in 1:32){
         rect(0,(i - 0.01) / 33, 0.5, (i + 0.99) / 33, col = .colour_ramp[i])
     }
