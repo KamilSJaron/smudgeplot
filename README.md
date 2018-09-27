@@ -138,20 +138,25 @@ This script estimates the size, heterozygosity, and repetitive fraction of the g
 
 ## Obvious near future
 
-One important potential feature of smudgeplots (not implemented yet) is to quantify error in the genome assembly. As we know, the arch nemesis of variant calling is missmapping mostly because of collapsed paralogs or separately assembled alleles. Smudgeplots can be used to quantify such mistakes.
+One important potential feature of smudgeplots (not implemented yet) is to quantify errors in a genome assembly. The arch nemesis of variant calling is missmapping mostly because of flaws of a genome assembly - collapsed paralogs or separately assembled alleles. Smudgeplot could be potentially used to quantify these mistakes.
 
-For example, imagine you have a diploid organism and a supposedly haploid assembly. If you extract kmer pairs with inferred four genomic copies, you would expect to find them exactly twice (because the haplotypes are expected to be collapsed). Therefore you can quantify the proportion of four-copy heterozygous kmers was assembled in corrected copy number. Analogically we can extract heterozygous kmers in two copies (those that should be collapsed into one sequence in the assembly) and map them to genome. Those that will be identified two
+For example, imagine you have a diploid organism and a supposedly haploid assembly. If you extract kmer pairs with inferred four genomic copies, you would expect to find them exactly twice (because the haplotypes are expected to be collapsed). Therefore you can quantify the proportion of four-copy heterozygous kmers was assembled in corrected copy number. Analogically we can extract heterozygous kmers in two copies (those that should be collapsed into one sequence in the assembly) and map them to genome. Those that will be identified two copies are separately assembled alleles, those with only one matching assembly region are those assembled correctly.
+
+There will be always some errors in a genome assembly, the best we can do is to try to quantify it!
+
+## Computational requirements
+
+The memory required scale linearly with the number of kmers and it is approximately 15x higher than the size of the dump file
+(for 20Gb dump file you will need approx ~250Gb of RAM).
+
+We have not calculated the complexity of the algorithm yet. Usually for smaller genomes (<250Gb) it's couple of hours.
 
 ## Contributions
 
 The file [DEVELOPMENT.md](playground/DEVELOPMENT.md) contains some development notes. The directory [playground](playground) contains some snippets, attempts, and other items of interest.
 
-TODO
-
-## License
-
-TODO GPL3? MIT? CC-0?
+This is definitely an open project, but we have not decided about how to recognize contributions yet.
 
 ## Acknowledgements
 
-This [blogpost](http://www.everydayanalytics.ca/2014/09/5-ways-to-do-2d-histograms-in-r.html) by Myles Harrison has largely inspired the visual output of smudgeplots (including the color theme).
+This [blogpost](http://www.everydayanalytics.ca/2014/09/5-ways-to-do-2d-histograms-in-r.html) by Myles Harrison has largely inspired the visual output of smudgeplots. The colourblind friendly colour theme was suggested by @ggrimes. Greatful for helpful comments of beta testers and pre-release chatters!
