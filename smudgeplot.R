@@ -13,6 +13,8 @@ parser$add_argument("-v", "--version", action="store_true", default = FALSE,
                     help="print the version and exit")
 parser$add_argument("--homozygous", action="store_true", default = F,
                     help="Assume no heterozygosity in the genome - plotting a paralog structure; [default FALSE]")
+parser$add_argument("--no_quantile_filt", action="store_true", default = F,
+                    help="Remove kmer pairs with coverage over 0.99 quantile ; [default TRUE]")
 parser$add_argument("-i", "--input", default = "coverages_2.tsv",
                     help="name of the input tsv file with covarages [default \"coverages_2.tsv\"]")
 parser$add_argument("-o", "--output", default = "smudgeplot",
@@ -29,7 +31,7 @@ parser$add_argument("-k", "--kmer_size", type = "integer", default = 21,
                     help="The kmer size used to calculate kmer spectra [default 21]")
 
 args <- parser$parse_args()
-version_message <- "Smudgeplot v0.1.1"
+version_message <- "Smudgeplot v0.1.2"
 
 if ( args$version ) {
     stop(version_message, call.=FALSE)
@@ -61,12 +63,14 @@ minor_variant_rel_cov <- cov$V1 / (cov$V1 + cov$V2)
 # total covarate of the kmer pair
 total_pair_cov <- cov$V1 + cov$V2
 
-# quantile filtering (remove top 1%, it's not really informative)
-high_cov_filt <- quantile(total_pair_cov, 0.99) > total_pair_cov
-smudge_warn(args$output, "Removing", sum(!high_cov_filt), "kmer pairs with coverage higher than",
-           quantile(total_pair_cov, 0.99), "(0.99 quantile)")
-minor_variant_rel_cov <- minor_variant_rel_cov[high_cov_filt]
-total_pair_cov <- total_pair_cov[high_cov_filt]
+if ( ! args$no_quantile_filt ){
+    # quantile filtering (remove top 1%, it's not really informative)
+    high_cov_filt <- quantile(total_pair_cov, 0.99) > total_pair_cov
+    smudge_warn(args$output, "Removing", sum(!high_cov_filt), "kmer pairs with coverage higher than",
+               quantile(total_pair_cov, 0.99), "(0.99 quantile)")
+    minor_variant_rel_cov <- minor_variant_rel_cov[high_cov_filt]
+    total_pair_cov <- total_pair_cov[high_cov_filt]
+}
 
 L <- ifelse( length(args$L) == 0, min(total_pair_cov) / 2, args$L)
 smudge_summary$n_subset_est <- round(estimate_1n_coverage_1d_subsets(total_pair_cov, minor_variant_rel_cov), 1)
