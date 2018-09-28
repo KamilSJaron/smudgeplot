@@ -19,8 +19,8 @@ Required R libraries are installed together with the R library `smudgeplot`.
 Get this repository
 
 ```
-git clone https://github.com/tbenavi1/sibling_kmers
-cd sibling_kmers
+git clone https://github.com/tbenavi1/smudgeplot
+cd smudgeplot
 ```
 
 Install the R package `smudgeplot`
@@ -45,7 +45,7 @@ echo "export PATH=\$PATH:$(pwd)" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-If the installation procedure does not work, if you encounter any other problem, or if you would like to get help with the interpretation of your smudgeplot, please open an [issue](https://github.com/tbenavi1/sibling_kmers/issues/new).
+If the installation procedure does not work, if you encounter any other problem, or if you would like to get help with the interpretation of your smudgeplot, please open an [issue](https://github.com/tbenavi1/smudgeplot/issues/new).
 
 ## Usage
 
