@@ -63,6 +63,8 @@ def worker(q, results, k):
       results.put(None)
       break
     results.put(get_one_away_pairs(kmer_index_family, k))
+  q.close()
+  results.close()
 
 ##############
 ### SCRIPT ###
@@ -140,6 +142,7 @@ if __name__=='__main__':
   for i in range(num_processes):
     q.put(None)
 
+  q.close()
   print('All index families added to queue.')
 
   #Save one_away_pairs to a tsv file, and keep track of which indices only occur once.
@@ -165,6 +168,7 @@ if __name__=='__main__':
   for p in processes:
     p.join()
 
+  results.close()
   print('Processes joined.')
 
   #Save families_2 and coverages_2 tsv files, which only include one_away_pairs that don't overlap any others.
