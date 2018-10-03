@@ -15,8 +15,8 @@ roundUpNice <- function(x, nice=c(1,2,4,5,6,8,10)) {
     10^floor(log10(x)) * nice[[which(x <= 10^floor(log10(x)) * nice)[[1]]]]
 }
 
-# U is representing 99.5% of the kmers in the dataset
-U <- roundUpNice(min(which(cumsum(kmer_hist) / sum(kmer_hist) > 0.995)))
+# U is representing 99.8% of the kmers in the dataset
+U <- roundUpNice(min(which(cumsum(as.numeric(kmer_hist)) / sum(as.numeric(kmer_hist)) > 0.998)))
 
 # find local minima
 selected_points <- which(diff(sign(diff(kmer_hist))) == 2)

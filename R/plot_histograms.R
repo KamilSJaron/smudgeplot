@@ -32,7 +32,7 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax, .smu
                            p5 = 'pentaploid',
                            p6 = 'hexaploid',
                            p7 = 'heptaploid',
-                           p8 = 'oktatploid')
+                           p8 = 'octoploid')
 
     if(!(is.na(.smudge_summary$genome_ploidy))){
         mtext(paste('estimated', ploidytext), side=3, adj=0.05, line=-5, cex = .cex - 0.2)
