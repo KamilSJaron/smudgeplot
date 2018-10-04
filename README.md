@@ -66,10 +66,10 @@ If using KMC, give KMC all the files with trimmed reads to calculate kmer freque
 mkdir tmp
 ls *.fastq > FILES
 kmc -k21 -m64 -ci1 -cs10000 @FILES kmer_counts tmp
-kmc_tools transform kmer_counts histogram kmer_k21.hist
+kmc_tools transform kmer_counts histogram kmer_k21.hist -cx10000
 ```
 
-where `-k` is the kmer length, `-m` is the max amount of RAM to use in GB (1 to 1024), `-ci<value>` excludes kmers occurring less than \<value\> times, `-cs` is the maximum value of a counter, `FILES` is a file name with a list of input files, `kmer_counts` is the output file name prefix, and `tmp` is a temporary directory.
+where `-k` is the kmer length, `-m` is the max amount of RAM to use in GB (1 to 1024), `-ci<value>` excludes kmers occurring less than \<value\> times, `-cs` is the maximum value of a counter, `FILES` is a file name with a list of input files, `kmer_counts` is the output file name prefix, `tmp` is a temporary directory, and `-cx<value>` is the maximum value of counter to be stored in the histogram file.
 
 The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using the script `kmer_cov_cutoff.R <kmer.hist> <L/U>`. Then, extract kmers in the coverage range from `L` to `U` using `Jellyfish` or `KMC` and pipe them directly to the python script `hetkmers.py` to compute the set of heterozygous kmers.
 
