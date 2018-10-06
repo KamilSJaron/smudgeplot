@@ -147,9 +147,11 @@ There will be always some errors in a genome assembly, the best we can do is to 
 ## Computational requirements
 
 The memory required scale linearly with the number of kmers and it is approximately 15x higher than the size of the dump file
-(for 20Gb dump file you will need approx ~250Gb of RAM).
+(for 20Gb dump file you will need approx ~250Gb of RAM). Alternatively, you can estimate requerements for RAM by number of dumped kmers. It's approximately 350x higher than number of kmers in the dump file. If your file has too many kmers you can decrease computational requirement by reruning the kmer spectra with a smaller kmer size or by more strict filtering of the dumped kmers (higher L and smaller U).
 
-We have not calculated the complexity of the algorithm yet. Usually for smaller genomes (<250Gb) it's couple of hours.
+We have not calculated the complexity of the algorithm yet. Usually for smaller genomes (<250Gb) it's couple of hours, the longest computation took bit more than one day.
+
+The biggest genome we analyzed so far was a triplod genome with a haploid size 3.5Gbp. We have processed 1.5e9 genomic kmers and it have required 520GB of memory and two days of computation on eight cores.
 
 ## Contributions
 
