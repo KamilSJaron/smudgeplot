@@ -24,7 +24,7 @@ parser$add_argument("-q", "--quantile_filt", type = "double",
 parser$add_argument("-n", "--n_cov", type = "double",
                     help="the haploid coverage of the sequencing data [default inference from data]")
 parser$add_argument("-L", "--low_cutoff", type = "integer",
-                    help="the lower boundary used when dumping kmers from jellyfish [default min(total_pair_cov) / 2]")
+                    help="the lower boundary used when dumping kmers [default min(total_pair_cov) / 2]")
 parser$add_argument("-nbins", type = "integer",
                     help="the number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]")
 parser$add_argument("-k", "--kmer_size", type = "integer", default = 21,
