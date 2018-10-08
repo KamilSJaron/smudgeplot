@@ -13,15 +13,15 @@ parser$add_argument("-v", "--version", action="store_true", default = FALSE,
                     help="print the version and exit")
 parser$add_argument("--homozygous", action="store_true", default = F,
                     help="Assume no heterozygosity in the genome - plotting a paralog structure; [default FALSE]")
-parser$add_argument("--no_quantile_filt", action="store_true", default = F,
-                    help="Remove kmer pairs with coverage over 0.99 quantile ; [default TRUE]")
 parser$add_argument("-i", "--input", default = "coverages_2.tsv",
                     help="name of the input tsv file with covarages [default \"coverages_2.tsv\"]")
 parser$add_argument("-o", "--output", default = "smudgeplot",
                     help="name pattern used for the output files (OUTPUT_smudgeplot.png, OUTPUT_summary.txt, OUTPUT_warrnings.txt) [default \"smudgeplot\"]")
 parser$add_argument("-t", "--title",
                     help="name printed at the top of the smudgeplot [default none]")
-parser$add_argument("-n", "--n_cov", type = "integer",
+parser$add_argument("-q", "--quantile_filt", type = "double",
+                    help="Remove kmer pairs with coverage over the specified quantile; [default none]")
+parser$add_argument("-n", "--n_cov", type = "double",
                     help="the haploid coverage of the sequencing data [default inference from data]")
 parser$add_argument("-L", "--low_cutoff", type = "integer",
                     help="the lower boundary used when dumping kmers from jellyfish [default min(total_pair_cov) / 2]")
@@ -31,7 +31,7 @@ parser$add_argument("-k", "--kmer_size", type = "integer", default = 21,
                     help="The kmer size used to calculate kmer spectra [default 21]")
 
 args <- parser$parse_args()
-version_message <- "Smudgeplot v0.1.2"
+version_message <- "Smudgeplot v0.1.3"
 
 if ( args$version ) {
     stop(version_message, call.=FALSE)
@@ -63,11 +63,11 @@ minor_variant_rel_cov <- cov$V1 / (cov$V1 + cov$V2)
 # total covarate of the kmer pair
 total_pair_cov <- cov$V1 + cov$V2
 
-if ( ! args$no_quantile_filt ){
+if ( !is.null(args$q) ){
     # quantile filtering (remove top 1%, it's not really informative)
-    high_cov_filt <- quantile(total_pair_cov, 0.99) > total_pair_cov
+    high_cov_filt <- quantile(total_pair_cov, args$q) > total_pair_cov
     smudge_warn(args$output, "Removing", sum(!high_cov_filt), "kmer pairs with coverage higher than",
-               quantile(total_pair_cov, 0.99), "(0.99 quantile)")
+               quantile(total_pair_cov, args$q), paste0("(", args$q, " quantile)"))
     minor_variant_rel_cov <- minor_variant_rel_cov[high_cov_filt]
     total_pair_cov <- total_pair_cov[high_cov_filt]
 }
