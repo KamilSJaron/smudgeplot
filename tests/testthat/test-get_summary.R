@@ -26,8 +26,9 @@ test_that("peak agregation creates more than one smudge", {
 )
 
 peak_sizes <- get_peak_summary(peak_points, smudge_container, 0.05)
+the_smallest_n <- get_trinoploid_1n_est(peak_sizes)
 
-n <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov)
+n <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov, the_smallest_n)
 
 test_that("test that polished estimate of coverage for mflo makes sense", {
         expect_true(abs(n - 207) < 10)

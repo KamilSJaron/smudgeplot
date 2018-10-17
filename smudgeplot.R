@@ -91,7 +91,9 @@ repeat {
 
     peak_points <- peak_agregation(smudge_container)
     peak_sizes <- get_peak_summary(peak_points, smudge_container, 0.02)
-    smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov)
+
+    the_smallest_n <- min(get_trinoploid_1n_est(peak_sizes), draft_n)
+    smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov, the_smallest_n)
 
     smudge_summary$n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_peak_est, args$n_cov)
 
