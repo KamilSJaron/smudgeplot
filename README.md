@@ -57,7 +57,7 @@ Give KMC all the files with trimmed reads to calculate kmer frequencies and then
 
 ```
 mkdir tmp
-ls *.fastq > FILES
+ls *.fastq.gz > FILES
 kmc -k21 -m64 -ci1 -cs10000 @FILES kmer_counts tmp
 kmc_tools transform kmer_counts histogram kmer_k21.hist -cx10000
 ```
@@ -77,16 +77,16 @@ hetkmers.py -k 21 -t 8 -o kmer_pairs < kmer_k21.dump
 After using KMC, generate the smudgeplot using the coverages of the kmer pairs (`*_coverages_2.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data and compare it afterwards. If GenomeScope correctly identifies the peak of haploid kmers, the expected positions of the haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider adjusting the GenomeScope model and redoing the plot with a better estimate of the haploid coverage. Something like
 
 ```
-sudgeplot.R -i kmer_pairs_coverages_2.tsv
+smudgeplot.R -i kmer_pairs_coverages_2.tsv
 ```
 
 will generate a basic smugeplot, the full usage of `smudgeplot.R` script is
 
 ```
-usage: /usr/local/bin/smudgeplot.R [-h] [-v] [--homozygous] [-i INPUT]
-                                   [-o OUTPUT] [-t TITLE] [-q QUANTILE_FILT]
-                                   [-n N_COV] [-L LOW_CUTOFF] [-nbins NBINS]
-                                   [-k KMER_SIZE]
+usage: smudgeplot.R [-h] [-v] [--homozygous] [-i INPUT]
+                    [-o OUTPUT] [-t TITLE] [-q QUANTILE_FILT]
+                    [-n N_COV] [-L LOW_CUTOFF] [-nbins NBINS]
+                    [-k KMER_SIZE]
 
 optional arguments:
   -h, --help            show this help message and exit
