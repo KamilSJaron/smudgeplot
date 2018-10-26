@@ -1,12 +1,12 @@
 Package: smudgeplot
 Type: Package
 Title:
-Version: 0.23
+Version: 0.1.3
 Date: 2016-05-31
 Author: Kamil S. Jaron <kamiljaron@gmail.com>
 Maintainer: Kamil S. Jaron <kamiljaron@gmail.com>
 Description: The package to plot smudgeplot
-Depends: viridis,argparse
+Depends: R (>= 3.2.0), viridis, argparse
 License: GPL-3
 LazyLoad: yes
 RoxygenNote: 6.0.1
