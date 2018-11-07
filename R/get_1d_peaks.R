@@ -6,6 +6,9 @@
 #' @export
 
 get_1d_peaks <- function(.total_pair_cov, .subset, .num_of_peaks = 3, .adjust = 10, .peak_frame = data.frame(), .depth = 1){
+    if (sum(.subset) < 2){
+        return(data.frame(cov = NA, height = NA))
+    }
     if (nrow(.peak_frame) < .num_of_peaks & .depth < 11){
         d <- density(.total_pair_cov[.subset], adjust = .adjust) # returns the density data
         # plot(d)

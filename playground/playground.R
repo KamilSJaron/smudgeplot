@@ -19,7 +19,7 @@ args$homozygous <- F
 
 i <- 7
 n <- NA
-cov <- read.table(files[i])
+cov <- read.table(args$input)
 
 # run bits of smudgeplot.R to get k, and peak summary
 

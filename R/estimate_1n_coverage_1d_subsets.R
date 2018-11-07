@@ -25,5 +25,5 @@ estimate_1n_coverage_1d_subsets <- function(.total_pair_cov, .minor_variant_rel_
     peak_frame_5$cov <- peak_frame_5$cov / (5 * round(peak_frame_5$cov / peak_frame_5$cov[1]))
 
     peak_frame <- rbind(peak_frame_2, peak_frame_3, peak_frame_4, peak_frame_5)
-    weighted.mean(peak_frame$cov, peak_frame$height)
+    weighted.mean(peak_frame$cov, peak_frame$height, na.rm = T)
 }
