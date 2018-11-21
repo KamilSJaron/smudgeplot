@@ -6,7 +6,7 @@ Date: 2016-05-31
 Author: Kamil S. Jaron <kamiljaron@gmail.com>
 Maintainer: Kamil S. Jaron <kamiljaron@gmail.com>
 Description: The package to plot smudgeplot
-Depends: R (>= 3.3.2), viridis, argparse
+Depends: R (>= 3.3.1), viridis, argparse
 License: GPL-3
 LazyLoad: yes
 RoxygenNote: 6.0.1
