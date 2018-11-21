@@ -143,7 +143,7 @@ For example, imagine you have a diploid organism and a supposedly haploid assemb
 
 There will be always some errors in a genome assembly, the best we can do is to try to quantify it!
 
-## Computational requirements
+## Computational requirements
 
 The memory required scale linearly with the number of kmers and it is approximately 15x higher than the size of the dump file
 (for 20Gb dump file you will need approx ~250Gb of RAM). Alternatively, you can estimate requerements for RAM by number of dumped kmers. It's approximately 350x higher than number of kmers in the dump file. If your file has too many kmers you can decrease computational requirement by reruning the kmer spectra with a smaller kmer size or by more strict filtering of the dumped kmers (higher L and smaller U).
@@ -158,6 +158,6 @@ The file [DEVELOPMENT.md](playground/DEVELOPMENT.md) contains some development n
 
 This is definitely an open project, but we have not decided about how to recognize contributions yet.
 
-## Acknowledgements
+## Acknowledgements
 
-This [blogpost](http://www.everydayanalytics.ca/2014/09/5-ways-to-do-2d-histograms-in-r.html) by Myles Harrison has largely inspired the visual output of smudgeplots. The colourblind friendly colour theme was suggested by @ggrimes. Greatful for helpful comments of beta testers and pre-release chatters!
+This [blogpost](http://www.everydayanalytics.ca/2014/09/5-ways-to-do-2d-histograms-in-r.html) by Myles Harrison has largely inspired the visual output of smudgeplots. The colourblind friendly colour theme was suggested by @ggrimes. Grateful for helpful comments of beta testers and pre-release chatters!
