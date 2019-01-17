@@ -58,7 +58,8 @@ Give KMC all the files with trimmed reads to calculate kmer frequencies and then
 ```
 mkdir tmp
 ls *.fastq.gz > FILES
-kmc -k21 -m64 -ci1 -cs10000 @FILES kmer_counts tmp
+# kmer 21, 16 threats, 64G of memory, counting kmer coverages between 1 and 10000x
+kmc -k21 -t16 -m64 -ci1 -cs10000 @FILES kmer_counts tmp
 kmc_tools transform kmer_counts histogram kmer_k21.hist -cx10000
 ```
 
