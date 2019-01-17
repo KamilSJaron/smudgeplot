@@ -71,7 +71,7 @@ The next step is to extract genomic kmers using reasonable coverage thresholds. 
 L=$(kmer_cov_cutoff.R kmer_k21.hist L)
 U=$(kmer_cov_cutoff.R kmer_k21.hist U)
 echo $L $U # these need to be sane values like 30 800 or so
-kmc_dump -ci$L -cx$U kmer_counts kmer_k21.dump
+kmc_tools transform kmer_counts -ci$L -cx$U dump -s kmer_k21.dump
 hetkmers.py -k 21 -t 8 -o kmer_pairs < kmer_k21.dump
 ```
 
