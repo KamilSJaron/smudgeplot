@@ -78,15 +78,17 @@ def middle_one_away(args):
   file_one_away_pairs = open(output_pattern + '_one_away_pairs.tsv', 'w')
   file_coverages = open(output_pattern + '_coverages.tsv', 'w')
 
-  #Initialize dictionaries in which the key is a kmer_half (kmer_L or kmer_R respectively), and the value is a list of (other_kmer_half, index) pairs.
-  #kmer_L_to_index_family = defaultdict(list)
+  duplicated = set()
+  filtered = set()
+
+  #Initialize a dictionary in which the key is the right kmer_half (not including the middle nucleotide), and the value is a list of (index, coverage) tuples corresponding to kmers that have that particular right kmer_half.
   kmer_R_to_index_family = defaultdict(list)
 
   #Get the locations for the two halves of the kmer.
-  k_L = k // 2
+  k_middle = k // 2
   i_L_L = 0
-  i_L_R = k_L - 1
-  i_R_L = k_L
+  i_L_R = k_middle - 1
+  i_R_L = k_middle + 1
   i_R_R = k-1
 
   # Read each line of the input file in order to load the kmers and coverages and process the kmer halves.
@@ -95,21 +97,35 @@ def middle_one_away(args):
     kmer, coverage1 = line.split()
     coverage1 = int(coverage1)
 
-    #coverages.append(coverage)
     new_kmer_L = kmer[i_L_L:i_L_R+1]
-    kmer_R = kmer[i_R_L+1:i_R_R+1]
+    kmer_R = kmer[i_R_L:i_R_R+1]
     if new_kmer_L == current_kmer_L:
       if kmer_R in kmer_R_to_index_family:
-        for i2,coverage2 in kmer_R_to_index_family[kmer_R]:
-          if coverage2 < coverage1:
-            file_one_away_pairs.write(str(i2) + '\t' + str(i1) + '\n')
-            file_coverages.write(str(coverage2) + '\t' + str(coverage1) + '\n')
-          else:
-            file_one_away_pairs.write(str(i1) + '\t' + str(i2) + '\n')
-            file_coverages.write(str(coverage1) + '\t' + str(coverage2) + '\n')
+        if kmer_R in duplicated:
+          filtered.discard(kmer_R)
+        else:
+          duplicated.add(kmer_R)
+          filtered.add(kmer_R)
+#        for i2,coverage2 in kmer_R_to_index_family[kmer_R]:
+#          if coverage2 < coverage1:
+#            file_one_away_pairs.write(str(i2) + '\t' + str(i1) + '\n')
+#            file_coverages.write(str(coverage2) + '\t' + str(coverage1) + '\n')
+#          else:
+#            file_one_away_pairs.write(str(i1) + '\t' + str(i2) + '\n')
+#            file_coverages.write(str(coverage1) + '\t' + str(coverage2) + '\n')
     else:
-      current_kmer_L = new_kmer_L
+      for kmer_R in filtered:
+        (i1, coverage1), (i2, coverage2) = kmer_R_to_index_family[kmer_R]
+        if coverage2 < coverage1:
+          file_one_away_pairs.write(str(i2) + '\t' + str(i1) + '\n')
+          file_coverages.write(str(coverage2) + '\t' + str(coverage1) + '\n')
+        else:
+          file_one_away_pairs.write(str(i1) + '\t' + str(i2) + '\n')
+          file_coverages.write(str(coverage1) + '\t' + str(coverage2) + '\n')
+      duplicated = set()
+      filtered = set()
       kmer_R_to_index_family = defaultdict(list)
+      current_kmer_L = new_kmer_L
     kmer_R_to_index_family[kmer_R].append((i1,coverage1))
 
   file_one_away_pairs.close()
