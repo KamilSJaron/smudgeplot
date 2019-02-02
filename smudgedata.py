@@ -15,6 +15,11 @@ import matplotlib.pyplot as plt
 class smudgedata:
   def __init__(self, user_args):
     self.args = user_args
+    if self.args.nbins == 0:
+      self.args.iterative_bins = True
+      self.args.nbins = 40
+    else:
+      self.args.iterative_bins = False
 
   def loadData(self):
     # add a protection against erasing already loaded data
@@ -27,6 +32,11 @@ class smudgedata:
       sum_cov = c1 + c2
       self.rel_cov.append(c1 / sum_cov)
       self.sum_cov.append(sum_cov)
+    if self.args.L == 0:
+      self.args.L = int(min(self.sum_cov) / 2)
+
+  def initialNEstimate(self):
+    self.n_init = 206
 
   def calculateHist(self, nbins, ymin, ymax):
     self.x = np.linspace(0, 0.5, nbins+1)

@@ -10,14 +10,13 @@ from smudgedata import smudgedata
 def main():
   parser = argparse.ArgumentParser(description='Generate 2d histogram for smudgeplot')
   parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='name of the input tsv file with covarages [default \"coverages_2.tsv\"]"')
-  parser.add_argument('-o', help='The pattern used to name the output (kmerpairs).', default='smudgeplot')
+  parser.add_argument('-o', help='The pattern used to name the output [default \"smudgeplot\"].', default='smudgeplot')
+  parser.add_argument('-L', help='The lower boundary used when dumping kmers [default min(total_pair_cov) / 2]', type=int, default=0)
+  parser.add_argument('-nbins', help='The number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]', type=int, default=0)
   # parser.add_argument('-k', help='The length of the kmer.', default=21)
   # parser.add_argument('-v', '--version', action="store_true", default = FALSE, help="print the version and exit")
   # # if not specified by user
   # nbins = 40
-  # #    L <- ifelse( length(args$L) == 0, min(total_pair_cov) / 2, args$L)
-  # # this is an integer division but that should be alright
-  # L = int(min(total_pair_cov) / 2)
 
   logging.basicConfig(level=logging.INFO)
   # parser = argparse.ArgumentParser(description='Generate 2d histogram for smudgeplot')
@@ -30,6 +29,7 @@ def main():
   smudge.loadData()
   logging.info('done')
 
+  logging.info('L = ' + str(smudge.args.L))
   # quantile filtering
   # -> user specified of qunatiles to be filtered out by the sum of coverages
   # -> turned off by default
@@ -42,15 +42,15 @@ def main():
   # logging.info('L=' + str(L))
   # logging.info('k=21')
 
-  # smudge.est_n_init()
-  # ymin = min(total_pair_cov) - 1
-  # ymax = min([10*smudge.n_init, max(total_pair_cov)])
+  smudge.initialNEstimate()
+  ymin = min(smudge.sum_cov) - 1
+  ymax = min([10*smudge.n_init, max(smudge.sum_cov)])
 
   # LOG
   # logging.info('Smudgeplot coverage range ' + str(ymin) + ' - ' + str(ymax))
 
   logging.info('calculating hist')
-  smudge.calculateHist(40,200,1000)
+  smudge.calculateHist(smudge.args.nbins, ymin, ymax)
   logging.info('done')
   # LOG some stats
   # while True:
