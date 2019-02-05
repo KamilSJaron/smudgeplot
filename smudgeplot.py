@@ -3,9 +3,16 @@
 import argparse
 import sys
 import logging
-import numpy as np
-import matplotlib.pyplot as plt
 from smudgedata import smudgedata
+
+# Development:
+#  - logging is done on the standard error stream using logging package (note different levels info, warning...)
+#  - majority opetations are performed though class smudgedata
+#  - methods are camel case; variables snake case
+
+################
+###  SCRIPT  ###
+################
 
 def main():
   parser = argparse.ArgumentParser(description='Generate 2d histogram for smudgeplot')
@@ -39,7 +46,6 @@ def main():
   # logging.info('k=21')
 
   smudge.initialNEstimate()
-
   ymin = min(smudge.sum_cov) - 1
   ymax = int(min([10*smudge.n_init, max(smudge.sum_cov)]))
 
@@ -47,22 +53,17 @@ def main():
   logging.info('smudgeplot coverage range ' + str(ymin) + ' - ' + str(ymax))
   logging.info('initial 1n coverage estimate {:0.2f}'.format(smudge.n_init))
 
-  logging.info('calculating hist')
-  smudge.calculateHist(smudge.args.nbins, ymin, ymax)
-  logging.info('done')
   # LOG some stats
-  # while True:
-  #   logging.info('running with nbins: ' + str(nbins))
-  #   smudges = smudge_matrix(minor_variant_rel_cov, total_pair_cov, nbins, ymin, ymax)
-  #   if there are more smudges on the same location & if user have not specified nbins
-  #   if smudges.hasDuplicitSmudges() and nbins > 10:
-  #     if nbins > 20 :
-  #       nbins = nbins - 5
-  #     else :
-  #       nbins = nbins - 2
-  #     logging.warn(args$output, "detecting two smudges at the same positions, not enough data for this number of bins lowering number of bins to ", args$nbins)
-  #   else :
-  #     break
+  while True:
+    logging.info('calculating hist with nbins: ' + str(smudge.args.nbins))
+    smudge.calculateHist(ymin, ymax)
+    smudge.agregateSmudges()
+    if smudge.hasDuplicitSmudges() and smudge.args.nbins > 10 and smudge.args.iterative_bins:
+      smudge.lowerNbins()
+      logging.warning("detecting two smudges at the same positions, not enough data for this number of bins lowering number of bins to " + str(smudge.args.nbins))
+    else :
+      break
+  logging.info('done')
 
   logging.info("saving " + smudge.args.o + "_smudgeplot_pythonic.png")
   smudge.plot()

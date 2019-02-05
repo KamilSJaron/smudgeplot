@@ -67,12 +67,31 @@ class smudgedata:
     self.n_init = np.average(np.concatenate((di_peaks_genome_cov, tri_peaks_genome_cov)),
                              weights = np.concatenate((di_heights, tri_heights)))
 
-  def calculateHist(self, nbins, ymin, ymax):
-    self.x = np.linspace(0, 0.5, nbins+1)
-    self.y = np.linspace(ymin, ymax, nbins+1)
+  def calculateHist(self, ymin, ymax):
+    self.x = np.linspace(0, 0.5, self.args.nbins + 1)
+    self.y = np.linspace(ymin, ymax, self.args.nbins + 1)
     self.hist, self.y, self.x = np.histogram2d(self.sum_cov, self.rel_cov, bins=(self.y, self.x))
     # self.loghist = np.log10(self.hist)
     # self.loghist[self.loghist == -np.inf] = 0
+
+  def agregateSmudges(self):
+    #nogo_x = findInterval(.L / .smudge_container$y, .smudge_container$x, left.open = T)
+    self.sorted_hist_indices = np.dstack(np.unravel_index(np.argsort(self.hist.ravel()), (self.args.nbins, self.args.nbins)))[0][::-1]
+    self.smudge_assignment = []
+    max_smudge = 0
+    self.smudge_centers = dict()
+    # x and y are coordinates in the array
+    for i_to_assign, xy in enumerate(self.sorted_hist_indices):
+      i_assigned = 0
+      self.smudge_assignment.append(max_smudge)
+      while True:
+        if (abs(xy[0] - self.sorted_hist_indices[i_assigned][0]) <= 1) or (abs(xy[1] - self.sorted_hist_indices[i_assigned][1]) <= 1):
+          self.smudge_assignment[i_to_assign] = self.smudge_assignment[i_assigned]
+          break
+        i_assigned += 1
+      if self.smudge_assignment[i_to_assign] == max_smudge:
+        self.smudge_centers[max_smudge] = xy
+        max_smudge += 1
 
   def plot(self):
     # , plot_log = False
@@ -88,3 +107,9 @@ class smudgedata:
 
   def hasDuplicitSmudges(self):
     return(True)
+
+  def lowerNbins(self):
+    if self.args.nbins > 20 :
+      self.args.nbins = self.args.nbins - 5
+    else :
+      self.args.nbins = self.args.nbins - 2
