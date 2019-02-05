@@ -19,13 +19,9 @@ def main():
   # nbins = 40
 
   logging.basicConfig(level=logging.INFO)
-  # parser = argparse.ArgumentParser(description='Generate 2d histogram for smudgeplot')
-  # args = parser.parse_args()
-  # args.infile = open('./data/samples/Mflo2_sample_50000_coverages_2.tsv')
-  # smudge = smudgedata(args)
   smudge = smudgedata(parser.parse_args())
 
-  logging.info('loading')
+  logging.info('loading kmers')
   smudge.loadData()
   logging.info('done')
 
@@ -43,11 +39,13 @@ def main():
   # logging.info('k=21')
 
   smudge.initialNEstimate()
+
   ymin = min(smudge.sum_cov) - 1
-  ymax = min([10*smudge.n_init, max(smudge.sum_cov)])
+  ymax = int(min([10*smudge.n_init, max(smudge.sum_cov)]))
 
   # LOG
-  # logging.info('Smudgeplot coverage range ' + str(ymin) + ' - ' + str(ymax))
+  logging.info('smudgeplot coverage range ' + str(ymin) + ' - ' + str(ymax))
+  logging.info('initial 1n coverage estimate {:0.2f}'.format(smudge.n_init))
 
   logging.info('calculating hist')
   smudge.calculateHist(smudge.args.nbins, ymin, ymax)
@@ -66,11 +64,11 @@ def main():
   #   else :
   #     break
 
-  logging.info('plotting *_smudgeplot_pythonic.png')
+  logging.info("saving " + smudge.args.o + "_smudgeplot_pythonic.png")
   smudge.plot()
   logging.info('done')
 
-  logging.info('saving *_smudgematrix.tsv')
+  logging.info("saving " + smudge.args.o + "_smudgematrix.tsv")
   smudge.saveMatrix()
   logging.info('done')
 

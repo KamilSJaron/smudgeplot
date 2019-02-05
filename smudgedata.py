@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
+from scipy.signal import find_peaks
+import scipy.signal
 
 # smudgedata - a class for easy control over the data related to smudgeplot
 #
@@ -35,8 +38,34 @@ class smudgedata:
     if self.args.L == 0:
       self.args.L = int(min(self.sum_cov) / 2)
 
+  def get1dSmudges(self, coverage_data, number_of_peaks, bandwidth = 0, depth = 1):
+    if bandwidth == 0:
+      coverage_kernel = gaussian_kde(coverage_data)
+      bandwidth = coverage_kernel.factor
+    else:
+      coverage_kernel = gaussian_kde(coverage_data, bandwidth)
+    coverage_range = range(len(coverage_data))
+    coverage_hist = coverage_kernel.evaluate(coverage_range)
+    peaks, _ = find_peaks(coverage_hist)
+    if len(peaks) > number_of_peaks and depth < 10:
+      new_bandwidth = bandwidth * 1.4
+      peaks, _ = self.get1dSmudges(coverage_data, number_of_peaks, new_bandwidth, depth + 1)
+    return peaks, coverage_hist[peaks]
+
+# originally I used a weighted average including tetra and pendaploid smudges
+# but I think diploid and tirploid will be sufficient
   def initialNEstimate(self):
-    self.n_init = 206
+    even_coverage_kmer_pairs = np.array([self.sum_cov[i] for i in range(len(self.rel_cov)) if self.rel_cov[i] > 0.47])
+    triploid_coverage_kmer_pairs = np.array([self.sum_cov[i] for i in range(len(self.rel_cov)) if self.rel_cov[i] > 0.31 and  self.rel_cov[i] < 0.35])
+
+    di_peaks, di_heights = self.get1dSmudges(even_coverage_kmer_pairs, 3)
+    tri_peaks, tri_heights = self.get1dSmudges(triploid_coverage_kmer_pairs, 2)
+
+    di_peaks_genome_cov = [peak / round(2 * peak / di_peaks[0]) for peak in di_peaks]
+    tri_peaks_genome_cov = [peak / round(3 * peak / tri_peaks[0]) for peak in tri_peaks]
+
+    self.n_init = np.average(np.concatenate((di_peaks_genome_cov, tri_peaks_genome_cov)),
+                             weights = np.concatenate((di_heights, tri_heights)))
 
   def calculateHist(self, nbins, ymin, ymax):
     self.x = np.linspace(0, 0.5, nbins+1)
