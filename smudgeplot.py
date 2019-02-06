@@ -58,6 +58,25 @@ def main():
     logging.info('calculating hist with nbins: ' + str(smudge.args.nbins))
     smudge.calculateHist(ymin, ymax)
     smudge.agregateSmudges()
+    smudge.countSmudgeSize(treshold = 0.02)
+
+    # the_smallest_n <- min(get_trinoploid_1n_est(peak_sizes), draft_n)
+    # smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov, the_smallest_n)
+    # smudge.brightestSmudgeNEstimate()
+    # smudge_summary$n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_peak_est, args$n_cov)
+
+    # if the organism is completely homozygous, all the detected kmer pairs are corresponding to paralogs
+    # therefore ther inference will confuse AB peak to AABB peak etc.
+    # that is recolvable just telling to guess half of the coverage instead
+    # if( args$homozygous ){
+    #     smudge_summary$n <- smudge_summary$n / 2
+    #     smudge_summary$n_subset_est <- smudge_summary$n_subset_est / 2
+    # }
+    # peak_sizes$structure <- apply(peak_sizes, 1,
+    #                               function(x){ guess_genome_structure(x, smudge_summary$n)})
+    # dulpicit_structures <- any(table(peak_sizes$structure) > 1)
+
+    dulpicit_structures = False
     if smudge.hasDuplicitSmudges() and smudge.args.nbins > 10 and smudge.args.iterative_bins:
       smudge.lowerNbins()
       logging.warning("detecting two smudges at the same positions, not enough data for this number of bins lowering number of bins to " + str(smudge.args.nbins))

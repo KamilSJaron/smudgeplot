@@ -78,20 +78,50 @@ class smudgedata:
     #nogo_x = findInterval(.L / .smudge_container$y, .smudge_container$x, left.open = T)
     self.sorted_hist_indices = np.dstack(np.unravel_index(np.argsort(self.hist.ravel()), (self.args.nbins, self.args.nbins)))[0][::-1]
     self.smudge_assignment = []
-    max_smudge = 0
+    max_smudge = 1
     self.smudge_centers = dict()
     # x and y are coordinates in the array
     for i_to_assign, xy in enumerate(self.sorted_hist_indices):
+      # I don't want to assign tiles with no kmers
+      if self.hist[xy[0], xy[1]] == 0:
+        self.smudge_assignment.append(0)
+        continue
+      # for non-zero tiles
       i_assigned = 0
       self.smudge_assignment.append(max_smudge)
+      # search if there is a neibouring tile that was parsed already (== carries more kmers)
       while True:
-        if (abs(xy[0] - self.sorted_hist_indices[i_assigned][0]) <= 1) or (abs(xy[1] - self.sorted_hist_indices[i_assigned][1]) <= 1):
+        if (abs(xy[0] - self.sorted_hist_indices[i_assigned][0]) <= 1) and (abs(xy[1] - self.sorted_hist_indices[i_assigned][1]) <= 1):
           self.smudge_assignment[i_to_assign] = self.smudge_assignment[i_assigned]
           break
         i_assigned += 1
       if self.smudge_assignment[i_to_assign] == max_smudge:
-        self.smudge_centers[max_smudge] = xy
+        self.smudge_centers[max_smudge] = [xy]
         max_smudge += 1
+
+  def countSmudgeSize(self, treshold = 0.02):
+    all_kmers = sum(sum(self.hist))
+
+    kmers_in_smudges = dict()
+    for i, smudge_index in enumerate(self.smudge_assignment):
+      kmer_pairs = self.hist[self.sorted_hist_indices[i][0], self.sorted_hist_indices[i][1]]
+      try:
+        kmers_in_smudges[smudge_index] += kmer_pairs
+      except KeyError:
+        kmers_in_smudges[smudge_index] = kmer_pairs
+
+    for smudge_index in list(self.smudge_centers):
+      rel_smudge_size = kmers_in_smudges[smudge_index] / all_kmers
+      if rel_smudge_size > treshold:
+        # number of kmers in the center
+        self.smudge_centers[smudge_index].append(self.hist[self.smudge_centers[smudge_index][0][0], self.smudge_centers[smudge_index][0][1]])
+        # absolute number kmers per smudge
+        self.smudge_centers[smudge_index].append(kmers_in_smudges[smudge_index])
+        # relative number kmers per smudge
+        self.smudge_centers[smudge_index].append(rel_smudge_size)
+      else:
+        self.smudge_assignment = [i if i != smudge_index else 0 for i in self.smudge_assignment]
+        del self.smudge_centers[smudge_index]
 
   def plot(self):
     # , plot_log = False
