@@ -55,7 +55,7 @@ def main():
 
   # LOG some stats
   while True:
-    logging.info('calculating hist with nbins: ' + str(smudge.args.nbins))
+    logging.info('calculating hist with nbins: ' + str(smudge.nbins))
     smudge.calculateHist(ymin, ymax)
     smudge.agregateSmudges()
     smudge.countSmudgeSize(treshold = 0.02)
@@ -76,10 +76,9 @@ def main():
     #                               function(x){ guess_genome_structure(x, smudge_summary$n)})
     # dulpicit_structures <- any(table(peak_sizes$structure) > 1)
 
-    dulpicit_structures = False
-    if smudge.hasDuplicitSmudges() and smudge.args.nbins > 10 and smudge.args.iterative_bins:
+    if smudge.hasDuplicitSmudges() and smudge.nbins > 10 and smudge.nbins != smudge.args.nbins:
       smudge.lowerNbins()
-      logging.warning("detecting two smudges at the same positions, not enough data for this number of bins lowering number of bins to " + str(smudge.args.nbins))
+      logging.warning("detecting two smudges at the same positions, not enough data for this number of bins lowering number of bins to " + str(smudge.nbins))
     else :
       break
   logging.info('done')

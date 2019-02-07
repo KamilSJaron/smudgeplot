@@ -19,10 +19,9 @@ class smudgedata:
   def __init__(self, user_args):
     self.args = user_args
     if self.args.nbins == 0:
-      self.args.iterative_bins = True
-      self.args.nbins = 40
+      self.nbins = 40
     else:
-      self.args.iterative_bins = False
+      self.nbins = self.args.nbins
 
   def loadData(self):
     # add a protection against erasing already loaded data
@@ -68,15 +67,15 @@ class smudgedata:
                              weights = np.concatenate((di_heights, tri_heights)))
 
   def calculateHist(self, ymin, ymax):
-    self.x = np.linspace(0, 0.5, self.args.nbins + 1)
-    self.y = np.linspace(ymin, ymax, self.args.nbins + 1)
+    self.x = np.linspace(0, 0.5, self.nbins + 1)
+    self.y = np.linspace(ymin, ymax, self.nbins + 1)
     self.hist, self.y, self.x = np.histogram2d(self.sum_cov, self.rel_cov, bins=(self.y, self.x))
     # self.loghist = np.log10(self.hist)
     # self.loghist[self.loghist == -np.inf] = 0
 
   def agregateSmudges(self):
     #nogo_x = findInterval(.L / .smudge_container$y, .smudge_container$x, left.open = T)
-    self.sorted_hist_indices = np.dstack(np.unravel_index(np.argsort(self.hist.ravel()), (self.args.nbins, self.args.nbins)))[0][::-1]
+    self.sorted_hist_indices = np.dstack(np.unravel_index(np.argsort(self.hist.ravel()), (self.nbins, self.nbins)))[0][::-1]
     self.smudge_assignment = []
     max_smudge = 1
     self.smudge_centers = dict()
@@ -139,7 +138,7 @@ class smudgedata:
     return(True)
 
   def lowerNbins(self):
-    if self.args.nbins > 20 :
-      self.args.nbins = self.args.nbins - 5
+    if self.nbins > 20 :
+      self.nbins = self.nbins - 5
     else :
-      self.args.nbins = self.args.nbins - 2
+      self.nbins = self.nbins - 2
