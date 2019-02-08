@@ -67,9 +67,7 @@ def main():
     #     smudge_summary$n <- smudge_summary$n / 2
     #     smudge_summary$n_subset_est <- smudge_summary$n_subset_est / 2
     # }
-    # smudge.guessGenomeStructure()
-    # peak_sizes$structure <- apply(peak_sizes, 1,
-    #                               function(x){ guess_genome_structure(x, smudge_summary$n)})
+    smudge.guessGenomeStructure()
 
     # smudge.nbins != smudge.args.nbins -> if user have set up number of bins, don't repeat, just plot what user have told us to
     if smudge.hasDuplicitSmudges() and smudge.nbins > 10 and smudge.nbins != smudge.args.nbins:

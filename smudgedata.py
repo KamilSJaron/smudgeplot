@@ -140,11 +140,25 @@ class smudgedata:
     # brighest_coverage / smudge_ploidy
     self.brightest_smudge_n = brighest_coverage / round(brighest_coverage / self.n_init)
 
-  # def guessGenomeStructure(self):
-  #   self.smudge_centers -> get AB; AAB... annotations
+  def guessGenomeStructure(self):
+    # -> get AB; AAB... annotations of smudges
+    genome_struct_template = np.array(["A", "B"])
+    for smudge_index in self.smudge_centers:
+        sum_cov_index = self.smudge_centers[smudge_index][0][0]
+        rel_cov_index = self.smudge_centers[smudge_index][0][1]
+        sum_cov = ((self.y[sum_cov_index] + self.y[sum_cov_index + 1]) / 2)
+        rel_cov = ((self.x[rel_cov_index] + self.x[rel_cov_index + 1]) / 2)
+        genome_count = round(sum_cov / self.brightest_smudge_n)
+        As = round((1 - rel_cov) * genome_count)
+        Bs = round(rel_cov * genome_count)
+        struct_list = np.repeat(genome_struct_template, [As, Bs], axis=0)
+        structure = "".join(struct_list)
+        self.smudge_centers[smudge_index].append(structure)
 
   def hasDuplicitSmudges(self):
-    return(True)
+    structures = np.array([self.smudge_centers[smudge_index][4] for smudge_index in self.smudge_centers])
+    uniq_sctruc, cunts = np.unique(structures, return_counts=True)
+    return(any(cunts > 1))
 
   def plot(self):
     # , plot_log = False
