@@ -122,6 +122,30 @@ class smudgedata:
         self.smudge_assignment = [i if i != smudge_index else 0 for i in self.smudge_assignment]
         del self.smudge_centers[smudge_index]
 
+  def brightestSmudgeNEstimate(self, margin = 0.02):
+    # extract smudge intensities from self.smudge_centers - data structure carring the information about assigned smudges
+    smudge_intensities = [self.smudge_centers[smudge_index][3] for smudge_index in self.smudge_centers]
+    # find the smudge with the highest coverage
+    bighest_smudge = list(self.smudge_centers)[smudge_intensities.index(max(smudge_intensities))]
+    rec_cov_coordinate = self.smudge_centers[bighest_smudge][0][1]
+    # get the relative coverage of the posisiotn of the brighest peak (likely 0.5, 0.33 or 0.25)
+    rel_cov = (self.x[rec_cov_coordinate + 1] + self.x[rec_cov_coordinate]) / 2
+    min_cov = rel_cov - margin
+    max_cov = rel_cov + margin
+    # extract kmers that are contain the birghest smudge for one more kernel smoothing fit
+    subset_sum_cov = np.array([self.sum_cov[i] for i in range(len(self.rel_cov)) if self.rel_cov[i] > min_cov and self.rel_cov[i] < max_cov])
+    smudge_centers, smudge_brightness = self.get1dSmudges(subset_sum_cov, 10)
+    brighest_coverage = smudge_centers[np.argmax(smudge_brightness)]
+    # round(brighest_coverage / self.n_init)) gives estimate of ploidy of the smudge
+    # brighest_coverage / smudge_ploidy
+    self.brightest_smudge_n = brighest_coverage / round(brighest_coverage / self.n_init)
+
+  # def guessGenomeStructure(self):
+  #   self.smudge_centers -> get AB; AAB... annotations
+
+  def hasDuplicitSmudges(self):
+    return(True)
+
   def plot(self):
     # , plot_log = False
     # if plot_log:
@@ -133,9 +157,6 @@ class smudgedata:
 
   def saveMatrix(self):
     np.savetxt(self.args.o + "_smudgematrix.tsv", self.hist, delimiter="\t", fmt='%i')
-
-  def hasDuplicitSmudges(self):
-    return(True)
 
   def lowerNbins(self):
     if self.nbins > 20 :
