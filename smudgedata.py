@@ -34,8 +34,18 @@ class smudgedata:
       sum_cov = c1 + c2
       self.rel_cov.append(c1 / sum_cov)
       self.sum_cov.append(sum_cov)
+    self.rel_cov = np.array(self.rel_cov)
+    self.sum_cov = np.array(self.sum_cov)
     if self.args.L == 0:
-      self.args.L = int(min(self.sum_cov) / 2)
+      self.L = int(min(self.sum_cov) / 2)
+    else:
+      self.L = self.args.L
+
+  def quantile_filt(self):
+    if self.args.q < 1:
+      quantile = np.percentile(self.sum_cov, self.args.q * 100)
+      self.rel_cov = self.rel_cov[self.sum_cov < quantile]
+      self.sum_cov = self.sum_cov[self.sum_cov < quantile]
 
   def get1dSmudges(self, coverage_data, number_of_peaks, bandwidth = 0, depth = 1):
     if bandwidth == 0:
