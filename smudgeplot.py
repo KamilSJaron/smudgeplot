@@ -73,7 +73,7 @@ def main():
   logging.info('done')
 
   logging.info("saving " + smudge.args.o + "_smudgeplot_pythonic.png")
-  smudge.plot()
+  smudge.plot((ymin,ymax))
   logging.info('done')
 
   logging.info("saving " + smudge.args.o + "_smudgematrix.tsv")

@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from scipy.signal import find_peaks
@@ -170,13 +171,52 @@ class smudgedata:
     uniq_sctruc, cunts = np.unique(structures, return_counts=True)
     return(any(cunts > 1))
 
-  def plot(self):
-    # , plot_log = False
-    # if plot_log:
-    #   plt.pcolormesh(self.x, self.y, self.loghist)
-    # else:
-    plt.pcolormesh(self.x, self.y, self.hist)
-    # plt.show()
+  def plot(self, ylim):
+    fig = plt.figure(figsize=(8, 8))
+    mpl.rcParams.update({'font.size': 14})
+    
+    ax_joint = plt.subplot2grid((8, 8), (2, 0), colspan=6, rowspan=6)
+    ax_marg_x = plt.subplot2grid((8, 8), (0, 0), colspan=6, rowspan=2, sharex=ax_joint, frameon=False)
+    ax_marg_y = plt.subplot2grid((8, 8), (2, 6), colspan=2, rowspan=6, sharey=ax_joint, frameon=False)
+    ax_legend = plt.subplot2grid((8, 8), (0, 6), colspan=1, rowspan=2)
+
+    plt.setp(ax_marg_x.get_xticklabels(), visible=False)
+    plt.setp(ax_marg_x.yaxis.get_majorticklines(), visible=False)
+    plt.setp(ax_marg_x.yaxis.get_minorticklines(), visible=False)
+    # to remove even the x ticks
+    # plt.setp(ax_marg_x.xaxis.get_majorticklines(), visible=False)
+    # plt.setp(ax_marg_x.xaxis.get_minorticklines(), visible=False)
+    plt.setp(ax_marg_x.get_yticklabels(), visible=False)
+    ax_marg_x.yaxis.grid(False)
+    ax_marg_x.hist(self.rel_cov, self.nbins, orientation = 'vertical', color = 'darkred')
+
+    plt.setp(ax_marg_y.get_yticklabels(), visible=False)
+    # to remove even the y ticks
+    # plt.setp(ax_marg_y.yaxis.get_majorticklines(), visible=False)
+    # plt.setp(ax_marg_y.yaxis.get_minorticklines(), visible=False)
+    plt.setp(ax_marg_y.xaxis.get_majorticklines(), visible=False)
+    plt.setp(ax_marg_y.xaxis.get_minorticklines(), visible=False)
+    plt.setp(ax_marg_y.get_xticklabels(), visible=False)
+    ax_marg_y.xaxis.grid(False)
+    ax_marg_y.hist(self.sum_cov, self.nbins, orientation = 'horizontal', range = ylim, color = 'darkred')
+
+    ax_joint.set_xlabel("A / (A + B)")
+    ax_joint.set_ylabel("A + B")
+    ax_joint.set_xlim((0,0.5))
+    ax_joint.set_ylim(ylim)
+    cmap = plt.get_cmap('viridis')
+    ax_joint.pcolormesh(self.x, self.y, self.hist, cmap = cmap)
+
+    # ax_legend.cla()
+    # fig.colorbar(im, ax=ax_legend)
+    # fig = plt.figure()
+    # ax_legend = plt.subplot2grid((4, 4), (0, 3), colspan=1, rowspan=1)
+    bounds = np.linspace(0,self.hist.max(), 64)
+    norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+    mpl.colorbar.ColorbarBase(ax_legend, cmap, norm, ticks = np.linspace(0,self.hist.max(), 6))
+    # fig.tight_layout()
+    plt.subplots_adjust(left = 0.12, bottom = 0.12, right = 0.95, top = 0.95, wspace = 0.06, hspace = 0.06)
+
     plt.savefig(self.args.o + "_smudgeplot_pythonic.png")
 
   def saveMatrix(self):
