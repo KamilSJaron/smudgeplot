@@ -15,6 +15,15 @@ Kamil
 P.S. If you still want to, you can email me...
 
 
+## My notes
+
+
+local instalation of the associated datastructure
+
+```
+python setup.py install --user
+```
+
 # Smudgeplot
 
 This tool extracts heterozygous kmer pairs from kmer dump files (from jellyfish or KMC) and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovA / (CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc. It's a work in progress but already provides great insights.
