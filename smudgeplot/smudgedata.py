@@ -174,7 +174,7 @@ class smudgedata:
   def plot(self, ylim):
     fig = plt.figure(figsize=(8, 8))
     mpl.rcParams.update({'font.size': 14})
-    
+
     ax_joint = plt.subplot2grid((8, 8), (2, 0), colspan=6, rowspan=6)
     ax_marg_x = plt.subplot2grid((8, 8), (0, 0), colspan=6, rowspan=2, sharex=ax_joint, frameon=False)
     ax_marg_y = plt.subplot2grid((8, 8), (2, 6), colspan=2, rowspan=6, sharey=ax_joint, frameon=False)

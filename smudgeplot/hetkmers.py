@@ -241,24 +241,3 @@ def all_one_away(args):
 
   print('*_families_2.tsv and *_coverages_2.tsv files saved.')
 
-##############
-### SCRIPT ###
-##############
-
-if __name__=='__main__':
-  parser = argparse.ArgumentParser(description='Calculate unique kmer pairs from a Jellyfish or KMC dump file.')
-  parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='Alphabetically sorted Jellyfish or KMC dump file (stdin).')
-  parser.add_argument('-o', help='The pattern used to name the output (kmerpairs).', default='kmerpairs')
-  parser.add_argument('-k', help='The length of the kmer.', default=21)
-  parser.add_argument('-t', help='Number of processes to use.', default = 4)
-  parser.add_argument('--all', dest='all', action='store_const', const = True, default = False,
-                      help='Get all kmer pairs one SNP away from each other (default: just the middle one).')
-
-  args = parser.parse_args()
-
-  if args.all:
-    all_one_away(args)
-  else:
-    middle_one_away(args)
-
-  print('Done!')
