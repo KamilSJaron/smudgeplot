@@ -1,27 +1,31 @@
 import argparse
 import sys
 import os
+import logging
 
 class Parser():
-
     def __init__(self):
-        self.parser = argparse.ArgumentParser(
+        parser = argparse.ArgumentParser(
             # description='Inference of ploidy and heterozygosity structure using whole genome sequencing data',
             usage='''smudgeplot <task> [options]
 tasks: hetkmers  Calculate unique kmer pairs from a Jellyfish or KMC dump file.
        plot      Generate 2d histogram; infere ploidy and plot a smudgeplot\n\n''')
-        self.parser.add_argument('task', help='Task to execute; for task specific options execute smudgeplot <task> -h')
-        self.parser.add_argument('-v', '--version', action="store_true", default = False, help="print the version and exit")
-        for arg in sys.argv:
-            print(arg)
-        self.arguments = self.parser.parse_args([''.join(sys.argv[1])])
-        if self.arguments.version:
+        parser.add_argument('task', help='Task to execute; for task specific options execute smudgeplot <task> -h')
+        parser.add_argument('-v', '--version', action="store_true", default = False, help="print the version and exit")
+        # print version is a special case
+        if sys.argv[1] in ['-v', '--version']:
+            self.task = "version"
+            return
+        # the following line either prints help and die; or assign the name of task to variable task
+        self.task = parser.parse_args([sys.argv[1]]).task
+        # if the task is known (i.e. defined in this file);
+        if hasattr(self, self.task):
+            # load arguments of that task
+            getattr(self, self.task)()
+        else:
+            parser.print_usage()
+            logging.error('"' + self.task + '" is not a valid task name')
             exit(1)
-        if not hasattr(self, self.arguments.task):
-            print('** Error: invalid task "' + self.arguments.task + '"')
-            self.parser.print_usage()
-            exit(1)
-        getattr(self, self.arguments.task)()
 
     def hetkmers(self):
         '''
@@ -35,7 +39,7 @@ tasks: hetkmers  Calculate unique kmer pairs from a Jellyfish or KMC dump file.
         parser.add_argument('-t', help='Number of processes to use.', default = 4)
         parser.add_argument('--all', dest='all', action='store_const', const = True, default = False,
                           help='Get all kmer pairs one SNP away from each other (default: just the middle one).')
-        self.__assignArguments__(parser, sys.argv)
+        self.arguments = parser.parse_args(sys.argv[2:])
 
     def plot(self):
         '''
@@ -49,8 +53,4 @@ tasks: hetkmers  Calculate unique kmer pairs from a Jellyfish or KMC dump file.
         parser.add_argument('-nbins', help='The number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]', type=int, default=0)
         # parser.add_argument('-k', help='The length of the kmer.', default=21)
         parser.add_argument('--homozygous', action="store_true", default = False, help="Assume no heterozygosity in the genome - plotting a paralog structure; [default False]")
-        self.__assignArguments__(parser, sys.argv)
-
-    def __assignArguments__(self, parser, argv):
-        parser.parse_args(argv[2:]) # execution of the local parser
-        self.arguments = self.parser.parse_args(argv[1:]) # This is done here to separate "-h" for each parser
+        self.arguments = parser.parse_args(sys.argv[2:])
