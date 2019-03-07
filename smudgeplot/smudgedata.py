@@ -35,6 +35,7 @@ class smudgedata:
             sum_cov = c1 + c2
             self.rel_cov.append(c1 / sum_cov)
             self.sum_cov.append(sum_cov)
+        self.args.infile.close()
         self.rel_cov = np.array(self.rel_cov)
         self.sum_cov = np.array(self.sum_cov)
         if self.args.L == 0:
