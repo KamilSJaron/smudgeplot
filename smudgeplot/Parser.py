@@ -46,11 +46,13 @@ tasks: hetkmers  Calculate unique kmer pairs from a Jellyfish or KMC dump file.
         Generate 2d histogram; infer ploidy and plot a smudgeplot.
         '''
         parser = argparse.ArgumentParser(description='Generate 2d histogram for smudgeplot')
-        parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='name of the input tsv file with covarages [default \"coverages_2.tsv\"]"')
+        parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='name of the input tsv file with covarages (default \"coverages_2.tsv\")."')
         parser.add_argument('-o', help='The pattern used to name the output (smudgeplot).', default='smudgeplot')
-        parser.add_argument('-q', help='Remove kmer pairs with coverage over the specified quantile; [default none]', default=1)
-        parser.add_argument('-L', help='The lower boundary used when dumping kmers [default min(total_pair_cov) / 2]', type=int, default=0)
-        parser.add_argument('-nbins', help='The number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]', type=int, default=0)
+        parser.add_argument('-q', help='Remove kmer pairs with coverage over the specified quantile; (default none).', default=1)
+        parser.add_argument('-L', help='The lower boundary used when dumping kmers (default min(total_pair_cov) / 2).', type=int, default=0)
+        parser.add_argument('-n', help='The expected haploid coverage (default estimated from data).', type=int, default=0)
+        parser.add_argument('-t', '--title', help='name printed at the top of the smudgeplot (default none).', default='')
+        parser.add_argument('-nbins', help='The number of nbins used for smudgeplot matrix (nbins x nbins) (default autodetection).', type=int, default=0)
         # parser.add_argument('-k', help='The length of the kmer.', default=21)
-        parser.add_argument('--homozygous', action="store_true", default = False, help="Assume no heterozygosity in the genome - plotting a paralog structure; [default False]")
+        parser.add_argument('--homozygous', action="store_true", default = False, help="Assume no heterozygosity in the genome - plotting a paralog structure; (default False).")
         self.arguments = parser.parse_args(sys.argv[2:])

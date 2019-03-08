@@ -14,7 +14,10 @@ import scipy.signal
 #  - sum_cov (sum of coverages; A + B)
 #  - x, y (borders of 2d histogram bins - x corresponds to rel_cov; y to sum_cov)
 #  - hist (matrix of kmers in bins)
-
+#  - sorted_hist_indices
+#  - smudge_assignment
+#  - smudge_centers
+#  - brightest_smudge_n
 
 class smudgedata:
     def __init__(self, user_args):
@@ -67,6 +70,11 @@ class smudgedata:
 # originally I used a weighted average including tetra and pendaploid smudges
 # but I think diploid and tirploid will be sufficient
     def initialNEstimate(self):
+        # don't estimate 1n coverage if user have speciefied it
+        if self.args.n > 0:
+            self.n_init = self.args.n
+            return
+
         even_coverage_kmer_pairs = np.array([self.sum_cov[i] for i in range(len(self.rel_cov)) if self.rel_cov[i] > 0.47])
         triploid_coverage_kmer_pairs = np.array([self.sum_cov[i] for i in range(len(self.rel_cov)) if self.rel_cov[i] > 0.31 and  self.rel_cov[i] < 0.35])
 
@@ -191,6 +199,15 @@ class smudgedata:
         plt.setp(ax_marg_x.get_yticklabels(), visible=False)
         ax_marg_x.yaxis.grid(False)
         ax_marg_x.hist(self.rel_cov, self.nbins, orientation = 'vertical', color = 'darkred')
+        # plot title at top left of the plot
+        if self.args.title:
+            ax_marg_x.text(0, 0.7, '$\it{' + self.args.title + '}$', size = 20, horizontalalignment='left',
+                           verticalalignment='bottom', transform=ax_marg_x.transAxes)
+        # estimated ploidy just bellow
+        ax_marg_x.text(0.05, 0.55, 'estimated TODO', horizontalalignment='left',
+                       verticalalignment='bottom', transform=ax_marg_x.transAxes)
+        ax_marg_x.text(0.05, 0.4, '1n coverage: ' + str(round(self.brightest_smudge_n, 1)), horizontalalignment='left',
+                       verticalalignment='bottom', transform=ax_marg_x.transAxes)
 
         plt.setp(ax_marg_y.get_yticklabels(), visible=False)
         # to remove even the y ticks
@@ -201,10 +218,16 @@ class smudgedata:
         plt.setp(ax_marg_y.get_xticklabels(), visible=False)
         ax_marg_y.xaxis.grid(False)
         ax_marg_y.hist(self.sum_cov, self.nbins, orientation = 'horizontal', range = ylim, color = 'darkred')
+        # ax_marg_y.text(1, 0, '1n = ' + str(round(self.brightest_smudge_n, 1)), horizontalalignment='right',
+        #                verticalalignment='bottom', transform=ax_marg_y.transAxes)
 
-        ax_joint.set_xlabel("A / (A + B)")
-        ax_joint.set_ylabel("A + B")
+        ax_joint.set_xlabel("Normalized minor kmer coverage: B / (A + B)")
+        ax_joint.set_ylabel("Total coverage of the kmer pair: A + B")
         ax_joint.set_xlim((0,0.5))
+        ax_joint.xaxis.set_major_locator(plt.FixedLocator([0.5, 0.4, 0.33, 0.25, 0.2]))
+        ax_joint.xaxis.set_major_formatter(plt.FixedFormatter(["1/2", "2/5", "1/3", "1/4", "1/5"]))
+        ax_joint.yaxis.set_major_locator(plt.MultipleLocator(self.brightest_smudge_n))
+        # self.annotateSmudge(ax_joint, 0.33, 3, ylim)
         ax_joint.set_ylim(ylim)
         cmap = plt.get_cmap('viridis')
         ax_joint.pcolormesh(self.x, self.y, self.hist, cmap = cmap)
@@ -220,6 +243,12 @@ class smudgedata:
         plt.subplots_adjust(left = 0.12, bottom = 0.12, right = 0.95, top = 0.95, wspace = 0.06, hspace = 0.06)
 
         plt.savefig(self.args.o + "_smudgeplot_pythonic.png")
+
+    # def annotateSmudge(self, ax, x, y, ylim):
+    #     label = "AAB"
+    #     ax.text(1 - x, (y * self.brightest_smudge_n - ylim[0]) / ylim[1], label,
+    #             horizontalalignment='center',
+    #             verticalalignment='bottom', transform=ax.transAxes)
 
     def saveMatrix(self):
         np.savetxt(self.args.o + "_smudgematrix.tsv", self.hist, delimiter="\t", fmt='%i')

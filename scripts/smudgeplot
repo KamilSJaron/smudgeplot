@@ -28,17 +28,17 @@ def plot(args):
     logging.info('loading kmers')
     smudge.loadData()
     smudge.quantile_filt()
-    logging.info('done')
 
     # LOG some stats
 
+    logging.info('calculating initial 1n coverage estimate')
     smudge.initialNEstimate()
     ymin = min(smudge.sum_cov) - 1
     ymax = int(min([10*smudge.n_init, max(smudge.sum_cov)]))
 
     # LOG
-    logging.info('smudgeplot coverage range ' + str(ymin) + ' - ' + str(ymax))
     logging.info('initial 1n coverage estimate {:0.2f}'.format(smudge.n_init))
+    logging.info('coverage range for smudgeplot: ' + str(ymin) + ' - ' + str(ymax))
 
     # LOG some stats
     while True:
@@ -61,15 +61,12 @@ def plot(args):
         else :
             break
     logging.info('final 1n coverage estimate {:0.2f}'.format(smudge.brightest_smudge_n))
-    logging.info('done')
 
     logging.info("saving " + smudge.args.o + "_smudgeplot_pythonic.png")
     smudge.plot((ymin,ymax))
-    logging.info('done')
 
     logging.info("saving " + smudge.args.o + "_smudgematrix.tsv")
     smudge.saveMatrix()
-    logging.info('done')
 
 ################
 ###  SCRIPT  ###
