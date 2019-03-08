@@ -159,7 +159,8 @@ class smudgedata:
         brighest_coverage = smudge_centers[np.argmax(smudge_brightness)]
         # round(brighest_coverage / self.n_init)) gives estimate of ploidy of the smudge
         # brighest_coverage / smudge_ploidy
-        self.brightest_smudge_n = brighest_coverage / round(brighest_coverage / self.n_init)
+        self.ploidy_est = int(brighest_coverage / self.n_init)
+        self.brightest_smudge_n = brighest_coverage / self.ploidy_est
 
     def guessGenomeStructure(self):
         # -> get AB; AAB... annotations of smudges
@@ -204,7 +205,8 @@ class smudgedata:
             ax_marg_x.text(0, 0.7, '$\it{' + self.args.title + '}$', size = 20, horizontalalignment='left',
                            verticalalignment='bottom', transform=ax_marg_x.transAxes)
         # estimated ploidy just bellow
-        ax_marg_x.text(0.05, 0.55, 'estimated TODO', horizontalalignment='left',
+        verbose_ploidy = self.getVerbosePloidy()
+        ax_marg_x.text(0.05, 0.55, 'estimated ' + verbose_ploidy, horizontalalignment='left',
                        verticalalignment='bottom', transform=ax_marg_x.transAxes)
         ax_marg_x.text(0.05, 0.4, '1n coverage: ' + str(round(self.brightest_smudge_n, 1)), horizontalalignment='left',
                        verticalalignment='bottom', transform=ax_marg_x.transAxes)
@@ -220,6 +222,11 @@ class smudgedata:
         ax_marg_y.hist(self.sum_cov, self.nbins, orientation = 'horizontal', range = ylim, color = 'darkred')
         # ax_marg_y.text(1, 0, '1n = ' + str(round(self.brightest_smudge_n, 1)), horizontalalignment='right',
         #                verticalalignment='bottom', transform=ax_marg_y.transAxes)
+        #### print summary
+        # summary = self.getSummary()
+        # summary = "AAB        0.62\nAB          0.13\nAAAB      0.09"
+        # ax_marg_y.text(0.2, 1, summary, horizontalalignment='left',
+        #                verticalalignment='top', transform=ax_marg_y.transAxes)
 
         ax_joint.set_xlabel("Normalized minor kmer coverage: B / (A + B)")
         ax_joint.set_ylabel("Total coverage of the kmer pair: A + B")
@@ -227,6 +234,7 @@ class smudgedata:
         ax_joint.xaxis.set_major_locator(plt.FixedLocator([0.5, 0.4, 0.33, 0.25, 0.2]))
         ax_joint.xaxis.set_major_formatter(plt.FixedFormatter(["1/2", "2/5", "1/3", "1/4", "1/5"]))
         ax_joint.yaxis.set_major_locator(plt.MultipleLocator(self.brightest_smudge_n))
+        #### Annotate smudges
         # self.annotateSmudge(ax_joint, 0.33, 3, ylim)
         ax_joint.set_ylim(ylim)
         cmap = plt.get_cmap('viridis')
@@ -240,7 +248,7 @@ class smudgedata:
         norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
         mpl.colorbar.ColorbarBase(ax_legend, cmap, norm, ticks = np.linspace(0,self.hist.max(), 6))
         # fig.tight_layout()
-        plt.subplots_adjust(left = 0.12, bottom = 0.12, right = 0.95, top = 0.95, wspace = 0.06, hspace = 0.06)
+        plt.subplots_adjust(left = 0.12, bottom = 0.12, right = 0.95, top = 0.95, wspace = 0.2, hspace = 0.2)
 
         plt.savefig(self.args.o + "_smudgeplot_pythonic.png")
 
@@ -249,6 +257,18 @@ class smudgedata:
     #     ax.text(1 - x, (y * self.brightest_smudge_n - ylim[0]) / ylim[1], label,
     #             horizontalalignment='center',
     #             verticalalignment='bottom', transform=ax.transAxes)
+
+    def getVerbosePloidy(self):
+        ploidy_map = {
+            2: "diploid",
+            3: "triploid",
+            4: 'tetraploid',
+            5: 'pentaploid',
+            6: 'hexaploid',
+            7: 'heptaploid',
+            8: 'octoploid'
+        }
+        return(ploidy_map.get(self.ploidy_est, "unknown"))
 
     def saveMatrix(self):
         np.savetxt(self.args.o + "_smudgematrix.tsv", self.hist, delimiter="\t", fmt='%i')
