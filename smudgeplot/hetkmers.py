@@ -5,6 +5,7 @@ import multiprocessing as mp
 import argparse
 import itertools
 import sys
+import logging
 
 ###################
 ###  DEFINE     ###
@@ -106,13 +107,6 @@ def middle_one_away(args):
         else:
           duplicated.add(kmer_R)
           filtered.add(kmer_R)
-#        for i2,coverage2 in kmer_R_to_index_family[kmer_R]:
-#          if coverage2 < coverage1:
-#            file_one_away_pairs.write(str(i2) + '\t' + str(i1) + '\n')
-#            file_coverages.write(str(coverage2) + '\t' + str(coverage1) + '\n')
-#          else:
-#            file_one_away_pairs.write(str(i1) + '\t' + str(i2) + '\n')
-#            file_coverages.write(str(coverage1) + '\t' + str(coverage2) + '\n')
     else:
       for kmer_R in filtered:
         (i1, coverage1), (i2, coverage2) = kmer_R_to_index_family[kmer_R]
@@ -164,7 +158,7 @@ def all_one_away(args):
     kmer_L_to_index_family[kmer_L].append((kmer_R, i))
     kmer_R_to_index_family[kmer_R].append((kmer_L, i))
 
-  print('Kmers and coverages loaded. Initial kmer halves processed. Starting processes.')
+  logging.info('Kmers and coverages loaded. Initial kmer halves processed. Starting processes.')
 
   #Create input queue and results queue to process the kmer index families.
   mp.set_start_method('spawn')
@@ -178,7 +172,7 @@ def all_one_away(args):
     p.start()
     processes.append(p)
 
-  print('Processes Started.')
+  logging.info('Processes Started.')
 
   #Add kmer index families to the queue.
   for kmer_L_index_family in kmer_L_to_index_family.values():
@@ -198,7 +192,7 @@ def all_one_away(args):
     q.put(None)
 
   q.close()
-  print('All index families added to queue.')
+  logging.info('All index families added to queue.')
 
   #Save one_away_pairs to a tsv file, and keep track of which indices only occur once.
   num_completed = 0
@@ -217,14 +211,14 @@ def all_one_away(args):
           repeated[i1] = i1 in repeated
           repeated[i2] = i2 in repeated
 
-  print('*_one_away_pairs.tsv file saved.')
+  logging.info('*_one_away_pairs.tsv file saved.')
 
   #Wait for the processes to finish.
   for p in processes:
     p.join()
 
   results.close()
-  print('Processes joined.')
+  logging.info('Processes joined.')
 
   #Save families_2 and coverages_2 tsv files, which only include one_away_pairs that don't overlap any others.
   with open(output_pattern + '_families_2.tsv', 'w') as record_file1, open(output_pattern + '_coverages_2.tsv', 'w') as record_file2:
@@ -233,11 +227,12 @@ def all_one_away(args):
         cov1 = coverages[i1]
         cov2 = coverages[i2]
         if cov1 < cov2:
+          # TODO get the actual kmers OR figure out translation functions (a new class I suppose)
           record_file1.write(str(i1) + '\t' + str(i2) + '\n')
           record_file2.write(str(cov1) + '\t' + str(cov2) + '\n')
         else:
           record_file1.write(str(i2) + '\t' + str(i1) + '\n')
           record_file2.write(str(cov2) + '\t' + str(cov1) + '\n')
 
-  print('*_families_2.tsv and *_coverages_2.tsv files saved.')
+  logging.info('*_families_2.tsv and *_coverages_2.tsv files saved.')
 
