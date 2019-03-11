@@ -1,21 +1,11 @@
-# STOP RIGHT THERE
+# Warning
 
-This README is terribly outdates for this version of smudgeplot.
+you are stepping on developers' ground. Thank you for that, feedback before release is always welcome.
 
-We are going though a major transition from R-bash code to python-based code. We are about to be done but it's not there yet.
-Once the code will be opeartional I will update this readme accordingly.
-
-Related, Makefile is terribly outdated too.
-
-Maybe just don't try to fidle with this branch yet ^^.
+Recently we undergone a switch form R to python code (most for versatility and performance purposes), but that might mean that some of the stuff is not working as it should and it's possible that I am not aware of it. If you encounter any unexpected behavior, open an issue or send us a mail.
 
 Cheers,
 Kamil
-
-P.S. If you still want to, you can email me...
-
-
-## My notes
 
 # Smudgeplot
 
@@ -79,8 +69,10 @@ The next step is to extract genomic kmers using reasonable coverage thresholds. 
 
 ```
 L=$(smudgeplot cutoff kmer_k21.hist L)
-U=$(smudgeplot cutoff kmer_k21.hist L)
-echo $L $U # these need to be sane values like 30 800 or so
+U=$(smudgeplot cutoff kmer_k21.hist U)
+echo $L $U # these need to be sane values
+# L should be like 20 - 200
+# U should be like 500 - 3000
 kmc_tools transform kmer_counts -ci$L -cx$U dump -s kmer_k21.dump
 smudgeplot hetkmers -k 21 -o kmer_pairs < kmer_k21.dump
 ```

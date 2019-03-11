@@ -8,16 +8,20 @@ class Parser():
         parser = argparse.ArgumentParser(
             # description='Inference of ploidy and heterozygosity structure using whole genome sequencing data',
             usage='''smudgeplot <task> [options]
-tasks: hetkmers  Calculate unique kmer pairs from a Jellyfish or KMC dump file.
-       plot      Generate 2d histogram; infere ploidy and plot a smudgeplot\n\n''')
+tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cutoff.
+       hetkmers  Calculate unique kmer pairs from a Jellyfish or KMC dump file.
+       plot      Generate 2d histogram; infere ploidy and plot a smudgeplot.\n\n''')
         parser.add_argument('task', help='Task to execute; for task specific options execute smudgeplot <task> -h')
         parser.add_argument('-v', '--version', action="store_true", default = False, help="print the version and exit")
         # print version is a special case
-        if sys.argv[1] in ['-v', '--version']:
-            self.task = "version"
-            return
-        # the following line either prints help and die; or assign the name of task to variable task
-        self.task = parser.parse_args([sys.argv[1]]).task
+        if len(sys.argv) > 1:
+            if sys.argv[1] in ['-v', '--version']:
+                self.task = "version"
+                return
+            # the following line either prints help and die; or assign the name of task to variable task
+            self.task = parser.parse_args([sys.argv[1]]).task
+        else:
+            self.task = ""
         # if the task is known (i.e. defined in this file);
         if hasattr(self, self.task):
             # load arguments of that task
