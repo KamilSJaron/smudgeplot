@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import logging
+from smudgeplot.smudgedata import smudgedata
+from smudgeplot.Parser import Parser
+from smudgeplot.hetkmers import *
+
+# number name(-development); meaning with more commits over the mentioned version
+version = '0.1.3 beta3-development'
+
+# Development:
+#  - logging is done on the standard error stream using logging package (note different levels info, warning...)
+#  - majority opetations are performed though class smudgedata
+#  - methods are camel case; variables snake case
+
+def hetkmers(args):
+    if args.all:
+        all_one_away(args)
+    else:
+        middle_one_away(args)
+    # LOG arguments by user
+
+def plot(args):
+    smudge = smudgedata(args)
+
+    logging.info('loading kmers')
+    smudge.loadData()
+    smudge.quantile_filt()
+
+    # LOG some stats
+
+    logging.info('calculating initial 1n coverage estimate')
+    smudge.initialNEstimate()
+    ymin = min(smudge.sum_cov) - 1
+    ymax = int(min([10*smudge.n_init, max(smudge.sum_cov)]))
+
+    # LOG
+    logging.info('initial 1n coverage estimate {:0.2f}'.format(smudge.n_init))
+    logging.info('coverage range for smudgeplot: ' + str(ymin) + ' - ' + str(ymax))
+
+    # LOG some stats
+    while True:
+        logging.info('calculating hist with nbins: ' + str(smudge.nbins))
+        smudge.calculateHist(ymin, ymax)
+        smudge.agregateSmudges()
+        smudge.countSmudgeSize(treshold = 0.02)
+        smudge.brightestSmudgeNEstimate()
+        # if the organism is completely homozygous, all the detected kmer pairs are corresponding to paralogs
+        # therefore ther inference will confuse AB peak to AABB peak etc.
+        # that is recolvable just telling to guess half of the coverage instead
+        if smudge.args.homozygous:
+            smudge.brightest_smudge_n = smudge.brightest_smudge_n / 2
+        smudge.guessGenomeStructure()
+
+        # smudge.nbins != smudge.args.nbins -> if user have set up number of bins, don't repeat, just plot what user have told us to
+        if smudge.hasDuplicitSmudges() and smudge.nbins > 10 and smudge.nbins != smudge.args.nbins:
+            smudge.lowerNbins()
+            logging.warning("detecting two smudges at the same positions, not enough data for this number of bins lowering number of bins to " + str(smudge.nbins))
+        else :
+            break
+    logging.info('final 1n coverage estimate {:0.2f}'.format(smudge.brightest_smudge_n))
+
+    logging.info("saving " + smudge.args.o + "_smudgeplot_pythonic.png")
+    smudge.plot((ymin,ymax))
+
+    logging.info("saving " + smudge.args.o + "_smudgematrix.tsv")
+    smudge.saveMatrix()
+
+################
+###  SCRIPT  ###
+################
+
+def main():
+    parser = Parser()
+
+    logging.basicConfig(level=logging.INFO)
+    logging.info('Running smudgeplot v' + version)
+    if parser.task == "version":
+        exit(0)
+
+    logging.info('Task: ' + parser.task)
+
+    if parser.task == "hetkmers":
+        hetkmers(parser.arguments)
+
+    if parser.task == "plot":
+        plot(parser.arguments)
+
+    logging.info('Done!\n')
+    exit(0)
+
+if __name__=='__main__':
+  main()

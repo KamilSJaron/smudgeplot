@@ -1,6 +1,25 @@
+# STOP RIGHT THERE
+
+This README is terribly outdates for this version of smudgeplot.
+
+We are going though a major transition from R-bash code to python-based code. We are about to be done but it's not there yet.
+Once the code will be opeartional I will update this readme accordingly.
+
+Related, Makefile is terribly outdated too.
+
+Maybe just don't try to fidle with this branch yet ^^.
+
+Cheers,
+Kamil
+
+P.S. If you still want to, you can email me...
+
+
+## My notes
+
 # Smudgeplot
 
-This tool extracts heterozygous kmer pairs from kmer dump files (from jellyfish or KMC) and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovA / (CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc. It's a work in progress but already provides great insights.
+This tool extracts heterozygous kmer pairs from kmer dump files and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovA / (CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc. It's a work in progress but already provides great insights.
 
 Smudgeplots are computed from raw/trimmed reads and show the haplotype structure using heterozygous kmer pairs. For example:
 
@@ -14,8 +33,6 @@ This tool is planned to be a part of [GenomeScope](https://github.com/schatzlab/
 
 You need [jellyfish](https://github.com/gmarcais/Jellyfish) or [KMC](https://github.com/refresh-bio/KMC) installed and we heavily recommend running [GenomeScope](https://github.com/schatzlab/genomescope) as well, sometimes both GenomeScope and smudgeplot are needed to make a sense out of the sequencing data.
 
-Required R libraries are installed together with the R library `smudgeplot`.
-
 Get this repository
 
 ```
@@ -23,27 +40,20 @@ git clone https://github.com/tbenavi1/smudgeplot
 cd smudgeplot
 ```
 
-Install the R package `smudgeplot`
+Install the python package `smudgeplot`
 
 ```
-Rscript install.R    # installs R library
+python setup.py install --user    # installs the library
 ```
 
-Finally copy these three scripts somewhere where your system will see them (places in `$PATH`)
+Congratulations, you should have `smudgeplot` operational.
+Just to sure, check that the smudgeplot script works
 
 ```
-# copy scripts somewhere where your shell will see them
-install -C hetkmers.py /usr/local/bin
-install -C smudgeplot.R /usr/local/bin
-install -C kmer_cov_cutoff.R /usr/local/bin
+smudgeplot -v
 ```
 
-If you don't have rights to write at these directories you can alternatively add this directory to your PATH
-
-```
-echo "export PATH=\$PATH:$(pwd)" >> ~/.bashrc
-source ~/.bashrc
-```
+something like `INFO:root:Running smudgeplot v0.1.3 beta3-development` is expected to be printed.
 
 If the installation procedure does not work, if you encounter any other problem, or if you would like to get help with the interpretation of your smudgeplot, please open an [issue](https://github.com/tbenavi1/smudgeplot/issues/new).
 
@@ -58,7 +68,7 @@ Give KMC all the files with trimmed reads to calculate kmer frequencies and then
 ```
 mkdir tmp
 ls *.fastq.gz > FILES
-# kmer 21, 16 threats, 64G of memory, counting kmer coverages between 1 and 10000x
+# kmer 21, 16 threads, 64G of memory, counting kmer coverages between 1 and 10000x
 kmc -k21 -t16 -m64 -ci1 -cs10000 @FILES kmer_counts tmp
 kmc_tools transform kmer_counts histogram kmer_k21.hist -cx10000
 ```
@@ -68,21 +78,22 @@ where `-k` is the kmer length, `-m` is the max amount of RAM to use in GB (1 to 
 The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using the script `kmer_cov_cutoff.R <kmer.hist> <L/U>`. Then, extract kmers in the coverage range from `L` to `U` using `kmc_dump`. Then give the dump of kmers to the python script `hetkmers.py` to compute the set of heterozygous kmers.
 
 ```
-L=$(kmer_cov_cutoff.R kmer_k21.hist L)
-U=$(kmer_cov_cutoff.R kmer_k21.hist U)
+L=$(smudgeplot cutoff kmer_k21.hist L)
+U=$(smudgeplot cutoff kmer_k21.hist L)
 echo $L $U # these need to be sane values like 30 800 or so
 kmc_tools transform kmer_counts -ci$L -cx$U dump -s kmer_k21.dump
-hetkmers.py -k 21 -t 8 -o kmer_pairs < kmer_k21.dump
+smudgeplot hetkmers -k 21 -o kmer_pairs < kmer_k21.dump
 ```
 
 After using KMC, generate the smudgeplot using the coverages of the kmer pairs (`*_coverages_2.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data and compare it afterwards. If GenomeScope correctly identifies the peak of haploid kmers, the expected positions of the haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider adjusting the GenomeScope model and redoing the plot with a better estimate of the haploid coverage. Something like
 
 ```
-smudgeplot.R -i kmer_pairs_coverages_2.tsv
+smudgeplot plot -i kmer_pairs_coverages_2.tsv
 ```
 
 will generate a basic smugeplot, the full usage of `smudgeplot.R` script is
 
+TODO: fix following section
 ```
 usage: smudgeplot.R [-h] [-v] [--homozygous] [-i INPUT]
                     [-o OUTPUT] [-t TITLE] [-q QUANTILE_FILT]

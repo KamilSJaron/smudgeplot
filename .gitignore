@@ -3,3 +3,7 @@ figures
 NAMESPACE
 man
 playground
+__pycache__
+smudgeplot_kamilsjaron.egg-info
+build/
+dist/
