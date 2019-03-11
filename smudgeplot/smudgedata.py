@@ -256,12 +256,12 @@ class smudgedata:
         for smudge_index in self.smudge_centers:
             sum_cov_index = self.smudge_centers[smudge_index][0][0]
             rel_cov_index = self.smudge_centers[smudge_index][0][1]
-            y = ((self.y[sum_cov_index] + self.y[sum_cov_index + 1]) / 2)
-            x = 2 * ((self.x[rel_cov_index] + self.x[rel_cov_index + 1]) / 2)
+            y = (self.y[sum_cov_index] + self.y[sum_cov_index + 1]) / 2
+            x = self.x[rel_cov_index] + self.x[rel_cov_index + 1]
             label = self.smudge_centers[smudge_index][4]
             if x > 0.90:
-                # these are hand-tuned values to make nice annotations for any rel_cov = 0.5 peak
-                # x = x - (0.018 * len(label) - 0.03)
+                # the labels of AB, AABB, AAABBB ... would not fit on the pic if they were centered on the smudge
+                # I will plot it rightmost instead, because it should be very close to 0.5 anyway
                 aln = 'right'
                 x = 1
             else :

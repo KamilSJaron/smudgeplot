@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from collections import defaultdict
 import multiprocessing as mp
 import argparse

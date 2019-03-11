@@ -60,3 +60,12 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         # parser.add_argument('-k', help='The length of the kmer.', default=21)
         parser.add_argument('--homozygous', action="store_true", default = False, help="Assume no heterozygosity in the genome - plotting a paralog structure; (default False).")
         self.arguments = parser.parse_args(sys.argv[2:])
+
+    def cutoff(self):
+        '''
+        Calculate meaningful values for lower/upper kmer histogram cutoff.
+        '''
+        parser = argparse.ArgumentParser(description='Calculate meaningful values for lower/upper kmer histogram cutoff.')
+        parser.add_argument('infile', type=argparse.FileType('r'), help='Name of the input kmer histogram file (default \"kmer.hist\")."')
+        parser.add_argument('boundary', help='Which bounary to compute L (lower, default) or U (upper)', default = 'L')
+        self.arguments = parser.parse_args(sys.argv[2:])
