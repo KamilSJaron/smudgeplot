@@ -145,7 +145,7 @@ class smudgedata:
 
     def brightestSmudgeNEstimate(self, margin = 0.02):
         # extract smudge intensities from self.smudge_centers - data structure carring the information about assigned smudges
-        smudge_intensities = [self.smudge_centers[smudge_index][3] for smudge_index in self.smudge_centers]
+        smudge_intensities = self.getSmudgeStats(3, sorted = False)
         # find the smudge with the highest coverage
         bighest_smudge = list(self.smudge_centers)[smudge_intensities.index(max(smudge_intensities))]
         rec_cov_coordinate = self.smudge_centers[bighest_smudge][0][1]
@@ -178,7 +178,7 @@ class smudgedata:
             self.smudge_centers[smudge_index].append(structure)
 
     def hasDuplicitSmudges(self):
-        structures = np.array([self.smudge_centers[smudge_index][4] for smudge_index in self.smudge_centers])
+        structures = np.array(self.getSmudgeStats(4, sorted = False))
         uniq_sctruc, cunts = np.unique(structures, return_counts=True)
         return(any(cunts > 1))
 
@@ -223,10 +223,10 @@ class smudgedata:
         # ax_marg_y.text(1, 0, '1n = ' + str(round(self.brightest_smudge_n, 1)), horizontalalignment='right',
         #                verticalalignment='bottom', transform=ax_marg_y.transAxes)
         #### print summary
-        # summary = self.getSummary()
-        # summary = "AAB        0.62\nAB          0.13\nAAAB      0.09"
-        # ax_marg_y.text(0.2, 1, summary, horizontalalignment='left',
-        #                verticalalignment='top', transform=ax_marg_y.transAxes)
+        het_structures = self.getSmudgeStats(4)
+        het_structure_sizes = [round(x, 2) for x in self.getSmudgeStats(3)]
+        self.plotTextVector(ax_marg_y, het_structures, 0.1)
+        self.plotTextVector(ax_marg_y, het_structure_sizes, 0.8)
 
         ax_joint.set_xlabel("Normalized minor kmer coverage: B / (A + B)")
         ax_joint.set_ylabel("Total coverage of the kmer pair: A + B")
@@ -235,7 +235,7 @@ class smudgedata:
         ax_joint.xaxis.set_major_formatter(plt.FixedFormatter(["1/2", "2/5", "1/3", "1/4", "1/5"]))
         ax_joint.yaxis.set_major_locator(plt.MultipleLocator(self.brightest_smudge_n))
         #### Annotate smudges
-        # self.annotateSmudge(ax_joint, 0.33, 3, ylim)
+        self.annotateSmudges(ax_joint, ylim)
         ax_joint.set_ylim(ylim)
         cmap = plt.get_cmap('viridis')
         ax_joint.pcolormesh(self.x, self.y, self.hist, cmap = cmap)
@@ -252,11 +252,24 @@ class smudgedata:
 
         plt.savefig(self.args.o + "_smudgeplot_pythonic.png")
 
-    # def annotateSmudge(self, ax, x, y, ylim):
-    #     label = "AAB"
-    #     ax.text(1 - x, (y * self.brightest_smudge_n - ylim[0]) / ylim[1], label,
-    #             horizontalalignment='center',
-    #             verticalalignment='bottom', transform=ax.transAxes)
+    def annotateSmudges(self, ax, ylim):
+        for smudge_index in self.smudge_centers:
+            sum_cov_index = self.smudge_centers[smudge_index][0][0]
+            rel_cov_index = self.smudge_centers[smudge_index][0][1]
+            y = ((self.y[sum_cov_index] + self.y[sum_cov_index + 1]) / 2)
+            x = 2 * ((self.x[rel_cov_index] + self.x[rel_cov_index + 1]) / 2)
+            label = self.smudge_centers[smudge_index][4]
+            if x > 0.90:
+                # these are hand-tuned values to make nice annotations for any rel_cov = 0.5 peak
+                # x = x - (0.018 * len(label) - 0.03)
+                aln = 'right'
+                x = 1
+            else :
+                aln = 'center'
+            # print("x: " + str(x) + " y: " + str(y) + " as " + label)
+            ax.text(x, (y - ylim[0]) / (ylim[1] - ylim[0]), label,
+                    horizontalalignment = aln,
+                    verticalalignment = 'center', transform = ax.transAxes)
 
     def getVerbosePloidy(self):
         ploidy_map = {
@@ -269,6 +282,20 @@ class smudgedata:
             8: 'octoploid'
         }
         return(ploidy_map.get(self.ploidy_est, "unknown"))
+
+    def getSmudgeStats(self, index, sorted = True):
+        if sorted:
+            sizes = [self.smudge_centers[smudge_index][3] for smudge_index in self.smudge_centers]
+            order_of_sizes = np.argsort(sizes)[::-1]
+            return([self.smudge_centers[list(self.smudge_centers.keys())[smudge_order]][index] for smudge_order in order_of_sizes])
+        else:
+            return([self.smudge_centers[smudge_index][index] for smudge_index in self.smudge_centers])
+
+    def plotTextVector(self, ax, vector, x, y = 1, aln = 'left'):
+        lining = 0.045
+        for i, value in enumerate(vector):
+            ax.text(x, y - lining * i, value, horizontalalignment=aln,
+                    verticalalignment='top', transform=ax.transAxes)
 
     def saveMatrix(self):
         np.savetxt(self.args.o + "_smudgematrix.tsv", self.hist, delimiter="\t", fmt='%i')
