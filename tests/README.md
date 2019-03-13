@@ -22,13 +22,46 @@ make test
 
 Tests of the scripts. Simulating use cases of the software. I hope to hook these to Travis at some point. Right now I will just make here a collection of commands that will do the testing.
 
+Generate a toy dumpfile `tests/data/toy_kmer_k21.dump`.
+
+```
+python3 tests/generatedDumpfileForTesting.py
+```
+
+there is a bit of random generation involved, but very little, should not have any consequences for the downstream tests (adding bit of sequencing noise to make pictures nicer).
 
 ### API of cutoff
 
 ### API of smudgeplot
 
+Runs, but wrong inference:
+
+```
+smudgeplot plot tests/data/toy_middle_coverages.tsv -t "fake\ data" -nbins 20 -o tests/data/toy_middle_plain
+```
+
+```
+smudgeplot plot tests/data/toy_middle_coverages.tsv -t "fake\ data" -nbins 20 -o tests/data/toy_middle_plain -n 100
+```
+
 ### API of hetkmers
+
+Works:
 
 ```
 cat data/Minc1/kmer_k21.dump | smudgeplot hetkmers -o data/Minc_test/files -k 21
+```
+
+```
+smudgeplot hetkmers -o tests/data/toy_middle -k 21 tests/data/toy_kmer_k21.dump
+```
+
+Does not:
+
+```
+smudgeplot hetkmers -o tests/data/minc_sample_all -k 21 tests/data/minc_k21_sample.dump --all
+```
+
+```
+smudgeplot hetkmers -o tests/data/toy_middle -k 21 tests/data/toy_kmer_k21.dump --all
 ```

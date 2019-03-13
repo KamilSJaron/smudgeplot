@@ -96,7 +96,10 @@ for value in kmer_database.values():
     kmer_feqequency_hist[value] = kmer_feqequency_hist.get(value, 0) + 1
 
 with open('tests/data/toy_kmer_k21.dump', 'w') as dump_file:
-    for kmer, freq in kmer_database.items():
-        dump_file.write(kmer + '\t' + str(int(normal(freq * 100, 10))) + '\n')
+    sorted_kmers = list(kmer_database.keys())
+    sorted_kmers.sort()
+    for kmer in sorted_kmers:
+        freq = int(normal(kmer_database[kmer] * 100, 10))
+        dump_file.write(kmer + '\t' + str(freq) + '\n')
 
 
