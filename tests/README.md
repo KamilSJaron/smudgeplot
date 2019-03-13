@@ -65,3 +65,31 @@ smudgeplot hetkmers -o tests/data/minc_sample_all -k 21 tests/data/minc_k21_samp
 ```
 smudgeplot hetkmers -o tests/data/toy_middle -k 21 tests/data/toy_kmer_k21.dump --all
 ```
+
+### Virtual environment testing
+
+Building up the list of required packagess
+
+```
+virtualenv -p python3 venv
+source venv/bin/activate
+python3 setup.py install
+# repeat following two lines until everything is fine
+smudgeplot -v
+pip install numpy
+# get the list of installed packages without this one
+pip freeze | grep -v "smudgeplot" > requirements.txt
+deactivate
+rm -r venv
+```
+
+Testing if it works
+
+```
+virtualenv -p python3 venv
+source venv/bin/activate
+pip3 install -r requirements.txt
+python3 setup.py install
+smudgeplot --version
+# heck yeah
+```

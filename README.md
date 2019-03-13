@@ -21,29 +21,45 @@ This tool is planned to be a part of [GenomeScope](https://github.com/schatzlab/
 
 ## Installation
 
-You need [jellyfish](https://github.com/gmarcais/Jellyfish) or [KMC](https://github.com/refresh-bio/KMC) installed and we heavily recommend running [GenomeScope](https://github.com/schatzlab/genomescope) as well, sometimes both GenomeScope and smudgeplot are needed to make a sense out of the sequencing data.
+You need a program for counting kmers installed, such as [KMC](https://github.com/refresh-bio/KMC) and we strongly recommend running [GenomeScope](https://github.com/schatzlab/genomescope) as well, it's not rare that both GenomeScope and smudgeplot are needed to make a sense out of the sequencing data.
+TODO: pointer to cluster installation instructions
 
-Get this repository
+Download this repository
 
 ```
 git clone https://github.com/tbenavi1/smudgeplot
 cd smudgeplot
 ```
 
-Install the python package `smudgeplot`
+### global installation
+
+Install all the dependencies from pip and this package
 
 ```
-python setup.py install --user    # installs the library
+pip3 install -r requirements.txt
+python3 setup.py install    # installs the library
 ```
 
 Congratulations, you should have `smudgeplot` operational.
 Just to sure, check that the smudgeplot script works
 
 ```
-smudgeplot -v
+smudgeplot --version
 ```
 
 something like `INFO:root:Running smudgeplot v0.1.3 beta3-development` is expected to be printed.
+
+### virtual environment
+
+Alternatively, you can install the package in virtual environment to be sure that it's not going to mess up with anything else in your computer.
+
+```
+virtualenv -p python3 venv
+source venv/bin/activate
+pip3 install -r requirements.txt
+python3 setup.py install
+smudgeplot --version
+```
 
 If the installation procedure does not work, if you encounter any other problem, or if you would like to get help with the interpretation of your smudgeplot, please open an [issue](https://github.com/tbenavi1/smudgeplot/issues/new).
 

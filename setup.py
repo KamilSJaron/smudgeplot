@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="smudgeplot-KamilSJaron",
-    version="0.1.13devN",
+    version="0.1.13.dev0",
     author="Kamil S. Jaron, Timothy Rhyker Ranallo-Benavidez",
     author_email="kamiljaron+smudge@gmail.com",
     description="a package for inference of ploidy and heterozygosity structure using whole genome sequencing data",
@@ -14,6 +14,7 @@ setuptools.setup(
     url="https://github.com/tbenavi1/smudgeplot",
     packages=setuptools.find_packages(),
     scripts=['scripts/smudgeplot'],
+    zip_safe=False,
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Programming Language :: Python :: 3",
