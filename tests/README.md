@@ -92,4 +92,16 @@ pip3 install -r requirements.txt
 python3 setup.py install
 smudgeplot --version
 # heck yeah
+rm -r venv
 ```
+
+### Test that is failing
+
+```
+python3 tests/generatedDumpfileForTesting.py
+smudgeplot hetkmers -o tests/data/toy_middle -k 21 tests/data/toy_kmer_k21.dump
+python3 tests/kmers_in_genome.py
+# line 4
+```
+
+Basically, I made this toy dataset, where I know exactly what variants I am implanting in. And one of the heterozygous loci is not identified although they represent a unique pair. Look at `tests/kmers_in_genome.py` for more details.
