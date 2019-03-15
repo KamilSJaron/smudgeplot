@@ -58,6 +58,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         parser.add_argument('-t', '--title', help='name printed at the top of the smudgeplot (default none).', default='')
         parser.add_argument('-nbins', help='The number of nbins used for smudgeplot matrix (nbins x nbins) (default autodetection).', type=int, default=0)
         # parser.add_argument('-k', help='The length of the kmer.', default=21)
+        parser.add_argument('-kmer_file', help='Name of the input files containing kmer seuqences (assuming the same order as in the coverage file)', default = "")
         parser.add_argument('--homozygous', action="store_true", default = False, help="Assume no heterozygosity in the genome - plotting a paralog structure; (default False).")
         self.arguments = parser.parse_args(sys.argv[2:])
 

@@ -4,9 +4,10 @@ mpl.use('TkAgg') # https://stackoverflow.com/a/34583958/2962344
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from scipy.signal import find_peaks
-import scipy.signal
-
-
+from os.path import isfile
+from collections import defaultdict
+from bisect import bisect_left
+import logging
 
 # smudgedata - a class for easy control over the data related to smudgeplot
 #
@@ -30,6 +31,14 @@ class smudgedata:
         else:
             self.nbins = self.args.nbins
 
+    def validateArguments(self):
+        # check if kmer file is valid
+        if self.args.kmer_file and not isfile(self.args.kmer_file):
+            # TODO: throw and exception
+            logging.error(self.args.kmer_file + ' is not a readable file.')
+            exit(1)
+
+
     def loadData(self):
         # add a protection against erasing already loaded data
         self.rel_cov = []
@@ -44,6 +53,7 @@ class smudgedata:
         self.args.infile.close()
         self.rel_cov = np.array(self.rel_cov)
         self.sum_cov = np.array(self.sum_cov)
+        # check if L was specified
         if self.args.L == 0:
             self.L = int(min(self.sum_cov) / 2)
         else:
@@ -184,6 +194,28 @@ class smudgedata:
         structures = np.array(self.getSmudgeStats(4, sorted = False))
         uniq_sctruc, cunts = np.unique(structures, return_counts=True)
         return(any(cunts > 1))
+
+    def saveKmersFromSmudges(self):
+        # build a dictionary of position > assigned smudge
+        coor_smudge_dict = dict()
+        for i, assigned_smudge in enumerate(self.smudge_assignment):
+             coords = self.sorted_hist_indices[i]
+             coor_smudge_dict[tuple(coords)] = assigned_smudge
+
+        # build a dictionary of smudges > list of kmers they carry
+        with open(self.args.kmer_file, 'r') as kmer_file:
+            smudge_kmers = defaultdict(list)
+            for i, kmer in enumerate(kmer_file):
+                x_coord = bisect_left(self.x, self.rel_cov[i]) - 1
+                y_coord = bisect_left(self.y, self.sum_cov[i]) - 1
+                assigned_smudge = coor_smudge_dict[(y_coord, x_coord)]
+                smudge_kmers[assigned_smudge].append(kmer)
+
+        # save the kmers in individual files
+        for processed_smudge in smudge_kmers.keys():
+            with open(self.args.o + "_kmers_in_smudge_" + str(processed_smudge) + ".txt", 'w') as kmer_smudge_file:
+                for kmer in smudge_kmers[processed_smudge]:
+                    kmer_smudge_file.write(kmer)
 
     def plot(self, ylim):
         fig = plt.figure(figsize=(8, 8))
