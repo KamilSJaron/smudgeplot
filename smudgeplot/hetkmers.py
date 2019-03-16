@@ -74,8 +74,9 @@ def middle_one_away(args):
   output_pattern = args.o
   k = int(args.k)
 
-  file_one_away_pairs = open(output_pattern + '_one_away_pairs.tsv', 'w')
+  # file_one_away_pairs = open(output_pattern + '_one_away_pairs.tsv', 'w')
   file_coverages = open(output_pattern + '_coverages.tsv', 'w')
+  file_kmers = open(output_pattern + '_sequences.tsv', 'w')
 
   duplicated = set()
   filtered = set()
@@ -109,19 +110,21 @@ def middle_one_away(args):
       for kmer_R in filtered:
         (i1, coverage1), (i2, coverage2) = kmer_R_to_index_family[kmer_R]
         if coverage2 < coverage1:
-          file_one_away_pairs.write(str(i2) + '\t' + str(i1) + '\n')
+          # file_one_away_pairs.write(str(i2) + '\t' + str(i1) + '\n')
           file_coverages.write(str(coverage2) + '\t' + str(coverage1) + '\n')
         else:
-          file_one_away_pairs.write(str(i1) + '\t' + str(i2) + '\n')
+          # file_one_away_pairs.write(str(i1) + '\t' + str(i2) + '\n')
           file_coverages.write(str(coverage1) + '\t' + str(coverage2) + '\n')
+        file_kmers.write(current_kmer_L + 'N' + kmer_R + '\n')
       duplicated = set()
       filtered = set()
       kmer_R_to_index_family = defaultdict(list)
       current_kmer_L = new_kmer_L
     kmer_R_to_index_family[kmer_R].append((i1,coverage1))
 
-  file_one_away_pairs.close()
+  # file_one_away_pairs.close()
   file_coverages.close()
+  file_kmers.close()
 
 def all_one_away(args):
   dumps_file = args.infile
