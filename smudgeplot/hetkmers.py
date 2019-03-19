@@ -12,6 +12,7 @@ import logging
 
 def get_one_away_pairs(kmer_index_family, k):
   """kmer_index_family is a list of (kmer, index) pairs currently under consideration. k is the kmer length. get_one_away_pairs returns a list of pairs of indices where each pair of indices corresponds to a pair of kmers different in exactly one base."""
+  logging.info('Extracting kmer pairs that differ in the middle nt')
 
   #This is the base case for the recursion. Return every pair of indices where the kmers corresponding to those indices differ at exactly one base.
   if k == 1:
@@ -70,6 +71,8 @@ def worker(q, results, k):
 #########################################
 
 def middle_one_away(args):
+  logging.info('Extracting kmer pairs that differ in the middle nt')
+
   dumps_file = args.infile
   output_pattern = args.o
   k = int(args.k)
@@ -91,6 +94,7 @@ def middle_one_away(args):
   i_R_L = k_middle + 1
   i_R_R = k-1
 
+  logging.info('Saving ' + output_pattern + '_coverages.tsv and ' + output_pattern + '_sequences.tsv files.')
   # Read each line of the input file in order to load the kmers and coverages and process the kmer halves.
   current_kmer_L = ""
   for i1, line in enumerate(dumps_file):

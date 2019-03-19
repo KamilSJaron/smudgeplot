@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib as mpl
-mpl.use('TkAgg') # https://stackoverflow.com/a/34583958/2962344
+mpl.use('Agg') # https://stackoverflow.com/a/33873802/2962344
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from scipy.signal import find_peaks
