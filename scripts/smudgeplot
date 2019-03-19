@@ -4,7 +4,7 @@ import argparse
 import sys
 import logging
 from smudgeplot.smudgedata import smudgedata
-from smudgeplot.Parser import Parser
+from smudgeplot.parser import parser
 from smudgeplot.hetkmers import *
 from smudgeplot.cutoff import cutoff
 
@@ -79,23 +79,23 @@ def plot(args):
 ################
 
 def main():
-    parser = Parser()
+    _parser = parser()
 
     logging.basicConfig(level=logging.INFO)
     logging.info('Running smudgeplot v' + version)
-    if parser.task == "version":
+    if _parser.task == "version":
         exit(0)
 
-    logging.info('Task: ' + parser.task)
+    logging.info('Task: ' + _parser.task)
 
-    if parser.task == "cutoff":
-        cutoff(parser.arguments)
+    if _parser.task == "cutoff":
+        cutoff(_parser.arguments)
 
-    if parser.task == "hetkmers":
-        hetkmers(parser.arguments)
+    if _parser.task == "hetkmers":
+        hetkmers(_parser.arguments)
 
-    if parser.task == "plot":
-        plot(parser.arguments)
+    if _parser.task == "plot":
+        plot(_parser.arguments)
 
     logging.info('Done!\n')
     exit(0)
