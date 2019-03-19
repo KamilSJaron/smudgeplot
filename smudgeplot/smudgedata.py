@@ -197,7 +197,7 @@ class smudgedata:
 
     def saveKmersFromSmudges(self):
         # build a dictionary of position > assigned smudge
-        coor_smudge_dict = dict()
+        coor_smudge_dict = defaultdict(int)
         for i, assigned_smudge in enumerate(self.smudge_assignment):
              coords = self.sorted_hist_indices[i]
              coor_smudge_dict[tuple(coords)] = assigned_smudge
@@ -213,6 +213,9 @@ class smudgedata:
 
         # save the kmers in individual files
         for processed_smudge in smudge_kmers.keys():
+            if processed_smudge == 0:
+                logging.info("Skipping " + str(len(smudge_kmers[processed_smudge])) + " kmer pairs without assigned smudge (close to the error line, dispersed in space, etc.)")
+                continue
             with open(self.args.o + "_kmers_in_smudge_" + str(processed_smudge) + ".txt", 'w') as kmer_smudge_file:
                 for kmer in smudge_kmers[processed_smudge]:
                     kmer_smudge_file.write(kmer)
