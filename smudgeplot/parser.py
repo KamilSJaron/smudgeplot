@@ -77,7 +77,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         Identify extracted kmer pairs from individual smudges to a genome.
         '''
         argparser = argparse.ArgumentParser(description='Identify extracted kmer pairs from individual smudges to a genome.')
-        argparser.add_argument('genomefile', type=argparse.FileType('r'), help='The reference genome.')
-        argparser.add_argument('-o', help='The pattern used to read kmers and output (smudgeplot).', default='smudgeplot')
+        argparser.add_argument('genomefile', help='The reference genome (fasta file; can be gunzipped).')
+        argparser.add_argument('-o', help='The pattern used to read kmers and output (default \"smudgeplot\").', default='smudgeplot')
         argparser.add_argument('-s', help='Smudge to be mapped (intiger, ordered by size; default is to map all smudges)', type = int, default = 0)
         self.arguments = argparser.parse_args(sys.argv[2:])
