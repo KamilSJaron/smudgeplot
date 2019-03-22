@@ -1,9 +1,12 @@
 from Bio import SeqIO
+from Bio.Seq import Seq
 from PySAIS import sais
 from bisect import bisect_right
+from time import time
 import numpy as np
 import gzip
 import logging
+
 
 class mapper:
     def __init__(self, user_args):
@@ -20,52 +23,56 @@ class mapper:
             return((self.scf_names[scf_index], eval_pos))
 
     def searchKmer(self, kmer):
+        reverse_complementary_kmer = str(Seq(kmer).reverse_complement())
         alignments = []
-        L_kmer = kmer[0:10]
-        l = 0
-        r = len(self.sa) - 1
-        while l <= r:
-            m = (l + r) // 2
-            eval_pos = self.sa[m]
-            L_genome_kmer = self.genome[eval_pos:(eval_pos + 10)]
-            if L_kmer == L_genome_kmer:
-                r_L_converged = r
-                for N in ['A', 'C', 'G', 'T']:
-                    kmer = kmer[0:10] + N + kmer[11:21]
-                    while l <= r:
-                        m = (l + r) // 2
-                        eval_pos = self.sa[m]
-                        genome_kmer = self.genome[eval_pos:(eval_pos + 21)]
-                        if kmer == genome_kmer:
-                            m_hit = m
-                            # following ms
-                            while kmer == genome_kmer:
-                                scf, pos = self.evaluated2assembly_position(eval_pos)
-                                alignments.append([scf, pos, N])
-                                m += 1
-                                eval_pos = self.sa[m]
-                                genome_kmer = self.genome[eval_pos:(eval_pos + 21)]
-                            # previous ms
-                            m = m_hit - 1
+        for strand in ['+', '-']:
+            if strand == '-':
+                kmer = reverse_complementary_kmer
+            L_kmer = kmer[0:10]
+            l = 0
+            r = len(self.sa) - 1
+            while l <= r:
+                m = (l + r) // 2
+                eval_pos = self.sa[m]
+                L_genome_kmer = self.genome[eval_pos:(eval_pos + 10)]
+                if L_kmer == L_genome_kmer:
+                    r_L_converged = r
+                    for N in ['A', 'C', 'G', 'T']:
+                        kmer = kmer[0:10] + N + kmer[11:21]
+                        while l <= r:
+                            m = (l + r) // 2
                             eval_pos = self.sa[m]
                             genome_kmer = self.genome[eval_pos:(eval_pos + 21)]
-                            while kmer == genome_kmer:
-                                scf, pos = self.evaluated2assembly_position(eval_pos)
-                                alignments.append([scf, pos, N])
-                                m -= 1
+                            if kmer == genome_kmer:
+                                m_hit = m
+                                # following ms
+                                while kmer == genome_kmer:
+                                    scf, pos = self.evaluated2assembly_position(eval_pos)
+                                    alignments.append([scf, pos, strand, N])
+                                    m += 1
+                                    eval_pos = self.sa[m]
+                                    genome_kmer = self.genome[eval_pos:(eval_pos + 21)]
+                                # previous ms
+                                m = m_hit - 1
                                 eval_pos = self.sa[m]
                                 genome_kmer = self.genome[eval_pos:(eval_pos + 21)]
-                            break
-                        elif genome_kmer < kmer:
-                            l = m + 1
-                        else:
-                            r = m - 1
-                    r = r_L_converged # recover the r after converging on the left sub-kmer
-                break
-            elif L_genome_kmer < L_kmer:
-                l = m + 1
-            else:
-                r = m - 1
+                                while kmer == genome_kmer:
+                                    scf, pos = self.evaluated2assembly_position(eval_pos)
+                                    alignments.append([scf, pos, strand, N])
+                                    m -= 1
+                                    eval_pos = self.sa[m]
+                                    genome_kmer = self.genome[eval_pos:(eval_pos + 21)]
+                                break
+                            elif genome_kmer < kmer:
+                                l = m + 1
+                            else:
+                                r = m - 1
+                        r = r_L_converged # recover the r after converging on the left sub-kmer
+                    break
+                elif L_genome_kmer < L_kmer:
+                    l = m + 1
+                else:
+                    r = m - 1
         return(alignments)
 
     def loadGenome(self):
@@ -103,10 +110,10 @@ class mapper:
             kmers = [kmer.rstrip() for kmer in kmer_file]
 
         logging.info('Mapping kmers')
-        start = time. time()
+        start = time.time()
         mapping_list = [searchKmer(kmer) for kmer in s1_kmers]
-        end = time. time()
-        print(end - start)
+        end = time.time()
+        logging.info('Kmers mapped in ' + str(end - start) + ' seconds')
 
         logging.info('Generating stats')
 
