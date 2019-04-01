@@ -47,11 +47,11 @@ def checkPositions(pos_from, pos_to):
     return(str(sum([pos > pos_from and pos < pos_to for pos in heterozygous_positions_flat])))
 
 
-print("Expected 1, found: " + checkPositions(1,500))
-print("Expected 50, found: " + checkPositions(500,2000))
-print("Expected 0, found: " + checkPositions(2000,2500))
-print("Expected 20, found: " + checkPositions(2500,3500))
-print("Expected 10, found: " + checkPositions(3500,5000))
+print("handmade: expected 1, found: " + checkPositions(1,500))
+print("linspace: expected 50, found: " + checkPositions(500,2000))
+print("linked: expected 0, found: " + checkPositions(2000,2500))
+print("duplicated: expected 20, found: " + checkPositions(2500,3500))
+print("triplicated: expected 10, found: " + checkPositions(3500,5000))
 
 # heterozygous_positions_flat[51:70]
 # # 2668 --> positive control

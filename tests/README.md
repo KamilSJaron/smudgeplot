@@ -89,6 +89,7 @@ Testing if it works
 virtualenv -p python3 venv
 source venv/bin/activate
 pip3 install -r requirements.txt
+pip3 install PySAIS==1.0.4
 python3 setup.py install
 smudgeplot --version
 # heck yeah
