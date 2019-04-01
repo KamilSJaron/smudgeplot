@@ -7,6 +7,7 @@ from smudgeplot.smudgedata import smudgedata
 from smudgeplot.parser import parser
 from smudgeplot.hetkmers import *
 from smudgeplot.cutoff import cutoff
+from smudgeplot.map import mapper
 
 # number name(-development); meaning with more commits over the mentioned version
 version = '0.1.3 beta3-development'
@@ -74,6 +75,12 @@ def plot(args):
     logging.info("saving " + smudge.args.o + "_smudgematrix.tsv")
     smudge.saveMatrix()
 
+def map_kmers(args):
+    kmer_map = mapper(args)
+    kmer_map.loadGenome()
+    kmer_map.constructSuffixArray()
+    kmer_map.map()
+
 ################
 ###  SCRIPT  ###
 ################
@@ -96,6 +103,9 @@ def main():
 
     if _parser.task == "plot":
         plot(_parser.arguments)
+
+    if _parser.task == "map":
+        map_kmers(_parser.arguments)
 
     logging.info('Done!\n')
     exit(0)

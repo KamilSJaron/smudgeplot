@@ -1,4 +1,5 @@
 from Bio import SeqIO
+from Bio import bgzf
 from Bio.Seq import Seq
 from PySAIS import sais
 from bisect import bisect_right
@@ -6,7 +7,9 @@ from time import time
 import numpy as np
 import gzip
 import logging
-
+import csv
+import os
+import time
 
 class mapper:
     def __init__(self, user_args):
@@ -15,10 +18,10 @@ class mapper:
         self.to_plot = user_args.s
 
     def evaluated2assembly_position(self, eval_pos):
-        scf_index = bisect_right(self.scf_sizes, eval_pos)
-        eval_pos - self.scf_sizes[scf_index - 1]
+        scf_index = bisect_right(self.scf_cum_sizes, eval_pos)
+        eval_pos - self.scf_cum_sizes[scf_index - 1]
         if scf_index > 0:
-            return((self.scf_names[scf_index], eval_pos - self.scf_sizes[scf_index - 1]))
+            return((self.scf_names[scf_index], eval_pos - self.scf_cum_sizes[scf_index - 1]))
         else :
             return((self.scf_names[scf_index], eval_pos))
 
@@ -91,7 +94,8 @@ class mapper:
             self.sequences.append(str(seq_record.seq).upper())
         ffile.close()
         # calculate scaffold sizes
-        self.scf_sizes = np.cumsum([len(scf) + 1 for scf in self.sequences])
+        self.scf_sizes = [len(scf) for scf in self.sequences]
+        self.scf_cum_sizes = np.cumsum([len(scf) + 1 for scf in self.sequences])
         # create a string representing the gneome
         self.genome = '$'.join(self.sequences)
 
@@ -99,23 +103,52 @@ class mapper:
         logging.info('Building suffix array (might take several minutes)')
         self.sa = sais(self.genome)
 
-    def map(self, args):
+    def map(self):
+        # if user specifies a smudge to process
+        if self.to_plot == 0:
+            proc_smudge = 1
+        else:
+            proc_smudge = self.to_plot
 
-        logging.info('Loading kmers')
+        while os.path.isfile(self.output_pattern + '_kmers_in_smudge_' + str(proc_smudge) + '.txt'):
+            logging.info('Processig smudge ' + str(proc_smudge))
 
-        # output_pattern -> kmer_files
-        # kmer_file_name = 'data/Tps1/Tps_middle_pair_end_reads_kmers_in_smudge_2.txt'
-        kmer_file_name = self.output_pattern + '_kmers_in_smudge_1.txt'
-        with open(kmer_file_name, 'r') as kmer_file:
-            kmers = [kmer.rstrip() for kmer in kmer_file]
+            logging.info('Loading kmers')
+            kmer_file_name = self.output_pattern + '_kmers_in_smudge_' + str(proc_smudge) + '.txt'
+            with open(kmer_file_name, 'r') as kmer_file:
+                kmers = [kmer.rstrip() for kmer in kmer_file]
 
-        logging.info('Mapping kmers')
-        start = time.time()
-        mapping_list = [searchKmer(kmer) for kmer in s1_kmers]
-        end = time.time()
-        logging.info('Kmers mapped in ' + str(end - start) + ' seconds')
+            logging.info('Mapping kmers')
+            start = time.time()
+            mapping_list = [self.searchKmer(kmer) for kmer in kmers]
+            end = time.time()
+            logging.info('Kmers mapped in ' + str(round(end - start, 4)) + ' seconds')
 
-        logging.info('Generating stats')
+            # logging.info('Generating stats')
+            # hit_numbers = [len(mapped_kmer) for mapped_kmer in mapping_list]
+            # hit_numbers.value_counts()
 
-        hit_numbers = [len(mapped_kmer) for mapped_kmer in mapping_list]
-        hit_numbers.value_counts()
+            logging.info('Generating bam file.')
+            hlaf_of_kmer = str(int((len(kmers[0]) - 1) / 2))
+            cigar = hlaf_of_kmer + '=1X' + hlaf_of_kmer + '='
+            bamfile_name = self.output_pattern + "_" + str(proc_smudge) + "_mapped.bam"
+            with bgzf.BgzfWriter(bamfile_name, 'w') as bamfile:
+                writer = csv.writer(bamfile, delimiter='\t', lineterminator='\n')
+                writer.writerow(['@HD', 'VN:1.3', 'SO:coordinate'])
+                for i, scf in enumerate(self.scf_names):
+                    writer.writerow(['@SQ', 'SN:' + scf, 'LN:' + str(self.scf_sizes[i])])
+                for i, mapped_kmer in enumerate(mapping_list):
+                    for entry in mapped_kmer:
+                        if entry[2] == '+':
+                            flag = 0
+                        else:
+                            flag = 16
+                        writer.writerow(['k' + str(i + 1), str(flag), entry[0], entry[1], 255, cigar, '*', '0', '0', kmers[i], '*'])
+                    if not mapped_kmer:
+                        flag = 4
+                        writer.writerow(['k' + str(i + 1), str(flag), '*', 0, 255, '*', '*', '0', '0', kmers[i], '*'])
+            logging.info('bam file saved.')
+            if self.to_plot != 0:
+                break
+            proc_smudge += 1
+
