@@ -39,6 +39,29 @@ mapping_list = [kmer_map.searchKmer(kmer) for kmer in s1_kmers]
 end = time.time()
 print('Done in ' + str(round(end - start, 1)) + ' s')
 
+import csv
+from Bio import bgzf
+
+hlaf_of_kmer = str(int((len(s1_kmers[0]) - 1) / 2))
+cigar = hlaf_of_kmer + '=1X' + hlaf_of_kmer + '='
+bamfile_name = kmer_map.output_pattern + "_AABB_mapped.bam"
+
+bamfile = bgzf.BgzfWriter(bamfile_name, 'w')
+writer = csv.writer(bamfile, delimiter='\t', lineterminator='\n')
+writer.writerow(['@HD', 'VN:1.3', 'SO:coordinate'])
+for i, scf in enumerate(kmer_map.scf_names):
+    writer.writerow(['@SQ', 'SN:' + scf, 'LN:' + str(scf2size[scf])])
+for i, mapped_kmer in enumerate(mapping_list):
+    for entry in mapped_kmer:
+        if entry[2] == '+':
+            flag = 3
+        else:
+            flag = 19
+        writer.writerow(['k' + str(i + 1), str(flag), entry[0], entry[1], 255, cigar, '*', '0', '0', s1_kmers[i], '*'])
+bamfile.close()
+
+print('Saved ' + bamfile_name)
+
 hit_numbers = [len(mapped_kmer) for mapped_kmer in mapping_list]
 hist = Counter(hit_numbers)
 fractions = [100 * round(hist[i] / len(mapping_list), 4) for i in range(0,10)]
@@ -74,17 +97,18 @@ scaffold_dupl = defaultdict(int)
 within_scaffold_dupl = defaultdict(int)
 for mapped_kmer in mapping_list:
     if len(mapped_kmer) == 2:
-        if mapped_kmer[0][0] == mapped_kmer[0][1]:
+        if mapped_kmer[0][0] == mapped_kmer[1][0]:
             within_scaffold_dupl[mapped_kmer[0][0]] += 1
         else:
             scaffold_dupl[mapped_kmer[0][0]] += 1
-            scaffold_dupl[mapped_kmer[0][1]] += 1
+            scaffold_dupl[mapped_kmer[1][0]] += 1
 
 ### Collapsed assembled duplications
 collapsed_dupl = defaultdict(int)
 for mapped_kmer in mapping_list:
     if len(mapped_kmer) == 1:
         collapsed_dupl[mapped_kmer[0][0]] += 1
+
 
 with open(kmer_map.output_pattern + "_scaffold_duplicates_list.txt", 'w') as dupl_file:
     for scf in kmer_map.scf_names:
@@ -94,6 +118,23 @@ with open(kmer_map.output_pattern + "_scaffold_collapsed_duplicates_list.txt", '
     for scf in kmer_map.scf_names:
         dupl_file.write(scf + "\t" + str(collapsed_dupl[scf]) + "\t" + str(collapsed_dupl[scf] / scf2size[scf]) + "\n")
 
+### distributions
+
+# ????
+
+### Networks
+
+dupl_network = defaultdict(int)
+for mapped_kmer in mapping_list:
+    if len(mapped_kmer) == 2:
+        scf1 = mapped_kmer[0][0]
+        scf2 = mapped_kmer[1][0]
+        if scf1 < scf2:
+            dupl_network[(scf1, scf2)] += 1
+        else :
+            dupl_network[(scf2, scf1)] += 1
+
+## save it???
 
 # # # # # # # # #
 # # full kmer # #
