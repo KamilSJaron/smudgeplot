@@ -39,29 +39,6 @@ mapping_list = [kmer_map.searchKmer(kmer) for kmer in s1_kmers]
 end = time.time()
 print('Done in ' + str(round(end - start, 1)) + ' s')
 
-import csv
-from Bio import bgzf
-
-hlaf_of_kmer = str(int((len(s1_kmers[0]) - 1) / 2))
-cigar = hlaf_of_kmer + '=1X' + hlaf_of_kmer + '='
-bamfile_name = kmer_map.output_pattern + "_AABB_mapped.bam"
-
-bamfile = bgzf.BgzfWriter(bamfile_name, 'w')
-writer = csv.writer(bamfile, delimiter='\t', lineterminator='\n')
-writer.writerow(['@HD', 'VN:1.3', 'SO:coordinate'])
-for i, scf in enumerate(kmer_map.scf_names):
-    writer.writerow(['@SQ', 'SN:' + scf, 'LN:' + str(scf2size[scf])])
-for i, mapped_kmer in enumerate(mapping_list):
-    for entry in mapped_kmer:
-        if entry[2] == '+':
-            flag = 3
-        else:
-            flag = 19
-        writer.writerow(['k' + str(i + 1), str(flag), entry[0], entry[1], 255, cigar, '*', '0', '0', s1_kmers[i], '*'])
-bamfile.close()
-
-print('Saved ' + bamfile_name)
-
 hit_numbers = [len(mapped_kmer) for mapped_kmer in mapping_list]
 hist = Counter(hit_numbers)
 fractions = [100 * round(hist[i] / len(mapping_list), 4) for i in range(0,10)]
