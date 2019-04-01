@@ -33,10 +33,16 @@ cd smudgeplot
 
 ### global installation
 
-Install all the dependencies from pip and this package
+Install all the dependencies from pip (installation of PySAIS requires Cython, therefore it must go in two steps)
 
 ```
 pip3 install -r requirements.txt
+pip3 install PySAIS==1.0.4
+```
+
+finally install this package
+
+```
 python3 setup.py install    # installs the library
 ```
 
@@ -57,6 +63,7 @@ Alternatively, you can install the package in virtual environment to be sure tha
 virtualenv -p python3 venv
 source venv/bin/activate
 pip3 install -r requirements.txt
+pip3 install PySAIS==1.0.4
 python3 setup.py install
 smudgeplot --version
 ```
