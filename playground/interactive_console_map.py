@@ -29,7 +29,6 @@ kmer_map.loadGenome()
 kmer_map.constructSuffixArray()
 
 kmer_file_name_s1 = 'data/Tps1/Tps_middle_pair_end_reads_kmers_in_smudge_1.txt'
-kmer_file_name_s1
 with open(kmer_file_name_s1, 'r') as s1_kmer_file:
     s1_kmers = [kmer.rstrip() for kmer in s1_kmer_file]
 

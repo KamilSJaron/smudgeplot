@@ -106,45 +106,7 @@ After using KMC, generate the smudgeplot using the coverages of the kmer pairs (
 smudgeplot plot -i kmer_pairs_coverages_2.tsv
 ```
 
-will generate a basic smugeplot, the full usage of `smudgeplot.R` script is
-
-TODO: fix following section
-```
-usage: smudgeplot.R [-h] [-v] [--homozygous] [-i INPUT]
-                    [-o OUTPUT] [-t TITLE] [-q QUANTILE_FILT]
-                    [-n N_COV] [-L LOW_CUTOFF] [-nbins NBINS]
-                    [-k KMER_SIZE]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -v, --version         print the version and exit
-  --homozygous          Assume no heterozygosity in the genome - plotting a
-                        paralog structure; [default FALSE]
-  -i INPUT, --input INPUT
-                        name of the input tsv file with covarages [default
-                        "coverages_2.tsv"]
-  -o OUTPUT, --output OUTPUT
-                        name pattern used for the output files
-                        (OUTPUT_smudgeplot.png, OUTPUT_summary.txt,
-                        OUTPUT_warrnings.txt) [default "smudgeplot"]
-  -t TITLE, --title TITLE
-                        name printed at the top of the smudgeplot [default
-                        none]
-  -q QUANTILE_FILT, --quantile_filt QUANTILE_FILT
-                        Remove kmer pairs with coverage over the specified
-                        quantile; [default none]
-  -n N_COV, --n_cov N_COV
-                        the haploid coverage of the sequencing data [default
-                        inference from data]
-  -L LOW_CUTOFF, --low_cutoff LOW_CUTOFF
-                        the lower boundary used when dumping kmers [default
-                        min(total_pair_cov) / 2]
-  -nbins NBINS          the number of nbins used for smudgeplot matrix (nbins
-                        x nbins) [default autodetection]
-  -k KMER_SIZE, --kmer_size KMER_SIZE
-                        The kmer size used to calculate kmer spectra [default
-                        21]
-```
+will generate a basic smugeplot, the full usage of `smudgeplot` script can be printed by `smudgeplot plot --help`.
 
 Smudgeplot generates two plots, one with coloration on a log scale and on a linear scale. The legend indicates approximate kmer pairs per tile densities. Note that a single polymorphism generates multiple heterozygous kmers. As such, the reported numbers do not directly correspond to the number of variants. Instead, the actual number is approximately 1/k times the reported numbers, where k is the kmer size (in summary already recalculated). It's important to note that this process does not exhaustively attempt to find all of the heterozygous kmers from the genome. Instead, only a sufficient sample is obtained in order to identify relative genome structure. You can also report the minimal number of loci that are heterozygous if the inference is correct.
 
