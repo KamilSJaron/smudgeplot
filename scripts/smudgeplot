@@ -71,6 +71,7 @@ def plot(args):
 
     logging.info("saving " + smudge.args.o + "_smudgeplot_pythonic.png")
     smudge.plot((ymin,ymax))
+    smudge.plot((ymin,ymax), log = True)
 
     logging.info("saving " + smudge.args.o + "_smudgematrix.tsv")
     smudge.saveMatrix()

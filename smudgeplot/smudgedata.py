@@ -104,8 +104,6 @@ class smudgedata:
         self.x = np.linspace(0, 0.5, self.nbins + 1)
         self.y = np.linspace(ymin, ymax, self.nbins + 1)
         self.hist, self.y, self.x = np.histogram2d(self.sum_cov, self.rel_cov, bins=(self.y, self.x))
-        # self.loghist = np.log10(self.hist)
-        # self.loghist[self.loghist == -np.inf] = 0
 
     def agregateSmudges(self):
         #nogo_x = findInterval(.L / .smudge_container$y, .smudge_container$x, left.open = T)
@@ -220,7 +218,7 @@ class smudgedata:
                 for kmer in smudge_kmers[processed_smudge]:
                     kmer_smudge_file.write(kmer)
 
-    def plot(self, ylim):
+    def plot(self, ylim, log = False):
         fig = plt.figure(figsize=(8, 8))
         mpl.rcParams.update({'font.size': 14})
 
@@ -229,6 +227,9 @@ class smudgedata:
         ax_marg_y = plt.subplot2grid((8, 8), (2, 6), colspan=2, rowspan=6, sharey=ax_joint, frameon=False)
         ax_legend = plt.subplot2grid((8, 8), (0, 6), colspan=1, rowspan=2)
 
+        ################
+        # REL COV HIST #
+        ################
         plt.setp(ax_marg_x.get_xticklabels(), visible=False)
         plt.setp(ax_marg_x.yaxis.get_majorticklines(), visible=False)
         plt.setp(ax_marg_x.yaxis.get_minorticklines(), visible=False)
@@ -249,6 +250,9 @@ class smudgedata:
         ax_marg_x.text(0.05, 0.4, '1n coverage: ' + str(round(self.brightest_smudge_n, 1)), horizontalalignment='left',
                        verticalalignment='bottom', transform=ax_marg_x.transAxes)
 
+        ################
+        # COV SUM HIST #
+        ################
         plt.setp(ax_marg_y.get_yticklabels(), visible=False)
         # to remove even the y ticks
         # plt.setp(ax_marg_y.yaxis.get_majorticklines(), visible=False)
@@ -272,23 +276,43 @@ class smudgedata:
         ax_joint.xaxis.set_major_locator(plt.FixedLocator([0.5, 0.4, 0.33, 0.25, 0.2]))
         ax_joint.xaxis.set_major_formatter(plt.FixedFormatter(["1/2", "2/5", "1/3", "1/4", "1/5"]))
         ax_joint.yaxis.set_major_locator(plt.MultipleLocator(self.brightest_smudge_n))
+
+        ###########
+        # 2D HIST #
+        ###########
         #### Annotate smudges
         self.annotateSmudges(ax_joint, ylim)
         ax_joint.set_ylim(ylim)
         cmap = plt.get_cmap('viridis')
-        ax_joint.pcolormesh(self.x, self.y, self.hist, cmap = cmap)
+        if log :
+            output_fig_file = self.args.o + "_smudgeplot_log10.png"
+            ax_joint.pcolormesh(self.x, self.y, self.hist + 1, cmap = cmap, norm=mpl.colors.LogNorm())
+            bounds = np.linspace(0, np.log10(self.hist.max()), 64)
+        else :
+            output_fig_file = self.args.o + "_smudgeplot.png"
+            ax_joint.pcolormesh(self.x, self.y, self.hist, cmap = cmap)
+            # for legend
+            bounds = np.linspace(0,self.hist.max(), 64)
 
+        ##########
+        # LEGEND #
+        ##########
         # ax_legend.cla()
         # fig.colorbar(im, ax=ax_legend)
         # fig = plt.figure()
         # ax_legend = plt.subplot2grid((4, 4), (0, 3), colspan=1, rowspan=1)
-        bounds = np.linspace(0,self.hist.max(), 64)
+
         norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
-        mpl.colorbar.ColorbarBase(ax_legend, cmap, norm, ticks = np.linspace(0,self.hist.max(), 6))
+        cbar = mpl.colorbar.ColorbarBase(ax_legend, cmap, norm, ticks = np.linspace(0, bounds.max(), 6))
+        if log:
+            max = np.log10(self.hist.max())
+            labels = np.around(10 ** (np.linspace(0, max, 6)))
+            cbar.ax.set_yticklabels(labels)
+
         # fig.tight_layout()
         plt.subplots_adjust(left = 0.12, bottom = 0.12, right = 0.95, top = 0.95, wspace = 0.2, hspace = 0.2)
 
-        plt.savefig(self.args.o + "_smudgeplot_pythonic.png")
+        plt.savefig(output_fig_file)
 
     def annotateSmudges(self, ax, ylim):
         for smudge_index in self.smudge_centers:
