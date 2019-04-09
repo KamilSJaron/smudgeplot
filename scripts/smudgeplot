@@ -64,6 +64,7 @@ def plot(args):
         else :
             break
     logging.info('final 1n coverage estimate {:0.2f}'.format(smudge.brightest_smudge_n))
+    smudge.saveSummary()
 
     if smudge.args.kmer_file:
         logging.info("saving kmers in smudges " + smudge.args.o + "_kmers_in_smudge_*.txt")

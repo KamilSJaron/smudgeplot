@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib as mpl
+# this should be only for non-interactive console
 mpl.use('Agg') # https://stackoverflow.com/a/33873802/2962344
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
@@ -7,6 +8,7 @@ from scipy.signal import find_peaks
 from os.path import isfile
 from collections import defaultdict
 from bisect import bisect_left
+from sys import stdout
 import logging
 
 # smudgedata - a class for easy control over the data related to smudgeplot
@@ -106,7 +108,8 @@ class smudgedata:
         self.hist, self.y, self.x = np.histogram2d(self.sum_cov, self.rel_cov, bins=(self.y, self.x))
 
     def agregateSmudges(self):
-        #nogo_x = findInterval(.L / .smudge_container$y, .smudge_container$x, left.open = T)
+        # use self.args.method to decide how to agregate smudges
+        # nogo_x = findInterval(.L / .smudge_container$y, .smudge_container$x, left.open = T)
         self.sorted_hist_indices = np.dstack(np.unravel_index(np.argsort(self.hist.ravel()), (self.nbins, self.nbins)))[0][::-1]
         self.smudge_assignment = []
         max_smudge = 1
@@ -193,6 +196,23 @@ class smudgedata:
         uniq_sctruc, cunts = np.unique(structures, return_counts=True)
         return(any(cunts > 1))
 
+    def saveSummary(self):
+        summary_file_name = self.args.o + "_summary_table.tsv"
+        smudge_structures = self.getSmudgeStats(4)
+        kmer_nums = [int(x) for x in self.getSmudgeStats(2)]
+        kmer_fracs = [x for x in self.getSmudgeStats(3)]
+        summits_cov_sum = [(self.y[x[0]] + self.y[x[0] + 1]) / 2 for x in self.getSmudgeStats(0)]
+        summits_rel_cov = [(self.x[x[1]] + self.x[x[1] + 1]) / 2 for x in self.getSmudgeStats(0)]
+        logging.info("Printing summary of all detected peaks (table) to stdout")
+        with open(summary_file_name, 'w') as summary_file:
+            header = "smudge\tkmers [#]\tkmers [proportion]\tcenter position B / (A + B)\tcenter position A + B\n"
+            summary_file.write(header)
+            stdout.write(header)
+            for i, sm in enumerate(smudge_structures):
+                fromated_line = "%s\t%d\t%.2f\t%.2f\t%.1f\n" % (sm, kmer_nums[i], kmer_fracs[i], summits_rel_cov[i], summits_cov_sum[i])
+                summary_file.write(fromated_line)
+                stdout.write(fromated_line)
+
     def saveKmersFromSmudges(self):
         # build a dictionary of position > assigned smudge
         coor_smudge_dict = defaultdict(int)
@@ -264,7 +284,6 @@ class smudgedata:
         ax_marg_y.hist(self.sum_cov, self.nbins, orientation = 'horizontal', range = ylim, color = 'darkred')
         # ax_marg_y.text(1, 0, '1n = ' + str(round(self.brightest_smudge_n, 1)), horizontalalignment='right',
         #                verticalalignment='bottom', transform=ax_marg_y.transAxes)
-        #### print summary
         het_structures = self.getSmudgeStats(4)
         het_structure_sizes = [round(x, 2) for x in self.getSmudgeStats(3)]
         self.plotTextVector(ax_marg_y, het_structures, 0.1)
@@ -345,6 +364,7 @@ class smudgedata:
         }
         return(ploidy_map.get(self.ploidy_est, "unknown"))
 
+    # index is an index of the parameter to extract
     def getSmudgeStats(self, index, sorted = True):
         if sorted:
             sizes = [self.smudge_centers[smudge_index][3] for smudge_index in self.smudge_centers]
