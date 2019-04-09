@@ -7,7 +7,7 @@ class parser():
     def __init__(self):
         argparser = argparse.ArgumentParser(
             # description='Inference of ploidy and heterozygosity structure using whole genome sequencing data',
-            usage='''smudgeplot <task> [options]
+            usage='''smudgeplot <task> [options] \n
 tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cutoff.
        hetkmers  Calculate unique kmer pairs from a Jellyfish or KMC dump file.
        plot      Generate 2d histogram; infere ploidy and plot a smudgeplot.
@@ -36,7 +36,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         '''
         Calculate unique kmer pairs from a Jellyfish or KMC dump file.
         '''
-        argparser = argparse.ArgumentParser(
+        argparser = argparse.ArgumentParser(prog = 'smudgeplot hetkmers',
             description='Calculate unique kmer pairs from a Jellyfish or KMC dump file.')
         argparser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='Alphabetically sorted Jellyfish or KMC dump file (stdin).')
         argparser.add_argument('-o', help='The pattern used to name the output (kmerpairs).', default='kmerpairs')
@@ -50,7 +50,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         '''
         Generate 2d histogram; infer ploidy and plot a smudgeplot.
         '''
-        argparser = argparse.ArgumentParser(description='Generate 2d histogram for smudgeplot')
+        argparser = argparse.ArgumentParser(prog = 'smudgeplot plot', description='Generate 2d histogram for smudgeplot')
         argparser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='name of the input tsv file with covarages (default \"coverages_2.tsv\")."')
         argparser.add_argument('-o', help='The pattern used to name the output (smudgeplot).', default='smudgeplot')
         argparser.add_argument('-q', help='Remove kmer pairs with coverage over the specified quantile; (default none).', type=float, default=1)
@@ -68,7 +68,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         '''
         Calculate meaningful values for lower/upper kmer histogram cutoff.
         '''
-        argparser = argparse.ArgumentParser(description='Calculate meaningful values for lower/upper kmer histogram cutoff.')
+        argparser = argparse.ArgumentParser(prog = 'smudgeplot cutoff', description='Calculate meaningful values for lower/upper kmer histogram cutoff.')
         argparser.add_argument('infile', type=argparse.FileType('r'), help='Name of the input kmer histogram file (default \"kmer.hist\")."')
         argparser.add_argument('boundary', help='Which bounary to compute L (lower, default) or U (upper)', default = 'L')
         self.arguments = argparser.parse_args(sys.argv[2:])
@@ -77,7 +77,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         '''
         Identify extracted kmer pairs from individual smudges to a genome.
         '''
-        argparser = argparse.ArgumentParser(description='Identify extracted kmer pairs from individual smudges to a genome.')
+        argparser = argparse.ArgumentParser(prog = 'smudgeplot map', description='Identify extracted kmer pairs from individual smudges to a genome.')
         argparser.add_argument('genomefile', help='The reference genome (fasta file; can be gunzipped).')
         argparser.add_argument('-o', help='The pattern used to read kmers and output (default \"smudgeplot\").', default='smudgeplot')
         argparser.add_argument('-s', help='Smudge to be mapped (intiger, ordered by size; default is to map all smudges)', type = int, default = 0)
