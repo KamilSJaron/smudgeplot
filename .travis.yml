@@ -3,7 +3,7 @@ python:
   - "3.7.2"
 cache: pip
 install:
-  - pip install -r requirements.txt && pip install PySAIS==1.0.4 && python3 setup.py install
+  - pip install --allow-all-external -r requirements.txt && pip install PySAIS==1.0.4 && python3 setup.py install
 branches:
   only:
     - dev
