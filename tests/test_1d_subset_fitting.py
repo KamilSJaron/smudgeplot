@@ -12,6 +12,7 @@ class TestFitting(unittest.TestCase):
         args.L = 0
         args.nbins = 0
         args.q = 0.95
+        args.n = 0
         self.smudge = smudgedata.smudgedata(args)
         self.smudge.loadData()
 
