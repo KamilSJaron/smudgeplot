@@ -1,6 +1,5 @@
 language: python3
 python:
-  - "3.6"
   - "3.7.2"
 cache: pip
 install:

@@ -21,6 +21,9 @@ This tool is planned to be a part of [GenomeScope](https://github.com/schatzlab/
 
 ## Installation
 
+Travis build & unit test of `master` branch : [![master_build](https://travis-ci.org/KamilSJaron/smudgeplot.svg?branch=master)](https://travis-ci.org/KamilSJaron/smudgeplot/branches)
+Travis build & unit test of `dev` branch : [![dev_test](https://travis-ci.org/KamilSJaron/smudgeplot.svg?branch=dev)](https://travis-ci.org/KamilSJaron/smudgeplot/branches)
+
 You need a program for counting kmers installed, such as [KMC](https://github.com/refresh-bio/KMC) and we strongly recommend running [GenomeScope](https://github.com/schatzlab/genomescope) as well, it's not rare that both GenomeScope and smudgeplot are needed to make a sense out of the sequencing data.
 TODO: pointer to cluster installation instructions
 
