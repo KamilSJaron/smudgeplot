@@ -1,7 +1,7 @@
 language: python3
 python:
-  - "3.7.2"
-cache: pip
+  - "3.6.3"
+cache: pip3
 install:
   - pip3 install -r requirements.txt && pip3 install PySAIS==1.0.4 && python3 setup.py install
 branches:
