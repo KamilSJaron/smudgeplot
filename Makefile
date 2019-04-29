@@ -15,7 +15,7 @@ CUTOFF_INST = $(INSTAL_PREFIX)/bin/kmer_cov_cutoff.R
 install : $(R_INSTALLATION) $(HET_KMERS_INST) $(SMUDGEPLOT_INST) $(CUTOFF_INST)
 
 $(INSTAL_PREFIX)/bin/% : %
-	install -C $< $(INSTAL_PREFIX)/bin
+	install -C exec/$< $(INSTAL_PREFIX)/bin
 
 $(R_INSTALLATION) : R/*
 	Rscript install.R
