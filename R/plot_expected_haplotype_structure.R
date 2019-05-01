@@ -6,7 +6,7 @@
 #' @export
 
 plot_expected_haplotype_structure <- function(.n, .peak_sizes,
-                                              .adjust = F, .cex = 1.3){
+                                              .adjust = F, .cex = 1.3, xmax = 0.49){
     borercases <- .peak_sizes$corrected_minor_variant_cov == 0.5
     # if(.adjust){
     #     # I adjust labels on 0.5 because otherwise they would be out of plot
@@ -19,7 +19,7 @@ plot_expected_haplotype_structure <- function(.n, .peak_sizes,
     # }
 
     for(i in 1:nrow(.peak_sizes)){
-        text( ifelse( borercases[i] & .adjust, 0.49, .peak_sizes$corrected_minor_variant_cov[i]),
+        text( ifelse( borercases[i] & .adjust, (xmax + 0.49) / 2, .peak_sizes$corrected_minor_variant_cov[i]),
              .peak_sizes$ploidy[i] * .n, .peak_sizes$structure[i],
              offset = 0, cex = .cex, xpd = T, pos = ifelse( borercases[i] & .adjust, 2, 1))
     }
