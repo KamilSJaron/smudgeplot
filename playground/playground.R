@@ -15,13 +15,20 @@ args$nbins <- 40
 args$kmer_size <- 21
 args$homozygous <- F
 
+# args <- list()
+# args$input <- 'data/rice/SRR1919013_k21_l35_u500_coverages.tsv'
+# args$output <- "data/rice/smudge"
+# args$nbins <- 40
+# args$kmer_size <- 21
+# args$homozygous <- F
+
 ###
 
 i <- 7
 n <- NA
 cov <- read.table(args$input)
 
-# run bits of smudgeplot.R to get k, and peak summary
+# run bits of smudgeplot_plot.R to get k, and peak summary
 
 filter <- total_pair_cov < 350
 total_pair_cov_filt <- total_pair_cov[filter]
