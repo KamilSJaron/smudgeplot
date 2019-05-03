@@ -106,7 +106,7 @@ smudgeplot hetkmers -k 21 -o kmer_pairs < kmer_k21.dump
 After using KMC, generate the smudgeplot using the coverages of the kmer pairs (`*_coverages_2.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data and compare it afterwards. If GenomeScope correctly identifies the peak of haploid kmers, the expected positions of the haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider adjusting the GenomeScope model and redoing the plot with a better estimate of the haploid coverage. Something like
 
 ```
-smudgeplot plot -i kmer_pairs_coverages_2.tsv
+smudgeplot plot kmer_pairs_coverages_2.tsv
 ```
 
 will generate a basic smugeplot, the full usage of `smudgeplot` script can be printed by `smudgeplot plot --help`.
