@@ -31,10 +31,6 @@ two different methods to extract homologous kmers
 ./exec/smudgeplot hetkmers -o tests/data/toy_all tests/data/toy_kmer_k21.dump
 ```
 
-```
-./exec/smudgeplot hetkmers -o tests/data/toy_all tests/data/toy_kmer_k21.dump
-```
-
 ###### Middle
 
 ```

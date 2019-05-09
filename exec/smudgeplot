@@ -175,13 +175,9 @@ def worker(q, results, k):
 def middle_one_away(args):
     print('Extracting kmer pairs that differ in the middle nt')
 
-    dumps_file = args.infile
-    output_pattern = args.o
-    k = int(args.k)
-
-    # file_one_away_pairs = open(output_pattern + '_one_away_pairs.tsv', 'w')
-    file_coverages = open(output_pattern + '_coverages.tsv', 'w')
-    file_kmers = open(output_pattern + '_sequences.tsv', 'w')
+    # file_one_away_pairs = open(args.o + '_one_away_pairs.tsv', 'w')
+    file_coverages = open(args.o + '_coverages.tsv', 'w')
+    file_kmers = open(args.o + '_sequences.tsv', 'w')
 
     duplicated = set()
     filtered = set()
@@ -190,16 +186,16 @@ def middle_one_away(args):
     kmer_R_to_index_family = defaultdict(list)
 
     #Get the locations for the two halves of the kmer.
-    k_middle = k // 2
+    k_middle = args.k // 2
     i_L_L = 0
     i_L_R = k_middle - 1
     i_R_L = k_middle + 1
-    i_R_R = k-1
+    i_R_R = args.k - 1
 
-    print('Saving ' + output_pattern + '_coverages.tsv and ' + output_pattern + '_sequences.tsv files.')
+    print('Saving ' + args.o + '_coverages.tsv and ' + args.o + '_sequences.tsv files.')
     # Read each line of the input file in order to load the kmers and coverages and process the kmer halves.
     current_kmer_L = ""
-    for i1, line in enumerate(dumps_file):
+    for i1, line in enumerate(args.infile):
         kmer, coverage1 = line.split()
         coverage1 = int(coverage1)
 
@@ -230,11 +226,6 @@ def middle_one_away(args):
     file_kmers.close()
 
 def all_one_away(args):
-    dumps_file = args.infile
-    output_pattern = args.o
-    k = int(args.k)
-    num_processes = int(args.t)
-
     #Initiate coverages list.
     coverages = []
 
@@ -246,14 +237,14 @@ def all_one_away(args):
     kmer_R_to_index_family = defaultdict(list)
 
     #Get the locations for the two halves of the kmer.
-    k_L = k // 2
+    k_L = args.k // 2
     i_L_L = 0
     i_L_R = k_L - 1
     i_R_L = k_L
-    i_R_R = k-1
+    i_R_R = args.k - 1
 
     #Read each line of the input file in order to load the kmers and coverages and process the kmer halves.
-    for i, line in enumerate(dumps_file):
+    for i, line in enumerate(args.infile):
         kmer, coverage = line.split()
         coverage = int(coverage)
         coverages.append(coverage)
@@ -271,8 +262,8 @@ def all_one_away(args):
 
     #Initiate processes.
     processes = []
-    for i in range(num_processes):
-        p = mp.Process(target = worker, args = (q, results, k))
+    for i in range(args.t):
+        p = mp.Process(target = worker, args = (q, results, args.k))
         p.start()
         processes.append(p)
 
@@ -292,7 +283,7 @@ def all_one_away(args):
     del kmer_R_to_index_family
 
     #Add sentinels so the processes know when to terminate.
-    for i in range(num_processes):
+    for i in range(args.t):
         q.put(None)
 
     q.close()
@@ -301,12 +292,12 @@ def all_one_away(args):
     #Save one_away_pairs to a tsv file, and keep track of which indices only occur once.
     num_completed = 0
     repeated = {}
-    with open(output_pattern + '_one_away_pairs.tsv', 'w') as record_file:
+    with open(args.o + '_one_away_pairs.tsv', 'w') as record_file:
         while True:
             partial_one_away_pairs = results.get()
             if partial_one_away_pairs is None:
                 num_completed += 1
-                if num_completed == num_processes:
+                if num_completed == args.t:
                     break
             else:
                 for (i1, i2) in partial_one_away_pairs:
@@ -325,7 +316,7 @@ def all_one_away(args):
     print('Processes joined.')
 
     #Save families_2 and coverages_2 tsv files, which only include one_away_pairs that don't overlap any others.
-    with open(output_pattern + '_families_2.tsv', 'w') as record_file1, open(output_pattern + '_coverages_2.tsv', 'w') as record_file2:
+    with open(args.o + '_families_2.tsv', 'w') as record_file1, open(args.o + '_coverages_2.tsv', 'w') as record_file2:
         for (i1, i2) in one_away_pairs:
             if not repeated[i1] and not repeated[i2]:
                 cov1 = coverages[i1]
@@ -360,11 +351,8 @@ def main():
     if _parser.task == "hetkmers":
         args = _parser.arguments
         if args.middle:
-            # print("middle not fixed yet")
-            # exit(0)
             middle_one_away(args)
         else :
-            print("Warning: all not fixed yet")
             all_one_away(args)
 
     if _parser.task == "plot":
