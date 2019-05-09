@@ -171,12 +171,17 @@ def middle_one_away(args):
     #Initialize a dictionary in which the key is the right kmer_half (not including the middle nucleotide), and the value is a list of (index, coverage) tuples corresponding to kmers that have that particular right kmer_half.
     kmer_R_to_index_family = defaultdict(list)
 
+    # read the first line to get the length of the kmer
+    with open(args.infile.name) as dump_file:
+        kmer, coverage = dump_file.readline().split()
+        k = len(kmer)
+
     #Get the locations for the two halves of the kmer.
-    k_middle = args.k // 2
+    k_middle = k // 2
     i_L_L = 0
     i_L_R = k_middle - 1
     i_R_L = k_middle + 1
-    i_R_R = args.k - 1
+    i_R_R = k - 1
 
     print('Saving ' + args.o + '_coverages.tsv and ' + args.o + '_sequences.tsv files.')
     # Read each line of the input file in order to load the kmers and coverages and process the kmer halves.
