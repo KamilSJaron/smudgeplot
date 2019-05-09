@@ -11,6 +11,7 @@ from scipy.signal import argrelextrema
 from collections import defaultdict
 from itertools import combinations
 import multiprocessing as mp
+import itertools
 
 version = '0.2.0'
 
@@ -119,7 +120,6 @@ def cutoff(args):
 
 def get_one_away_pairs(kmer_index_family, k):
     """kmer_index_family is a list of (kmer, index) pairs currently under consideration. k is the kmer length. get_one_away_pairs returns a list of pairs of indices where each pair of indices corresponds to a pair of kmers different in exactly one base."""
-    print('Extracting kmer pairs that differ in the middle nt')
 
     #This is the base case for the recursion. Return every pair of indices where the kmers corresponding to those indices differ at exactly one base.
     if k == 1:
@@ -360,9 +360,12 @@ def main():
     if _parser.task == "hetkmers":
         args = _parser.arguments
         if args.middle:
-            middle_one_away(args.arguments)
+            # print("middle not fixed yet")
+            # exit(0)
+            middle_one_away(args)
         else :
-            all_one_away(args.arguments)
+            print("Warning: all not fixed yet")
+            all_one_away(args)
 
     if _parser.task == "plot":
         # the plotting script is expected ot be installed in the system as well as the R library supporting it
