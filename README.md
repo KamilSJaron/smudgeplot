@@ -29,7 +29,7 @@ cd smudgeplot
 Rscript install.R
 ```
 
-and finally install two scripts
+3. install two scripts
 
 ```
 install -C exec/smudgeplot /usr/local/bin
@@ -51,7 +51,7 @@ If the installation procedure does not work, if you encounter any other problem,
 
 The input is a set of whole genome sequencing reads, the more coverage the better. The method is designed to process big datasets, don't hesitate to pull all single-end/pair-end libraries together.
 
-The workflow is automatic, but it's not fool-proof. It requires some decisions. The usage is shown using [KMC](https://github.com/refresh-bio/KMC) and [GenomeScope](https://github.com/schatzlab/genomescope). We provide also a real data tutorial on our wiki: [strawberry genome analysis](https://github.com/KamilSJaron/smudgeplot/wiki/strawberry-tutorial). If you are interested in running Jellyfish instead of KMC, look at the [manual of smudgeplot with Jellyfish](https://github.com/KamilSJaron/smudgeplot/wiki/manual-of-smudgeplot-with-jellyfish).
+The workflow is automatic, but it's not fool-proof. It requires some decisions. The usage is shown here is using [KMC](https://github.com/refresh-bio/KMC) and [GenomeScope](https://github.com/schatzlab/genomescope). We provide also a real data tutorial on our wiki: [strawberry genome analysis](https://github.com/KamilSJaron/smudgeplot/wiki/strawberry-tutorial). If you are interested in running Jellyfish instead of KMC, look at the [manual of smudgeplot with Jellyfish](https://github.com/KamilSJaron/smudgeplot/wiki/manual-of-smudgeplot-with-jellyfish).
 
 Give KMC all the files with trimmed reads to calculate kmer frequencies and then generate a histogram of kmers:
 
@@ -77,7 +77,7 @@ kmc_tools transform kmer_counts -ci$L -cx$U dump -s kmer_k21.dump
 smudgeplot hetkmers -o kmer_pairs < kmer_k21.dump
 ```
 
-After using KMC, generate the smudgeplot using the coverages of the kmer pairs (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data and compare it afterwards. If GenomeScope correctly identifies the peak of haploid kmers, the expected positions of the haplotype structures will overlap with high density smudges on the smudgeplot. If the overlap is not great you might consider adjusting the GenomeScope model and redoing the plot with a better estimate of the haploid coverage. Something like
+now you can finally generate the smudgeplot using the coverages of the identified kmer pairs (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data. Something like this
 
 ```
 smudgeplot plot kmer_pairs_coverages.tsv
@@ -106,7 +106,7 @@ Check [projects](https://github.com/KamilSJaron/smudgeplot/projects) to see how 
 ## Computational requirements
 
 The memory required scale linearly with the number of kmers and it is approximately 15x higher than the size of the dump file
-(for 20Gb dump file you will need approx ~250Gb of RAM). Alternatively, you can estimate requerements for RAM by number of dumped kmers. It's approximately 350x higher than number of kmers in the dump file. If your file has too many kmers you can decrease computational requirement by reruning the kmer spectra with a smaller kmer size or by more strict filtering of the dumped kmers (higher L and smaller U).
+(for a 20Gb dump file you will need approx ~250Gb of RAM). Alternatively, you can estimate the RAM requirement by number of dumped kmers. It's approximately 350x higher than number of kmers in the dump file. If your file has too many kmers you can decrease computational requirement by rerunning the kmer spectra with a smaller k (i.e. kmer size) or by more strict filtering of the dumped kmers (higher L and smaller U).
 
 We have not calculated the complexity of the algorithm yet. Usually for smaller genomes (<250Gb) it's couple of hours, the longest computation took bit more than one day.
 
