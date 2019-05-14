@@ -9,8 +9,6 @@ suppressPackageStartupMessages(library("smudgeplot"))
 #############
 
 parser <- ArgumentParser()
-parser$add_argument("-v", "--version", action="store_true", default = FALSE,
-                    help="print the version and exit")
 parser$add_argument("--homozygous", action="store_true", default = F,
                     help="Assume no heterozygosity in the genome - plotting a paralog structure; [default FALSE]")
 parser$add_argument("-i", "--input", default = "coverages_2.tsv",
@@ -31,13 +29,6 @@ parser$add_argument("-k", "--kmer_size", type = "integer", default = 21,
                     help="The kmer size used to calculate kmer spectra [default 21]")
 
 args <- parser$parse_args()
-version_message <- "Smudgeplot v0.1.3"
-
-if ( args$version ) {
-    stop(version_message, call.=FALSE)
-} else {
-    smudge_warn(args$output, "running", version_message)
-}
 
 iterative_nbins <- F
 if( is.null(args$nbins) ){
@@ -172,7 +163,7 @@ png(paste0(args$output,'_smudgeplot_log10.png'))
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
-plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T)
+plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
 # 2,3 hist
 plot_histograms(minor_variant_rel_cov, total_pair_cov,
                 ymax, smudge_summary, args$nbins, fig_title)
@@ -189,7 +180,7 @@ png(paste0(args$output,'_smudgeplot.png'))
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
-plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T)
+plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
 # 2,3 hist
 plot_histograms(minor_variant_rel_cov, total_pair_cov,
                 ymax, smudge_summary, args$nbins, fig_title)

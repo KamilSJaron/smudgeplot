@@ -1,26 +1,19 @@
 #' @title plot_expected_haplotype_structure
 #'
 #' @description
-#' \code{plot_expected_haplotype_structure} adds to a plot
+#' \code{plot_expected_haplotype_structure} adds genome scture labels to a smudgeplot
 #'
 #' @export
 
 plot_expected_haplotype_structure <- function(.n, .peak_sizes,
-                                              .adjust = F, .cex = 1.3){
-    borercases <- .peak_sizes$minor_variant_cov_rounded == 0.5
-    if(.adjust){
-        # I adjust labels on 0.5 because otherwise they would be out of plot
-        .peak_sizes$minor_variant_cov_rounded[borercases] <-
-              .peak_sizes$minor_variant_cov_rounded[borercases] -
-              ((0.007 * .peak_sizes$ploidy[borercases]) + 0.01)
-    } else {
-        # this is because xlim for even squares (yeah, I don't really like this function)
-        .peak_sizes$minor_variant_cov_rounded[borercases] <- 0.48
-    }
-
+                                              .adjust = F, .cex = 1.3, xmax = 0.49){
+    borercases <- .peak_sizes$corrected_minor_variant_cov == 0.5
     for(i in 1:nrow(.peak_sizes)){
-        text(.peak_sizes$minor_variant_cov_rounded[i],
+        # xmax is in the middle of the last square in the 2d histogram,
+        # which is too far from the edge, so I average it with 0.49
+        # witch will pull the label bit to the edge
+        text( ifelse( borercases[i] & .adjust, (xmax + 0.49) / 2, .peak_sizes$corrected_minor_variant_cov[i]),
              .peak_sizes$ploidy[i] * .n, .peak_sizes$structure[i],
-             offset = 0, cex = .cex, xpd = T)
+             offset = 0, cex = .cex, xpd = T, pos = ifelse( borercases[i] & .adjust, 2, 1))
     }
 }

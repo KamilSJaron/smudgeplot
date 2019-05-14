@@ -7,15 +7,20 @@ ifndef INSTAL_PREFIX
 endif
 
 R_INSTALLATION = $(PATH)/$(RPACKAGE)
-HET_KMERS_INST = $(INSTAL_PREFIX)/bin/hetkmers.py
-SMUDGEPLOT_INST = $(INSTAL_PREFIX)/bin/smudgeplot.R
-CUTOFF_INST = $(INSTAL_PREFIX)/bin/kmer_cov_cutoff.R
+HET_KMERS_INST = $(INSTAL_PREFIX)/bin/smudgeplot
+SMUDGEPLOT_INST = $(INSTAL_PREFIX)/bin/smudgeplot_plot.R
 
 .PHONY : install
 install : $(R_INSTALLATION) $(HET_KMERS_INST) $(SMUDGEPLOT_INST) $(CUTOFF_INST)
 
-$(INSTAL_PREFIX)/bin/% : %
+$(INSTAL_PREFIX)/bin/% : exec/%
 	install -C $< $(INSTAL_PREFIX)/bin
 
 $(R_INSTALLATION) : R/*
 	Rscript install.R
+
+.PHONY : clean
+clean :
+	rm -r build
+	rm -r dist/
+	rm -r smudgeplot_KamilSJaron.egg-info/
