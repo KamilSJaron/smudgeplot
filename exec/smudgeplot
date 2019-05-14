@@ -54,7 +54,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         argparser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='Alphabetically sorted Jellyfish or KMC dump file (stdin).')
         argparser.add_argument('-o', help='The pattern used to name the output (kmerpairs).', default='kmerpairs')
         argparser.add_argument('--middle', dest='middle', action='store_const', const = True, default = False,
-                          help='Get all kmer pairs one SNP away from each other (default: just the middle one).')
+                               help='Get all kmer pairs that are exactly the same but in the middle nt. When this flag is used, the input dump must be alphabetically sorted/ (default: different by a SNP at any position).')
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def plot(self):
@@ -81,7 +81,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         '''
         argparser = argparse.ArgumentParser(prog = 'smudgeplot cutoff', description='Calculate meaningful values for lower/upper kmer histogram cutoff.')
         argparser.add_argument('infile', type=argparse.FileType('r'), help='Name of the input kmer histogram file (default \"kmer.hist\")."')
-        argparser.add_argument('boundary', help='Which bounary to compute L (lower, default) or U (upper)', default = 'L')
+        argparser.add_argument('boundary', help='Which bounary to compute L (lower) or U (upper)')
         self.arguments = argparser.parse_args(sys.argv[2:])
 
 ###############

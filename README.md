@@ -99,18 +99,9 @@ This script estimates the size, heterozygosity, and repetitive fraction of the g
 
 ## Frequently Asked Questions
 
-Are collected on [our wiki](https://github.com/KamilSJaron/smudgeplot/wiki/FAQ). If you won't find an answer for your question there, open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new/choose) or drop us an email.
+Are collected on [our wiki](https://github.com/KamilSJaron/smudgeplot/wiki/FAQ). Smudgeplot is not much demanding on computational resources, but make sure you check [memory requirements](https://github.com/KamilSJaron/smudgeplot/wiki/smudgeplot-hetkmers#memory-requirements) before you extract kmer pairs (`hetkmers` task). If you won't find an answer for your question in FAQ, open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new/choose) or drop us an email.
 
-Check [projects](https://github.com/KamilSJaron/smudgeplot/projects) to see how the development goes
-
-## Computational requirements
-
-The memory required scale linearly with the number of kmers and it is approximately 15x higher than the size of the dump file
-(for a 20Gb dump file you will need approx ~250Gb of RAM). Alternatively, you can estimate the RAM requirement by number of dumped kmers. It's approximately 350x higher than number of kmers in the dump file. If your file has too many kmers you can decrease computational requirement by rerunning the kmer spectra with a smaller k (i.e. kmer size) or by more strict filtering of the dumped kmers (higher L and smaller U).
-
-We have not calculated the complexity of the algorithm yet. Usually for smaller genomes (<250Gb) it's couple of hours, the longest computation took bit more than one day.
-
-The biggest genome we analyzed so far was a triplod genome with a haploid size 3.5Gbp. We have processed 1.5e9 genomic kmers and it have required 520GB of memory and two days of computation on eight cores.
+Check [projects](https://github.com/KamilSJaron/smudgeplot/projects) to see how the development goes.
 
 ## Contributions
 
