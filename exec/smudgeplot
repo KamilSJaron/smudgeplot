@@ -266,11 +266,11 @@ def all_one_away(args):
 def main():
     _parser = parser()
 
-    print('Running smudgeplot v' + version)
+    sys.stderr.write('Running smudgeplot v' + version + "\n")
     if _parser.task == "version":
         exit(0)
 
-    print('Task: ' + _parser.task)
+    sys.stderr.write('Task: ' + _parser.task + "\n")
 
     if _parser.task == "cutoff":
         cutoff(_parser.arguments)
@@ -298,10 +298,10 @@ def main():
             plot_args += " -nbins " + str(args.nbins)
         if args.homozygous:
             plot_args += " --homozygous"
-        print("Calling: smudgeplot_plot.R " + plot_args)
+        sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
         system("smudgeplot_plot.R " + plot_args)
 
-    print('Done!')
+    sys.stderr.write('Done!' + "\n")
     exit(0)
 
 if __name__=='__main__':
