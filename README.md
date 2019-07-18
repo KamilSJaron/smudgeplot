@@ -32,7 +32,7 @@ Rscript install.R
 3. install two scripts
 
 ```
-install -C exec/smudgeplot /usr/local/bin
+install -C exec/smudgeplot.py /usr/local/bin
 install -C exec/smudgeplot_plot.R /usr/local/bin
 ```
 
@@ -40,7 +40,7 @@ Congratulations, you should have `smudgeplot` operational.
 Just to sure, check that the smudgeplot script works
 
 ```
-smudgeplot --version
+smudgeplot.py --version
 ```
 
 something like `Running smudgeplot v0.2.0` is expected to be printed.
@@ -68,22 +68,22 @@ where `-k` is the kmer length, `-m` is the approximate amount of RAM to use in G
 The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using command `smudgeplot cutoff <kmer.hist> <L/U>`. Then, extract kmers in the coverage range from `L` to `U` using `kmc_dump`. Then run `smudgeplot hetkmers` on the dump of kmers to compute the set of kmer pairs.
 
 ```
-L=$(smudgeplot cutoff kmer_k21.hist L)
-U=$(smudgeplot cutoff kmer_k21.hist U)
+L=$(smudgeplot.py cutoff kmer_k21.hist L)
+U=$(smudgeplot.py cutoff kmer_k21.hist U)
 echo $L $U # these need to be sane values
 # L should be like 20 - 200
 # U should be like 500 - 3000
 kmc_tools transform kmer_counts -ci$L -cx$U dump -s kmer_k21.dump
-smudgeplot hetkmers -o kmer_pairs < kmer_k21.dump
+smudgeplot.py hetkmers -o kmer_pairs < kmer_k21.dump
 ```
 
 now you can finally generate the smudgeplot using the coverages of the identified kmer pairs (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data. Something like this
 
 ```
-smudgeplot plot kmer_pairs_coverages.tsv
+smudgeplot.py plot kmer_pairs_coverages.tsv
 ```
 
-will generate a basic smugeplot. To see all the parameters of `smudgeplot plot` you can run `smudgeplot plot --help`.
+will generate a basic smugeplot. To see all the parameters of `smudgeplot.py plot` you can run `smudgeplot.py plot --help`.
 
 Smudgeplot generates two plots, one with coloration on a log scale and on a linear scale. The legend indicates approximate kmer pairs per tile densities. Note that a single polymorphism generates multiple heterozygous kmers. As such, the reported numbers do not directly correspond to the number of variants. Instead, the actual number is approximately 1/k times the reported numbers, where k is the kmer size (in summary already recalculated). It's important to note that this process does not exhaustively attempt to find all of the heterozygous kmers from the genome. Instead, only a sufficient sample is obtained in order to identify relative genome structure. You can also report the minimal number of loci that are heterozygous if the inference is correct.
 
