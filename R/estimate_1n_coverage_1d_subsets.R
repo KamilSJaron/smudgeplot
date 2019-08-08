@@ -1,7 +1,7 @@
 #' @title estimate_1n_coverage_1d_subsets
 #'
 #' @description
-#' \code{estimate_1n_coverage_1d_subsets} is a legacy code
+#' \code{estimate_1n_coverage_1d_subsets} is used as the first proxy of 1n coverage. The estimate is subsequentially refined by the brightest smudge.
 #'
 #' @export
 

@@ -11,7 +11,7 @@ from scipy.signal import argrelextrema
 from collections import defaultdict
 from itertools import combinations
 
-version = '0.2.0'
+version = '0.2.1'
 
 ############################
 # processing of user input #
@@ -42,7 +42,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
             getattr(self, self.task)()
         else:
             argparser.print_usage()
-            print('"' + self.task + '" is not a valid task name')
+            sys.stderr.write('"' + self.task + '" is not a valid task name\n')
             exit(1)
 
     def hetkmers(self):
@@ -103,12 +103,13 @@ def cutoff(args):
     if args.boundary == "L":
         local_minima = argrelextrema(hist, np.less)[0][0]
         L = max(10, int(round(local_minima * 1.25)))
-        print(L, end = '')
+        sys.stdout.write(str(L))
     else:
         # take 99.8 quantile of kmers that are more than one in the read set
         hist_rel_cumsum = np.cumsum(hist[1:]) / np.sum(hist[1:])
         U = round_up_nice(np.argmax(hist_rel_cumsum > 0.998))
-        print(U, end = '')
+        sys.stdout.write(str(U))
+    sys.stdout.flush()
 
 ############
 # hetkmers #
@@ -159,7 +160,7 @@ def get_one_away_pairs(kmer_index_family, k):
     return(one_away_pairs)
 
 def middle_one_away(args):
-    print('Extracting kmer pairs that differ in the middle nt')
+    sys.stderr.write('Extracting kmer pairs that differ in the middle nt\n')
 
     # file_one_away_pairs = open(args.o + '_one_away_pairs.tsv', 'w')
     file_coverages = open(args.o + '_coverages.tsv', 'w')
@@ -183,7 +184,7 @@ def middle_one_away(args):
     i_R_L = k_middle + 1
     i_R_R = k - 1
 
-    print('Saving ' + args.o + '_coverages.tsv and ' + args.o + '_sequences.tsv files.')
+    sys.stderr.write('Saving ' + args.o + '_coverages.tsv and ' + args.o + '_sequences.tsv files.\n')
     # Read each line of the input file in order to load the kmers and coverages and process the kmer halves.
     current_kmer_L = ""
     for i1, line in enumerate(args.infile):
@@ -229,20 +230,20 @@ def all_one_away(args):
         coverages.append(coverage)
         kmers.append(kmer)
 
-    print('Kmers and coverages loaded.')
+    sys.stderr.write('Kmers and coverages loaded.\n')
 
     k = len(kmer) # all the kmers in the dump file have the same length, so I can just calc the number of nts in the last one
     # get_one_away_pairs is a recursive function that gatheres indices of all kmer 1 SNP from each other
     one_away_pairs = get_one_away_pairs([(kmer,i) for i,kmer in enumerate(kmers)], k)
 
-    print('Kmer pairs identified.')
+    sys.stderr.write('Kmer pairs identified.\n')
 
     repeated = {}
     for (i1, i2) in one_away_pairs:
         repeated[i1] = i1 in repeated
         repeated[i2] = i2 in repeated
 
-    print('Kmers in unique kmer pairs identified.')
+    sys.stderr.write('Kmers in unique kmer pairs identified.\n')
 
     with open(args.o + '_sequences.tsv', 'w') as file_seqs, open(args.o + '_coverages.tsv', 'w') as file_coverages:
         for (i1, i2) in one_away_pairs:
@@ -256,7 +257,7 @@ def all_one_away(args):
                     file_coverages.write(str(cov2) + '\t' + str(cov1) + '\n')
                     file_seqs.write(kmers[i2] + '\t' + kmers[i1] + '\n')
 
-    print(args.o + '_families.tsv and ' + args.o + '_coverages.tsv files saved.')
+    sys.stderr.write(args.o + '_families.tsv and ' + args.o + '_coverages.tsv files saved.\n')
 
 
 #####################
@@ -301,7 +302,7 @@ def main():
         sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
         system("smudgeplot_plot.R " + plot_args)
 
-    sys.stderr.write('Done!' + "\n")
+    sys.stderr.write("\nDone!\n")
     exit(0)
 
 if __name__=='__main__':
