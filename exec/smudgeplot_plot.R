@@ -137,7 +137,12 @@ if( any(to_filter) ){
 peak_sizes$rel_size <- peak_sizes$rel_size / sum(peak_sizes$rel_size)
 peak_sizes <- peak_sizes[order(peak_sizes$rel_size, decreasing = T),]
 smudge_summary$peak_sizes <- peak_sizes
-smudge_summary$genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)]
+
+# genome ploidy is the ploidy with highest number of corresponding kmer pairs regardless of topology
+considered_ploidies <- unique(peak_sizes$ploidy)
+ploidy_with_most_smudges <- which.max(sapply(considered_ploidies, function(x){ sum(peak_sizes[peak_sizes$ploidy == x,'rel_size']) }) )
+smudge_summary$genome_ploidy <- considered_ploidies[ploidy_with_most_smudges]
+# smudge_summary$genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)]
 
 # this will be probably diploid,
 # but theoretically one can imagine a species that si completely homozygous tetraploid
