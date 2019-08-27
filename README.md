@@ -109,6 +109,9 @@ This is definitely an open project, contributions are welcome. You can check som
 
 The file [playground/DEVELOPMENT.md](playground/DEVELOPMENT.md) contains some development notes. The directory [playground](playground) contains some snippets, attempts, and other items of interest.
 
+## Reference
+
+GenomeScope 2.0 and Smudgeplots: Reference-free profiling of polyploid genomes Timothy Rhyker Ranallo-Benavidez, Kamil S. Jaron, Michael C. Schatz bioRxiv 747568; doi: https://doi.org/10.1101/747568
 
 ## Acknowledgements
 
