@@ -23,7 +23,7 @@ git clone https://github.com/KamilSJaron/smudgeplot
 cd smudgeplot
 ```
 
-2. Install the R package that is needed for plotting
+2. Install the R package that is needed for plotting. For the installation you will need R package `devtools`, the rest of the dependencies is installed automatically.
 
 ```
 Rscript install.R

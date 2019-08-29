@@ -1,4 +1,4 @@
-library(devtools)
+require(devtools)
 
 document()
 test()
