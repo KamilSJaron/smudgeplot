@@ -8,7 +8,7 @@ about: For interpretation problems of smudgeplot, send an issue by email if the 
 I have troubles understanding my smudgeplot. I have used follwing command to generate it
 
 ```
-smudgeplot.R -i kmer_pairs_coverages_2.tsv -o my_org -t "Figure 1a: genome structure of X. odoratum" -L 40 -k 19
+smudgeplot plot -i kmer_pairs_coverages_2.tsv -o my_org -t "Figure 1a: genome structure of X. odoratum" -L 40 -k 19
 ```
 
 and it look like this:

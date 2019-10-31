@@ -1,6 +1,7 @@
 ---
 name: A bug
 about: If it looks like an error in the code
+labels: potential_problems
 
 ---
 

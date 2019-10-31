@@ -1,6 +1,8 @@
 ---
 name: Feature request
 about: Any ideas how to improve smudgeplot?
+title: feature request: [short descrition]
+labels: enhancement
 
 ---
 
