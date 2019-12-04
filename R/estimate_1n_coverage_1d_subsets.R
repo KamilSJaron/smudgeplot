@@ -9,9 +9,10 @@ estimate_1n_coverage_1d_subsets <- function(.total_pair_cov, .minor_variant_rel_
     total_kmers <- length(.minor_variant_rel_cov)
     minor_freq_subsets <- list(
         AB_subset = .minor_variant_rel_cov > 0.47,
-        AAB_subset = .minor_variant_rel_cov < 0.35 & .minor_variant_rel_cov > 0.31,
-        AAAB_subset = .minor_variant_rel_cov < 0.27 & .minor_variant_rel_cov > 0.23,
-        AAAAB_subset = .minor_variant_rel_cov < 0.21 & .minor_variant_rel_cov > 0.19
+        AAB_subset = .minor_variant_rel_cov < 0.3433333 & .minor_variant_rel_cov > 0.3233333,
+        AAAB_subset = .minor_variant_rel_cov < 0.26 & .minor_variant_rel_cov > 0.24,
+        AAAAB_subset = .minor_variant_rel_cov < 0.21 & .minor_variant_rel_cov > 0.19,
+        AAAAAB_subset = .minor_variant_rel_cov < 0.1766667 & .minor_variant_rel_cov > 0.1566667
     )
 
     peak_frame_2 <- get_1d_peaks(.total_pair_cov, minor_freq_subsets[[1]], 3)

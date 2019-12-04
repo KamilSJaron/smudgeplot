@@ -7,7 +7,7 @@ ifndef INSTAL_PREFIX
 endif
 
 R_INSTALLATION = $(PATH)/$(RPACKAGE)
-HET_KMERS_INST = $(INSTAL_PREFIX)/bin/smudgeplot
+HET_KMERS_INST = $(INSTAL_PREFIX)/bin/smudgeplot.py
 SMUDGEPLOT_INST = $(INSTAL_PREFIX)/bin/smudgeplot_plot.R
 
 .PHONY : install

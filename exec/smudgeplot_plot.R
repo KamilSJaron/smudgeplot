@@ -113,12 +113,20 @@ repeat {
     }
 }
 
+if( abs(log2(smudge_summary$n_subset_est / smudge_summary$n_peak_est)) > 1 & !args$homozygous){
+    smudge_warn(args$output, "!! Careful, the two types of estimates of 1n coverage differ a lot (",
+                smudge_summary$n_subset_est, "and", smudge_summary$n_peak_est, ")")
+    smudge_warn(args$output, "meaning that at least of one of the smudgeplot methods to estimate the haploid coverage got it wrong")
+    smudge_warn(args$output, "Does the smudgeplot look sane? Is at least one of the estimates close a GenomeScope estimate?")
+    smudge_warn(args$output, "You can help us imrove this software by sharing this strange smudgeplot on https://github.com/KamilSJaron/smudgeplot/issues.")
+}
+
 if( L > (smudge_summary$n / 2) & !args$homozygous ){
     smudge_warn(args$output, "!! Careful, your coverage filter on the lower end (L = ", L,
                 ") is higher than half of the 1n coverage estimate ( 1n / 2 = ", round(smudge_summary$n / 2, 2))
     smudge_warn(args$output, "If the real 1n coverage is half of your estimate you would not picked it up due to the filtering.")
-    smudge_warn(args$output, "Consider reruning the analysis with lover L as well (something like (1n / 2) - 5 should do the job)")
-    smudge_warn(args$output, "Another good way for verificaiton would be to compare it to GenomeScope estimate of haploid coverage")
+    smudge_warn(args$output, "If you have sufficient coverage, consider reruning the analysis with lower L (something like (1n / 2) - 5)")
+    smudge_warn(args$output, "One good way for verificaiton would be to compare it to GenomeScope estimate of haploid coverage")
 }
 
 peak_sizes$corrected_minor_variant_cov <- sapply(peak_sizes$structure, function(x){round(mean(unlist(strsplit(x, split = '')) == 'B'), 2)})
