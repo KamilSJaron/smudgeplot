@@ -12,7 +12,7 @@ This tool is planned to be a part of [GenomeScope](https://github.com/schatzlab/
 
 ## Installation
 
-You need a program for counting kmers installed, such as [KMC](https://github.com/refresh-bio/KMC) and you should definitely run as well [GenomeScope](https://github.com/schatzlab/genomescope) (a classical kmer spectra analysis). It's not rare that both GenomeScope and smudgeplot are needed to make a sense out of the sequencing data.
+You need a program for counting kmers installed, such as [KMC](https://github.com/refresh-bio/KMC) and you should definitely run as well [GenomeScope](https://github.com/tbenavi1/genomescope2.0) (a classical kmer spectra analysis). It's not rare that both GenomeScope and smudgeplot are needed to make a sense out of the sequencing data.
 
 To run smudgpelot, you will need `python3` with couple of pretty standard packages and `R`.
 
@@ -65,7 +65,9 @@ kmc_tools transform kmer_counts histogram kmer_k21.hist -cx10000
 
 where `-k` is the kmer length, `-m` is the approximate amount of RAM to use in GB (1 to 1024), `-ci<value>` excludes kmers occurring less than \<value\> times, `-cs` is the maximum value of a counter, `FILES` is a file name with a list of input files, `kmer_counts` is the output file name prefix, `tmp` is a temporary directory, and `-cx<value>` is the maximum value of counter to be stored in the histogram file.
 
-The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using command `smudgeplot.py cutoff <kmer.hist> <L/U>`. Then, extract kmers in the coverage range from `L` to `U` using `kmc_dump`. Then run `smudgeplot.py hetkmers` on the dump of kmers to compute the set of kmer pairs.
+The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using command `smudgeplot.py cutoff <kmer.hist> <L/U>`. Then, extract kmers in the coverage range from `L` to `U` using `kmc_tools`. Then run `smudge_families` on the reduced file to compute the set of kmer families.
+
+`smudge_families` is available at [tbenavi1/KMC](https://github.com/tbenavi1/KMC). Specifically, after compiling this forked version of KMC, `smudge_families` will be in the bin directory.
 
 ```
 L=$(smudgeplot.py cutoff kmer_k21.hist L)
@@ -73,11 +75,11 @@ U=$(smudgeplot.py cutoff kmer_k21.hist U)
 echo $L $U # these need to be sane values
 # L should be like 20 - 200
 # U should be like 500 - 3000
-kmc_tools transform kmer_counts -ci$L -cx$U dump -s kmer_k21.dump
-smudgeplot.py hetkmers -o kmer_pairs < kmer_k21.dump
+kmc_tools transform kmer_counts -ci$L -cx$U reduce kmer_counts_L$L\_U$U
+smudge_families kmer_counts_L$L\_U$U kmer_counts_L$L\_U$U_coverages.tsv
 ```
 
-now you can finally generate the smudgeplot using the coverages of the identified kmer pairs (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data. Something like this
+now you can finally generate the smudgeplot using the coverages of the identified kmer families (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data. Something like this
 
 ```
 smudgeplot.py plot kmer_pairs_coverages.tsv
