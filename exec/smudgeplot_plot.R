@@ -86,7 +86,15 @@ repeat {
     the_smallest_n <- min(get_trinoploid_1n_est(peak_sizes), draft_n)
     smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov, the_smallest_n)
 
-    smudge_summary$n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_peak_est, args$n_cov)
+    if (length(args$n_cov) == 0) {
+        if( abs(log2(smudge_summary$n_subset_est / smudge_summary$n_peak_est)) > 1 & !args$homozygous){
+            smudge_summary$n <- smudge_summary$n_subset_est
+        } else {
+            smudge_summary$n <- smudge_summary$n_peak_est
+        }
+    } else {
+        smudge_summary$n <- args$n_cov 
+    }
 
     # if the organism is completely homozygous, all the detected kmer pairs are corresponding to paralogs
     # therefore ther inference will confuse AB peak to AABB peak etc.
@@ -117,7 +125,8 @@ if( abs(log2(smudge_summary$n_subset_est / smudge_summary$n_peak_est)) > 1 & !ar
     smudge_warn(args$output, "!! Careful, the two types of estimates of 1n coverage differ a lot (",
                 smudge_summary$n_subset_est, "and", smudge_summary$n_peak_est, ")")
     smudge_warn(args$output, "meaning that at least of one of the smudgeplot methods to estimate the haploid coverage got it wrong")
-    smudge_warn(args$output, "Does the smudgeplot look sane? Is at least one of the estimates close a GenomeScope estimate?")
+    smudge_warn(args$output, "Using subset estimate instead of highest peak estimate (less precise but also less often completely wrong)")
+    smudge_warn(args$output, "Does the smudgeplot look sane? Is at least one of the 1n estimates close a GenomeScope estimate?")
     smudge_warn(args$output, "You can help us imrove this software by sharing this strange smudgeplot on https://github.com/KamilSJaron/smudgeplot/issues.")
 }
 
