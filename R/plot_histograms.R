@@ -35,7 +35,7 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax, .smu
                            p8 = 'octoploid')
 
     if(!(is.na(.smudge_summary$genome_ploidy))){
-        mtext(paste('estimated', ploidytext), side=3, adj=0.05, line=-5, cex = .cex - 0.2)
+        mtext(paste('proposed', ploidytext), side=3, adj=0.05, line=-5, cex = .cex - 0.2)
     }
 
     # total pair coverage HISTOGRAM - right

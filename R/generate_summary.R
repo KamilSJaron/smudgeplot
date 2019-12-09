@@ -12,7 +12,7 @@ generate_summary <- function(.args, .smudge_summary){
     smudge_summary(.args$output, "* Highest peak 1n coverage estimate:", round(.smudge_summary$n_peak_est, 1))
     smudge_summary(.args$output, "1n coverage used in smudgeplot (one of the three above):", round(.smudge_summary$n, 1))
 
-    smudge_summary(.args$output, "* Estimated ploidy:", .smudge_summary$genome_ploidy)
+    smudge_summary(.args$output, "* Proposed ploidy:", .smudge_summary$genome_ploidy)
 
     for_sure_heterozygous <- sapply(.smudge_summary$peak_sizes$structure, function(x){sum(unlist(strsplit(x, split = '')) == 'B') == 1})
     # THIS LINE
