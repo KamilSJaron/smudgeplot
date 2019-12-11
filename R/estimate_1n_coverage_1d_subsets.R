@@ -8,7 +8,7 @@
 estimate_1n_coverage_1d_subsets <- function(.total_pair_cov, .minor_variant_rel_cov){
     total_kmers <- length(.minor_variant_rel_cov)
     minor_freq_subsets <- list(
-        AB_subset = .minor_variant_rel_cov > 0.47,
+        AB_subset = .minor_variant_rel_cov > 0.48,
         AAB_subset = .minor_variant_rel_cov < 0.3433333 & .minor_variant_rel_cov > 0.3233333,
         AAAB_subset = .minor_variant_rel_cov < 0.26 & .minor_variant_rel_cov > 0.24,
         AAAAB_subset = .minor_variant_rel_cov < 0.21 & .minor_variant_rel_cov > 0.19,

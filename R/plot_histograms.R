@@ -25,14 +25,18 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax, .smu
         mtext(bquote(italic(.(.fig_title))), side=3, adj=0, line=-3, cex = .cex + 0.2)
     }
 
-    ploidytext <- switch(.smudge_summary$genome_ploidy - 1,
-                           p2 = 'diploid',
-                           p3 = 'triploid',
-                           p4 = 'tetraploid',
-                           p5 = 'pentaploid',
-                           p6 = 'hexaploid',
-                           p7 = 'heptaploid',
-                           p8 = 'octoploid')
+    if ( .smudge_summary$genome_ploidy < 9){
+        ploidytext <- switch(.smudge_summary$genome_ploidy - 1,
+                               p2 = 'diploid',
+                               p3 = 'triploid',
+                               p4 = 'tetraploid',
+                               p5 = 'pentaploid',
+                               p6 = 'hexaploid',
+                               p7 = 'heptaploid',
+                               p8 = 'octoploid')
+    } else {
+        ploidytext <- paste0(.smudge_summary$genome_ploidy, '-ploid')
+    }
 
     if(!(is.na(.smudge_summary$genome_ploidy))){
         mtext(paste('proposed', ploidytext), side=3, adj=0.05, line=-5, cex = .cex - 0.2)
