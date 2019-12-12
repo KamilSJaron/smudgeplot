@@ -85,9 +85,8 @@ repeat {
 
     the_smallest_n <- min(get_trinoploid_1n_est(peak_sizes), draft_n)
     smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov, the_smallest_n)
-
     if (length(args$n_cov) == 0) {
-        if( abs(log2(smudge_summary$n_subset_est / smudge_summary$n_peak_est)) > 1 & !args$homozygous){
+        if( (abs(log2(smudge_summary$n_subset_est / smudge_summary$n_peak_est)) > .95 | smudge_summary$n_peak_est < smudge_summary$n_subset_est) & !args$homozygous){
             smudge_summary$n <- smudge_summary$n_subset_est
         } else {
             smudge_summary$n <- smudge_summary$n_peak_est
