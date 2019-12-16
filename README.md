@@ -1,6 +1,6 @@
 # Smudgeplot
 
-This tool extracts heterozygous kmer pairs from kmer dump files and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovA / (CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc.
+This tool extracts heterozygous kmer pairs from kmer count databases and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovB / (CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc.
 
 Smudgeplots are computed from raw or even better from trimmed reads and show the haplotype structure using heterozygous kmer pairs. For example:
 
@@ -8,13 +8,13 @@ Smudgeplots are computed from raw or even better from trimmed reads and show the
 
 Every haplotype structure has a unique smudge on the graph and the heat of the smudge indicates how frequently the haplotype structure is represented in the genome compared to the other structures. The image above is an ideal case, where the sequencing coverage is sufficient to beautifully separate all the smudges, providing very strong and clear evidence of triploidy.
 
-This tool is planned to be a part of [GenomeScope](https://github.com/schatzlab/genomescope) in the near future.
+This tool is planned to be a part of [GenomeScope](https://github.com/tbenavi1/genomescope2.0) in the near future.
 
 ## Installation
 
-You need a program for counting kmers installed, such as [KMC](https://github.com/refresh-bio/KMC) and you should definitely run as well [GenomeScope](https://github.com/tbenavi1/genomescope2.0) (a classical kmer spectra analysis). It's not rare that both GenomeScope and smudgeplot are needed to make a sense out of the sequencing data.
+You will need a program for counting kmers such as [KMC](https://github.com/refresh-bio/KMC) installed, and you should definitely also run [GenomeScope](https://github.com/tbenavi1/genomescope2.0) (a classical kmer spectra analysis). It's not rare that both GenomeScope and Smudgeplot are needed to make sense out of the sequencing data. We recommend using [tbenavi1/KMC](https://github.com/tbenavi1/KMC). This version of KMC has an additional `smudge_pairs` program which finds heterozygous kmer pairs more quickly and using less memory than the python version of hetkmers.
 
-To run smudgpelot, you will need `python3` with couple of pretty standard packages and `R`.
+To run Smudgeplot, you will need `python3` with a couple of standard packages and `R`.
 
 1. Download this repository
 
@@ -23,7 +23,7 @@ git clone https://github.com/KamilSJaron/smudgeplot
 cd smudgeplot
 ```
 
-2. Install the R package that is needed for plotting. For the installation you will need R package `devtools`, the rest of the dependencies is installed automatically.
+2. Install the R package that is needed for plotting. For the installation you will need the R package `devtools`, and the rest of the dependencies are installed automatically.
 
 ```
 Rscript install.R
@@ -36,14 +36,14 @@ install -C exec/smudgeplot.py /usr/local/bin
 install -C exec/smudgeplot_plot.R /usr/local/bin
 ```
 
-Congratulations, you should have `smudgeplot` operational.
-Just to sure, check that the smudgeplot script works
+Congratulations, `smudgeplot` should be operational.
+Just to be sure, check that the smudgeplot script works:
 
 ```
 smudgeplot.py --version
 ```
 
-something like `Running smudgeplot v0.2.0` is expected to be printed.
+Something like `Running smudgeplot v0.2.1` is expected to be printed.
 
 If the installation procedure does not work, if you encounter any other problem, or if you would like to get help with the interpretation of your smudgeplot, please open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new).
 
@@ -51,7 +51,7 @@ If the installation procedure does not work, if you encounter any other problem,
 
 The input is a set of whole genome sequencing reads, the more coverage the better. The method is designed to process big datasets, don't hesitate to pull all single-end/pair-end libraries together.
 
-The workflow is automatic, but it's not fool-proof. It requires some decisions. The usage is shown here is using [KMC](https://github.com/refresh-bio/KMC) and [GenomeScope](https://github.com/schatzlab/genomescope). We provide also a real data tutorial on our wiki: [strawberry genome analysis](https://github.com/KamilSJaron/smudgeplot/wiki/strawberry-tutorial). If you are interested in running Jellyfish instead of KMC, look at the [manual of smudgeplot with Jellyfish](https://github.com/KamilSJaron/smudgeplot/wiki/manual-of-smudgeplot-with-jellyfish).
+The workflow is automatic, but it's not fool-proof. It requires some decisions. The usage is shown here using [tbenavi1/KMC](https://github.com/tbenavi1/KMC) and [GenomeScope](https://github.com/tbenavi1/genomescope2.0). We also provide a real data tutorial on our wiki: [strawberry genome analysis](https://github.com/KamilSJaron/smudgeplot/wiki/strawberry-tutorial). If you are interested in running Jellyfish instead of KMC, look at the [manual of smudgeplot with Jellyfish](https://github.com/KamilSJaron/smudgeplot/wiki/manual-of-smudgeplot-with-jellyfish).
 
 Give KMC all the files with trimmed reads to calculate kmer frequencies and then generate a histogram of kmers:
 
@@ -65,29 +65,39 @@ kmc_tools transform kmer_counts histogram kmer_k21.hist -cx10000
 
 where `-k` is the kmer length, `-m` is the approximate amount of RAM to use in GB (1 to 1024), `-ci<value>` excludes kmers occurring less than \<value\> times, `-cs` is the maximum value of a counter, `FILES` is a file name with a list of input files, `kmer_counts` is the output file name prefix, `tmp` is a temporary directory, and `-cx<value>` is the maximum value of counter to be stored in the histogram file.
 
-The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using command `smudgeplot.py cutoff <kmer.hist> <L/U>`. Then, extract kmers in the coverage range from `L` to `U` using `kmc_tools`. Then run `smudge_families` on the reduced file to compute the set of kmer families.
-
-`smudge_families` is available at [tbenavi1/KMC](https://github.com/tbenavi1/KMC). Specifically, after compiling this forked version of KMC, `smudge_families` will be in the bin directory.
-
+The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using command `smudgeplot.py cutoff <kmer.hist> <L/U>`.
 ```
 L=$(smudgeplot.py cutoff kmer_k21.hist L)
 U=$(smudgeplot.py cutoff kmer_k21.hist U)
 echo $L $U # these need to be sane values
 # L should be like 20 - 200
 # U should be like 500 - 3000
+```
+
+Then, extract kmers in the coverage range from `L` to `U` using `kmc_tools`. Then run `smudge_pairs` on the reduced file to compute the set of kmer pairs.
+
+`smudge_pairs` is available at [tbenavi1/KMC](https://github.com/tbenavi1/KMC). Specifically, after compiling this version of KMC, `smudge_pairs` will be in the bin directory.
+
+```
 kmc_tools transform kmer_counts -ci$L -cx$U reduce kmer_counts_L$L\_U$U
-smudge_families kmer_counts_L$L\_U$U kmer_counts_L$L\_U$U_coverages.tsv
+smudge_pairs kmer_counts_L$L\_U$U kmer_pairs_L$L\_U$U_coverages.tsv
 ```
 
-now you can finally generate the smudgeplot using the coverages of the identified kmer families (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data. Something like this
+Alternatively, if you don't have [tbenavi1/KMC](https://github.com/tbenavi1/KMC) installed, you can extract kmers in the coverage range from `L` to `U` using `kmc_dump`. Then run `smudgeplot.py hetkmers` on the dump of kmers the compute the set of kmer pairs.
+```
+kmc_tools transform kmer_counts -ci$L -cx$U dump -s kmer_counts_L$L\_U$U.dump
+smudgeplot.py hetkmers -o kmer_pairs_L$L\_U$U < kmer_counts_L$L\_U$U.dump
+```
+
+Now you can finally generate the smudgeplot using the coverages of the identified kmer pairs (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data. Something like this
 
 ```
-smudgeplot.py plot kmer_pairs_coverages.tsv
+smudgeplot.py plot kmer_pairs_L$L\_U$U_coverages.tsv
 ```
 
-will generate a basic smugeplot. To see all the parameters of `smudgeplot.py plot` you can run `smudgeplot.py plot --help`.
+will generate a basic smudgeplot. To see all the parameters of `smudgeplot.py plot` you can run `smudgeplot.py plot --help`.
 
-Smudgeplot generates two plots, one with coloration on a log scale and on a linear scale. The legend indicates approximate kmer pairs per tile densities. Note that a single polymorphism generates multiple heterozygous kmers. As such, the reported numbers do not directly correspond to the number of variants. Instead, the actual number is approximately 1/k times the reported numbers, where k is the kmer size (in summary already recalculated). It's important to note that this process does not exhaustively attempt to find all of the heterozygous kmers from the genome. Instead, only a sufficient sample is obtained in order to identify relative genome structure. You can also report the minimal number of loci that are heterozygous if the inference is correct.
+Smudgeplot generates two plots, one with coloration on a log scale and the other on a linear scale. The legend indicates approximate kmer pairs per tile densities. Note that a single polymorphism generates multiple heterozygous kmers. As such, the reported numbers do not directly correspond to the number of variants. Instead, the actual number is approximately 1/k times the reported numbers, where k is the kmer size (in summary already recalculated). It's important to note that this process does not exhaustively attempt to find all of the heterozygous kmers from the genome. Instead, only a sufficient sample is obtained in order to identify relative genome structure. You can also report the minimal number of loci that are heterozygous if the inference is correct.
 
 ### GenomeScope for estimation of L/U
 
@@ -101,13 +111,13 @@ This script estimates the size, heterozygosity, and repetitive fraction of the g
 
 ## Frequently Asked Questions
 
-Are collected on [our wiki](https://github.com/KamilSJaron/smudgeplot/wiki/FAQ). Smudgeplot is not much demanding on computational resources, but make sure you check [memory requirements](https://github.com/KamilSJaron/smudgeplot/wiki/smudgeplot-hetkmers#memory-requirements) before you extract kmer pairs (`hetkmers` task). If you won't find an answer for your question in FAQ, open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new/choose) or drop us an email.
+Are collected on [our wiki](https://github.com/KamilSJaron/smudgeplot/wiki/FAQ). Smudgeplot does not demand much on computational resources, but make sure you check [memory requirements](https://github.com/KamilSJaron/smudgeplot/wiki/smudgeplot-hetkmers#memory-requirements) before you extract kmer pairs (`hetkmers` task). If you don't find an answer for your question in FAQ, open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new/choose) or drop us an email.
 
 Check [projects](https://github.com/KamilSJaron/smudgeplot/projects) to see how the development goes.
 
 ## Contributions
 
-This is definitely an open project, contributions are welcome. You can check some of the ideas for future in [projects](https://github.com/KamilSJaron/smudgeplot/projects) and the development in [dev](https://github.com/KamilSJaron/smudgeplot/tree/dev) branch.
+This is definitely an open project, contributions are welcome. You can check some of the ideas for the future in [projects](https://github.com/KamilSJaron/smudgeplot/projects) and in the development [dev](https://github.com/KamilSJaron/smudgeplot/tree/dev) branch.
 
 The file [playground/DEVELOPMENT.md](playground/DEVELOPMENT.md) contains some development notes. The directory [playground](playground) contains some snippets, attempts, and other items of interest.
 
