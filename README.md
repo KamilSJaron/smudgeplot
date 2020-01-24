@@ -43,7 +43,7 @@ Just to be sure, check that the smudgeplot script works:
 smudgeplot.py --version
 ```
 
-Something like `Running smudgeplot v0.2.1` is expected to be printed.
+Something like `Running smudgeplot v0.2.2` is expected to be printed.
 
 If the installation procedure does not work, if you encounter any other problem, or if you would like to get help with the interpretation of your smudgeplot, please open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new).
 
