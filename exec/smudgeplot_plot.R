@@ -179,7 +179,9 @@ smudge_warn(args$output, "##########")
 fig_title <- ifelse(length(args$title) == 0, NA, args$title[1])
 colour_ramp <- get_default_col_ramp() # get the default colour ramp (Spectral, 11)
 
-png(paste0(args$output,'_smudgeplot_log10.png'))
+#png(paste0(args$output,'_smudgeplot_log10.png'))
+setEPS()
+postscript(paste0(args$output,'_smudgeplot_log10.eps'))
 
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
@@ -196,7 +198,9 @@ dev.off()
 # replace the log transformed values by non-transformed
 smudge_container$z <- smudge_container$dens
 
-png(paste0(args$output,'_smudgeplot.png'))
+#png(paste0(args$output,'_smudgeplot.png'))
+setEPS()
+postscript(paste0(args$output,'_smudgeplot.eps'))
 
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
