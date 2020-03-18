@@ -123,7 +123,7 @@ The file [playground/DEVELOPMENT.md](playground/DEVELOPMENT.md) contains some de
 
 ## Reference
 
-GenomeScope 2.0 and Smudgeplots: Reference-free profiling of polyploid genomes Timothy Rhyker Ranallo-Benavidez, Kamil S. Jaron, Michael C. Schatz bioRxiv 747568; doi: https://doi.org/10.1101/747568
+Ranallo-Benavidez, T.R., Jaron, K.S. & Schatz, M.C. GenomeScope 2.0 and Smudgeplot for reference-free profiling of polyploid genomes. *Nature Communications* **11**, 1432 (2020). https://doi.org/10.1038/s41467-020-14998-3
 
 ## Acknowledgements
 
