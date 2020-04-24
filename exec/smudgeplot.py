@@ -11,7 +11,7 @@ from scipy.signal import argrelextrema
 from collections import defaultdict
 from itertools import combinations
 
-version = '0.2.2'
+version = '0.2.3dev'
 
 ############################
 # processing of user input #
@@ -66,7 +66,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         argparser.add_argument('-o', help='The pattern used to name the output (smudgeplot).', default='smudgeplot')
         argparser.add_argument('-q', help='Remove kmer pairs with coverage over the specified quantile; (default none).', type=float, default=1)
         argparser.add_argument('-L', help='The lower boundary used when dumping kmers (default min(total_pair_cov) / 2).', type=int, default=0)
-        argparser.add_argument('-n', help='The expected haploid coverage (default estimated from data).', type=int, default=0)
+        argparser.add_argument('-n', help='The expected haploid coverage (default estimated from data).', type=float, default=0)
         argparser.add_argument('-t', '--title', help='name printed at the top of the smudgeplot (default none).', default='')
         # argparser.add_argument('-m', '-method', help='The algorithm for annotation of smudges (default \'local_aggregation\')', default='local_aggregation')
         argparser.add_argument('-nbins', help='The number of nbins used for smudgeplot matrix (nbins x nbins) (default autodetection).', type=int, default=0)

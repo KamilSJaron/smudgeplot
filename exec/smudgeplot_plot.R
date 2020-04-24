@@ -92,7 +92,7 @@ repeat {
             smudge_summary$n <- smudge_summary$n_peak_est
         }
     } else {
-        smudge_summary$n <- args$n_cov 
+        smudge_summary$n <- args$n_cov
     }
 
     # if the organism is completely homozygous, all the detected kmer pairs are corresponding to paralogs
@@ -121,16 +121,16 @@ repeat {
 }
 
 if( abs(log2(smudge_summary$n_subset_est / smudge_summary$n_peak_est)) > 1 & !args$homozygous){
-    smudge_warn(args$output, "!! Careful, the two types of estimates of 1n coverage differ a lot (",
+    smudge_warn(args$output, "!! Warning, the two types of estimates of 1n coverage differ a lot (",
                 smudge_summary$n_subset_est, "and", smudge_summary$n_peak_est, ")")
-    smudge_warn(args$output, "meaning that at least of one of the smudgeplot methods to estimate the haploid coverage got it wrong")
+    smudge_warn(args$output, "i.e. at least of one of the smudgeplot methods to estimate the haploid coverage got it wrong")
     smudge_warn(args$output, "Using subset estimate instead of highest peak estimate (less precise but also less often completely wrong)")
     smudge_warn(args$output, "Does the smudgeplot look sane? Is at least one of the 1n estimates close a GenomeScope estimate?")
     smudge_warn(args$output, "You can help us imrove this software by sharing this strange smudgeplot on https://github.com/KamilSJaron/smudgeplot/issues.")
 }
 
 if( L > (smudge_summary$n / 2) & !args$homozygous ){
-    smudge_warn(args$output, "!! Careful, your coverage filter on the lower end (L = ", L,
+    smudge_warn(args$output, "!! Warning, your coverage filter on the lower end (L = ", L,
                 ") is higher than half of the 1n coverage estimate ( 1n / 2 = ", round(smudge_summary$n / 2, 2))
     smudge_warn(args$output, "If the real 1n coverage is half of your estimate you would not picked it up due to the filtering.")
     smudge_warn(args$output, "If you have sufficient coverage, consider reruning the analysis with lower L (something like (1n / 2) - 5)")
@@ -140,7 +140,7 @@ if( L > (smudge_summary$n / 2) & !args$homozygous ){
 peak_sizes$corrected_minor_variant_cov <- sapply(peak_sizes$structure, function(x){round(mean(unlist(strsplit(x, split = '')) == 'B'), 2)})
 peak_sizes$ploidy <- sapply(peak_sizes$structure, nchar)
 
-to_filter <- peak_sizes$ploidy == 1
+to_filter <- peak_sizes$ploidy <= 1
 if( any(to_filter) ){
     smudge_warn(args$output, paste(sum(to_filter), "peaks of kmer pairs detected with coverage < (1n_coverage * 2) =", round(smudge_summary$n * 2, 1)))
     tab_to_print <- peak_sizes[to_filter,c(2,3,8,9)]
@@ -148,6 +148,8 @@ if( any(to_filter) ){
     colnames(tab_to_print) <- c('kmers_in_peak[#]', 'kmers_in_peak[proportion]', 'summit B / (A + B)', 'summit A + B')
     smudge_warn(args$output, paste0(capture.output(tab_to_print), collapse = "\n"))
     peak_sizes <- peak_sizes[!to_filter,]
+    smudge_warn(args$output, "This might be due to kmers with sequencing errors present in the kmer dump.")
+    smudge_warn(args$output, "Increasing L might help remove erroneous kmers.")
 }
 
 peak_sizes$rel_size <- peak_sizes$rel_size / sum(peak_sizes$rel_size)
