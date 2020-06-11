@@ -107,7 +107,7 @@ You can feed the kmer coverage histogram to GenomeScope. (Either run the [genome
 Rscript genomescope.R kmcdb_k21.hist <k-mer_length> <read_length> <output_dir> [kmer_max] [verbose]
 ```
 
-This script estimates the size, heterozygosity, and repetitive fraction of the genome. By inspecting the fitted model you can determine the location of the smallest peak after the error tail. Then, you can decide the low end cutoff below which all kmers will be discarded as errors (cca $\frac{1}{2}$ of the haploid kmer coverage), and the high end cutoff above which all kmers will be discarded (cca 8$\frac{1}{2}$ times the haploid kmer coverage).
+This script estimates the size, heterozygosity, and repetitive fraction of the genome. By inspecting the fitted model you can determine the location of the smallest peak after the error tail. Then, you can decide the low end cutoff below which all kmers will be discarded as errors (cca 0.5 times the haploid kmer coverage), and the high end cutoff above which all kmers will be discarded (cca 8.5 times the haploid kmer coverage).
 
 ## Frequently Asked Questions
 
