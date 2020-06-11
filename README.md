@@ -59,16 +59,16 @@ Give KMC all the files with trimmed reads to calculate kmer frequencies and then
 mkdir tmp
 ls *.fastq.gz > FILES
 # kmer 21, 16 threads, 64G of memory, counting kmer coverages between 1 and 10000x
-kmc -k21 -t16 -m64 -ci1 -cs10000 @FILES kmer_counts tmp
-kmc_tools transform kmer_counts histogram kmer_k21.hist -cx10000
+kmc -k21 -t16 -m64 -ci1 -cs10000 @FILES kmcdb tmp
+kmc_tools transform kmcdb histogram kmcdb_k21.hist -cx10000
 ```
 
-where `-k` is the kmer length, `-m` is the approximate amount of RAM to use in GB (1 to 1024), `-ci<value>` excludes kmers occurring less than \<value\> times, `-cs` is the maximum value of a counter, `FILES` is a file name with a list of input files, `kmer_counts` is the output file name prefix, `tmp` is a temporary directory, and `-cx<value>` is the maximum value of counter to be stored in the histogram file.
+where `-k` is the kmer length, `-m` is the approximate amount of RAM to use in GB (1 to 1024), `-ci<value>` excludes kmers occurring less than \<value\> times, `-cs` is the maximum value of a counter, `FILES` is a file name with a list of input files, `kmcdb` is the output file name prefix for the KMC database, `tmp` is a temporary directory, and `-cx<value>` is the maximum value of counter to be stored in the histogram file.
 
-The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using command `smudgeplot.py cutoff <kmer.hist> <L/U>`.
+The next step is to extract genomic kmers using reasonable coverage thresholds. You can either inspect the kmer spectra and choose the L (lower) and U (upper) coverage thresholds via visual inspection, or you can estimate them using command `smudgeplot.py cutoff <kmcdb_k21.hist> <L/U>`.
 ```
-L=$(smudgeplot.py cutoff kmer_k21.hist L)
-U=$(smudgeplot.py cutoff kmer_k21.hist U)
+L=$(smudgeplot.py cutoff kmcdb_k21.hist L)
+U=$(smudgeplot.py cutoff kmcdb_k21.hist U)
 echo $L $U # these need to be sane values
 # L should be like 20 - 200
 # U should be like 500 - 3000
@@ -79,20 +79,20 @@ Then, extract kmers in the coverage range from `L` to `U` using `kmc_tools`. The
 `smudge_pairs` is available at [tbenavi1/KMC](https://github.com/tbenavi1/KMC). Specifically, after compiling this version of KMC, `smudge_pairs` will be in the bin directory.
 
 ```
-kmc_tools transform kmer_counts -ci$L -cx$U reduce kmer_counts_L$L\_U$U
-smudge_pairs kmer_counts_L$L\_U$U kmer_pairs_L$L\_U$U_coverages.tsv
+kmc_tools transform kmcdb -ci$L -cx$U reduce kmcdb_L$L\_U$U
+smudge_pairs kmcdb_L$L\_U$U kmcdb_L$L\_U$U_coverages.tsv kmcdb_L$L\_U$U_pairs.tsv > kmcdb_L$L\_U$U_familysizes.tsv
 ```
 
 Alternatively, if you don't have [tbenavi1/KMC](https://github.com/tbenavi1/KMC) installed, you can extract kmers in the coverage range from `L` to `U` using `kmc_dump`. Then run `smudgeplot.py hetkmers` on the dump of kmers the compute the set of kmer pairs.
 ```
-kmc_tools transform kmer_counts -ci$L -cx$U dump -s kmer_counts_L$L\_U$U.dump
-smudgeplot.py hetkmers -o kmer_pairs_L$L\_U$U < kmer_counts_L$L\_U$U.dump
+kmc_tools transform kmcdb -ci$L -cx$U dump -s kmcdb_L$L\_U$U.dump
+smudgeplot.py hetkmers -o kmcdb_L$L\_U$U < kmcdb_L$L\_U$U.dump
 ```
 
 Now you can finally generate the smudgeplot using the coverages of the identified kmer pairs (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data. Something like this
 
 ```
-smudgeplot.py plot kmer_pairs_L$L\_U$U_coverages.tsv
+smudgeplot.py plot kmcdb_L$L\_U$U_coverages.tsv
 ```
 
 will generate a basic smudgeplot. To see all the parameters of `smudgeplot.py plot` you can run `smudgeplot.py plot --help`.
@@ -104,10 +104,10 @@ Smudgeplot generates two plots, one with coloration on a log scale and the other
 You can feed the kmer coverage histogram to GenomeScope. (Either run the [genomescope script](https://github.com/schatzlab/genomescope/blob/master/genomescope.R) or use the [web server](http://qb.cshl.edu/genomescope/))
 
 ```
-Rscript genomescope.R kmer_k21.hist <k-mer_length> <read_length> <output_dir> [kmer_max] [verbose]
+Rscript genomescope.R kmcdb_k21.hist <k-mer_length> <read_length> <output_dir> [kmer_max] [verbose]
 ```
 
-This script estimates the size, heterozygosity, and repetitive fraction of the genome. By inspecting the fitted model you can determine the location of the smallest peak after the error tail. Then, you can decide the low end cutoff below which all kmers will be discarded as errors (cca 1/2 of the haploid kmer coverage), and the high end cutoff above which all kmers will be discarded (cca 8x of the haploid kmer coverage).
+This script estimates the size, heterozygosity, and repetitive fraction of the genome. By inspecting the fitted model you can determine the location of the smallest peak after the error tail. Then, you can decide the low end cutoff below which all kmers will be discarded as errors (cca $\frac{1}{2}$ of the haploid kmer coverage), and the high end cutoff above which all kmers will be discarded (cca 8$\frac{1}{2}$ times the haploid kmer coverage).
 
 ## Frequently Asked Questions
 
