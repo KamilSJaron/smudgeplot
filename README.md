@@ -79,20 +79,20 @@ Then, extract kmers in the coverage range from `L` to `U` using `kmc_tools`. The
 `smudge_pairs` is available at [tbenavi1/KMC](https://github.com/tbenavi1/KMC). Specifically, after compiling this version of KMC, `smudge_pairs` will be in the bin directory.
 
 ```
-kmc_tools transform kmcdb -ci$L -cx$U reduce kmcdb_L$L\_U$U
-smudge_pairs kmcdb_L$L\_U$U kmcdb_L$L\_U$U_coverages.tsv kmcdb_L$L\_U$U_pairs.tsv > kmcdb_L$L\_U$U_familysizes.tsv
+kmc_tools transform kmcdb -ci"$L" -cx"$U" reduce kmcdb_L"$L"_U"$U"
+smudge_pairs kmcdb_L"$L"_U"$U" kmcdb_L"$L"_U"$U"_coverages.tsv kmcdb_L"$L"_U"$U"_pairs.tsv > kmcdb_L"$L"_U"$U"_familysizes.tsv
 ```
 
 Alternatively, if you don't have [tbenavi1/KMC](https://github.com/tbenavi1/KMC) installed, you can extract kmers in the coverage range from `L` to `U` using `kmc_dump`. Then run `smudgeplot.py hetkmers` on the dump of kmers the compute the set of kmer pairs.
 ```
-kmc_tools transform kmcdb -ci$L -cx$U dump -s kmcdb_L$L\_U$U.dump
-smudgeplot.py hetkmers -o kmcdb_L$L\_U$U < kmcdb_L$L\_U$U.dump
+kmc_tools transform kmcdb -ci"$L" -cx"$U" dump -s kmcdb_L"$L"_U"$U".dump
+smudgeplot.py hetkmers -o kmcdb_L"$L"_U"$U" < kmcdb_L"$L"_U"$U".dump
 ```
 
 Now you can finally generate the smudgeplot using the coverages of the identified kmer pairs (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data. Something like this
 
 ```
-smudgeplot.py plot kmcdb_L$L\_U$U_coverages.tsv
+smudgeplot.py plot kmcdb_L"$L"_U"$U"_coverages.tsv
 ```
 
 will generate a basic smudgeplot. To see all the parameters of `smudgeplot.py plot` you can run `smudgeplot.py plot --help`.
