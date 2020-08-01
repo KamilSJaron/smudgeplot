@@ -38,3 +38,12 @@ two different methods to extract homologous kmers
 ```
 
 generates two files `tests/data/toy_middle_coverages.tsv` and `tests/data/toy_middle_sequences.tsv` with coverages and sequences of kmer pairs.
+
+
+##### smudgeplot kmer extraction
+
+```
+exec/extract_kmer_pairs.py -cov tests/data/toy_all_coverages.tsv -seq tests/data/toy_all_sequences.tsv   -minc 400 -maxc 410 -minr 0.49 -maxr 0.5 | head
+```
+
+would extract 80 lines made of 20 kmers pairs, but showing only the first ten.
