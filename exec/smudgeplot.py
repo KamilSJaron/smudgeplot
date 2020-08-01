@@ -24,7 +24,8 @@ class parser():
             usage='''smudgeplot <task> [options] \n
 tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cutoff.
        hetkmers  Calculate unique kmer pairs from a Jellyfish or KMC dump file.
-       plot      Generate 2d histogram; infere ploidy and plot a smudgeplot.\n\n''')
+       plot      Generate 2d histogram; infere ploidy and plot a smudgeplot.
+       extract   Extract kmer pairs within specified coverage sum and minor covrage ratio ranges\n\n''')
         argparser.add_argument('task', help='Task to execute; for task specific options execute smudgeplot <task> -h')
         argparser.add_argument('-v', '--version', action="store_true", default = False, help="print the version and exit")
         # print version is a special case
@@ -82,6 +83,19 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         argparser = argparse.ArgumentParser(prog = 'smudgeplot cutoff', description='Calculate meaningful values for lower/upper kmer histogram cutoff.')
         argparser.add_argument('infile', type=argparse.FileType('r'), help='Name of the input kmer histogram file (default \"kmer.hist\")."')
         argparser.add_argument('boundary', help='Which bounary to compute L (lower) or U (upper)')
+        self.arguments = argparser.parse_args(sys.argv[2:])
+
+    def extract(self):
+        '''
+        Extract kmer pairs within specified coverage sum and minor covrage ratio ranges.
+        '''
+        argparser = argparse.ArgumentParser(prog = 'smudgeplot extract', description='Extract kmer pairs within specified coverage sum and minor covrage ratio ranges.')
+        argparser.add_argument("-cov", "--coverageFile",required=True, help="coverage file for the kmer pairs")
+        argparser.add_argument("-seq", "--seqFile",required=True, help="sequences of the kmer pairs")
+        argparser.add_argument("-minc", "--countMin",required=True, help="lower bound of the summed coverage", type=int)
+        argparser.add_argument("-maxc", "--countMax",required=True, help="upper bound of the summed coverage", type=int)
+        argparser.add_argument("-minr", "--ratioMin",required=True, help="lower bound of minor allele ratio", type=float)
+        argparser.add_argument("-maxr", "--ratioMax",required=True, help="upper bound of minor allele ratio", type=float)
         self.arguments = argparser.parse_args(sys.argv[2:])
 
 ###############
@@ -259,6 +273,34 @@ def all_one_away(args):
 
     sys.stderr.write(args.o + '_families.tsv and ' + args.o + '_coverages.tsv files saved.\n')
 
+def extract_kmer_pairs(args):
+    index2covs = defaultdict(list)
+
+    with open(args.coverageFile,"r") as f:
+        for i, row in enumerate(f):
+            row_list = row.rstrip("\n").split("\t")
+            countL = int(row_list[0])
+            countR = int(row_list[1])
+
+            cov_sum = countL + countR
+            cov_ratio = countL / (countL + countR)
+            if cov_sum <= args.countMax and cov_sum >= args.countMin and cov_ratio >= args.ratioMin and cov_ratio <= args.ratioMax:
+                # out_cov_h.write(str(countL)+"\t" + str(countR) + "\n")
+                #print(str(i1))
+                index2covs[i] = [countL, countR]
+
+    with open(args.seqFile,"r") as f:
+        extracted = 0
+        for i, row in enumerate(f):
+            if len(index2covs[i]) == 2:
+                extracted += 1;
+                kmer1, kmer2 = row.rstrip('\n').split('\t')
+                sys.stdout.write(">kmer_" + str(i) + "_1_cov_" + str(index2covs[i][0]) + "\n")
+                sys.stdout.write(kmer1 + '\n')
+                sys.stdout.write(">kmer_" + str(i) + "_2_cov_" + str(index2covs[i][1]) + "\n")
+                sys.stdout.write(kmer2 + '\n')
+        sys.stderr.write("Extracting " + str(extracted) + " of total kmer pairs: " + str(i + 1) + '\n')
+        sys.stderr.write(str(round(100 * extracted / (i + 1), 3)) + ' %\n')
 
 #####################
 # the script itself #
@@ -301,6 +343,10 @@ def main():
             plot_args += " --homozygous"
         sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
         system("smudgeplot_plot.R " + plot_args)
+
+    if _parser.task == "extract":
+        extract_kmer_pairs(_parser.arguments)
+
 
     sys.stderr.write("\nDone!\n")
     exit(0)
