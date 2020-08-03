@@ -69,6 +69,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         argparser.add_argument('-L', help='The lower boundary used when dumping kmers (default min(total_pair_cov) / 2).', type=int, default=0)
         argparser.add_argument('-n', help='The expected haploid coverage (default estimated from data).', type=float, default=0)
         argparser.add_argument('-t', '--title', help='name printed at the top of the smudgeplot (default none).', default='')
+        argparser.add_argument('-e', '--extreme_ploidies', help='Allow very high ploidies, at the cost of speed.', action='store_true') 
         # argparser.add_argument('-m', '-method', help='The algorithm for annotation of smudges (default \'local_aggregation\')', default='local_aggregation')
         argparser.add_argument('-nbins', help='The number of nbins used for smudgeplot matrix (nbins x nbins) (default autodetection).', type=int, default=0)
         argparser.add_argument('-k', help='The length of the kmer.', default=21)
@@ -337,6 +338,8 @@ def main():
             plot_args += " -n " + str(args.n)
         if args.title:
             plot_args += " -t \"" + args.title + "\""
+        if args.extreme_ploidies:
+            plot_args += " -e "
         if args.nbins != 0:
             plot_args += " -nbins " + str(args.nbins)
         if args.homozygous:

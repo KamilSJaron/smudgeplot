@@ -27,6 +27,7 @@ parser$add_argument("-nbins", type = "integer",
                     help="the number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]")
 parser$add_argument("-k", "--kmer_size", type = "integer", default = 21,
                     help="The kmer size used to calculate kmer spectra [default 21]")
+parser$add_argument("-e", "--extreme_ploidies", action="store_true", help="Expect extremely high ploidies at the cost of speed.")
 
 args <- parser$parse_args()
 
@@ -68,7 +69,7 @@ smudge_summary$n_subset_est <- round(estimate_1n_coverage_1d_subsets(total_pair_
 
 draft_n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_subset_est, args$n_cov)
 
-ymax <- min(10*draft_n, max(total_pair_cov))
+ymax <- ifelse(args$extreme_ploidies, max(total_pair_cov), min(10*draft_n, max(total_pair_cov)))
 ymin <- min(total_pair_cov) - 1
 
 smudge_warn(args$output, "\n#############")
