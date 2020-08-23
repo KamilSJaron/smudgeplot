@@ -11,7 +11,7 @@ from scipy.signal import argrelextrema
 from collections import defaultdict
 from itertools import combinations
 
-version = '0.2.3dev'
+version = '0.2.3dev_rn'
 
 ############################
 # processing of user input #
@@ -53,8 +53,9 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
             description='Calculate unique kmer pairs from a Jellyfish or KMC dump file.')
         argparser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin, help='Alphabetically sorted Jellyfish or KMC dump file (stdin).')
         argparser.add_argument('-o', help='The pattern used to name the output (kmerpairs).', default='kmerpairs')
-        argparser.add_argument('--middle', dest='middle', action='store_const', const = True, default = False,
-                               help='Get all kmer pairs that are exactly the same but in the middle nt. When this flag is used, the input dump must be alphabetically sorted/ (default: different by a SNP at any position).')
+        # argparser.add_argument('--middle', dest='middle', action='store_const', const = True, default = False,
+        #                        help='Get all kmer pairs that are exactly the same but in the middle nt. When this flag is used, the input dump must be alphabetically sorted/ (default: different by a SNP at any position).')
+        argparser.add_argument('--pos', help='Position in k-mer to look for pairs, 0-based, min(1) - max(k-2)', dest='pos', type=int)
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def plot(self):
@@ -120,7 +121,7 @@ def get_one_away_pairs(kmer_index_family, k):
 
     #This is the base case for the recursion. Return every pair of indices where the kmers corresponding to those indices differ at exactly one base.
     if k == 1:
-        return [(i,j) for ((kmer1,i),(kmer2,j)) in combinations(kmer_index_family, 2) if kmer1 != kmer2]
+        return [(i,j) for ((kmer1, i), (kmer2, j)) in combinations(kmer_index_family, 2) if kmer1 != kmer2]
 
     #Initialize one_away_pairs, which will be returned by get_one_away_pairs.
     one_away_pairs = []
@@ -159,12 +160,12 @@ def get_one_away_pairs(kmer_index_family, k):
     del kmer_R_to_index_family
     return(one_away_pairs)
 
-def middle_one_away(args):
-    sys.stderr.write('Extracting kmer pairs that differ in the middle nt\n')
+def get_pairs_at_pos(args):
+    sys.stderr.write('Extracting kmer pairs that differ in position:' + str(args.pos) + '\n')
 
     # file_one_away_pairs = open(args.o + '_one_away_pairs.tsv', 'w')
-    file_coverages = open(args.o + '_coverages.tsv', 'w')
-    file_kmers = open(args.o + '_sequences.tsv', 'w')
+    file_coverages = open(args.o + '_pos' + str(args.pos) + '_coverages.tsv', 'w')
+    file_kmers = open(args.o + '_pos' + str(args.pos) + '_sequences.tsv', 'w')
 
     duplicated = set()
     filtered = set()
@@ -178,10 +179,10 @@ def middle_one_away(args):
         k = len(kmer)
 
     #Get the locations for the two halves of the kmer.
-    k_middle = k // 2
+    #k_middle = k // 2
     i_L_L = 0
-    i_L_R = k_middle - 1
-    i_R_L = k_middle + 1
+    i_L_R = args.pos - 1
+    i_R_L = args.pos + 1
     i_R_R = k - 1
 
     sys.stderr.write('Saving ' + args.o + '_coverages.tsv and ' + args.o + '_sequences.tsv files.\n')
@@ -232,9 +233,9 @@ def all_one_away(args):
 
     sys.stderr.write('Kmers and coverages loaded.\n')
 
-    k = len(kmer) # all the kmers in the dump file have the same length, so I can just calc the number of nts in the last one
+    k = len(kmer)  # all the kmers in the dump file have the same length, so I can just calc the number of nts in the last one
     # get_one_away_pairs is a recursive function that gatheres indices of all kmer 1 SNP from each other
-    one_away_pairs = get_one_away_pairs([(kmer,i) for i,kmer in enumerate(kmers)], k)
+    one_away_pairs = get_one_away_pairs([(kmer, i) for i, kmer in enumerate(kmers)], k)
 
     sys.stderr.write('Kmer pairs identified.\n')
 
@@ -278,8 +279,8 @@ def main():
 
     if _parser.task == "hetkmers":
         args = _parser.arguments
-        if args.middle:
-            middle_one_away(args)
+        if args.pos:
+            get_pairs_at_pos(args)
         else :
             all_one_away(args)
 
