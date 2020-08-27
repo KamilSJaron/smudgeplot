@@ -17,6 +17,7 @@ version = '0.2.3dev_rn'
 # processing of user input #
 ############################
 
+
 class parser():
     def __init__(self):
         argparser = argparse.ArgumentParser(
@@ -24,9 +25,10 @@ class parser():
             usage='''smudgeplot <task> [options] \n
 tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cutoff.
        hetkmers  Calculate unique kmer pairs from a Jellyfish or KMC dump file.
-       plot      Generate 2d histogram; infere ploidy and plot a smudgeplot.\n\n''')
+       plot      Generate 2d histogram; infere ploidy and plot a smudgeplot.
+       aggregate Retrieve unique k-mer pairs from files containing IDs. \n\n''')
         argparser.add_argument('task', help='Task to execute; for task specific options execute smudgeplot <task> -h')
-        argparser.add_argument('-v', '--version', action="store_true", default = False, help="print the version and exit")
+        argparser.add_argument('-v', '--version', action="store_true", default=False, help="print the version and exit")
         # print version is a special case
         if len(sys.argv) > 1:
             if sys.argv[1] in ['-v', '--version']:
@@ -76,6 +78,17 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         argparser.add_argument('--homozygous', action="store_true", default = False, help="Assume no heterozygosity in the genome - plotting a paralog structure; (default False).")
         self.arguments = argparser.parse_args(sys.argv[2:])
 
+    def aggregate(self):
+        '''
+        Retrieve unique k-mer pairs from files containing IDs.
+        '''
+        argparser = argparse.ArgumentParser(prog='smudgeplot aggregate',
+                                            description='Retrieve unique k-mer pairs from files containing IDs.')
+        argparser.add_argument('--infile', required=True, type=argparse.FileType('r'), help='Alphabetically sorted Jellyfish or KMC dump file.')
+        argparser.add_argument('--index_files', required=True, nargs='*', type=argparse.FileType('r'), help='Multiple indices files output of smudgeplot.py hetkmers --pos.')
+        argparser.add_argument('-o', help='The pattern used to name the output (kmerpairs).', default='kmerpairs')
+        self.arguments = argparser.parse_args(sys.argv[2:])
+
     def cutoff(self):
         '''
         Calculate meaningful values for lower/upper kmer histogram cutoff.
@@ -89,13 +102,15 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
 # task cutoff #
 ###############
 
+
 def round_up_nice(x):
     digits = ceil(log(x, 10))
     if digits <= 1:
         multiplier = 10 ** (digits - 1)
     else:
         multiplier = 10 ** (digits - 2)
-    return(ceil(x / multiplier) * multiplier)
+    return ceil(x / multiplier) * multiplier
+
 
 def cutoff(args):
     # kmer_hist = open("data/Mflo2/kmer.hist","r")
@@ -158,25 +173,30 @@ def get_one_away_pairs(kmer_index_family, k):
             one_away_pairs.extend(get_one_away_pairs(kmer_R_index_family, k_L)) #differ by 1 in left half
 
     del kmer_R_to_index_family
-    return(one_away_pairs)
+    return one_away_pairs
+
 
 def get_pairs_at_pos(args):
-    sys.stderr.write('Extracting kmer pairs that differ in position:' + str(args.pos) + '\n')
+    sys.stderr.write('Extracting kmer pairs that differ in position: ' + str(args.pos) + '\n')
 
     # file_one_away_pairs = open(args.o + '_one_away_pairs.tsv', 'w')
-    file_coverages = open(args.o + '_pos' + str(args.pos) + '_coverages.tsv', 'w')
-    file_kmers = open(args.o + '_pos' + str(args.pos) + '_sequences.tsv', 'w')
+    file_coverages = args.o + '_pos' + str(args.pos) + '_coverages.tsv'
+    file_kmers = args.o + '_pos' + str(args.pos) + '_sequences.tsv'
+    file_indices = args.o + '_pos' + str(args.pos) + '_indices.tsv'
 
-    duplicated = set()
-    filtered = set()
+    duplicated = dict()
+    filtered = dict()
 
-    #Initialize a dictionary in which the key is the right kmer_half (not including the middle nucleotide), and the value is a list of (index, coverage) tuples corresponding to kmers that have that particular right kmer_half.
+    # Initialize a dictionary in which the key is the right kmer_half (not including the middle nucleotide), and the value is a list of (index, coverage) tuples corresponding to kmers that have that particular right kmer_half.
     kmer_R_to_index_family = defaultdict(list)
 
     # read the first line to get the length of the kmer
     with open(args.infile.name) as dump_file:
         kmer, coverage = dump_file.readline().split()
         k = len(kmer)
+
+    if k - 1 < args.pos < 0:
+        raise ValueError()  # Let Kamil decide on how to the error handling
 
     #Get the locations for the two halves of the kmer.
     #k_middle = k // 2
@@ -185,38 +205,103 @@ def get_pairs_at_pos(args):
     i_R_L = args.pos + 1
     i_R_R = k - 1
 
-    sys.stderr.write('Saving ' + args.o + '_coverages.tsv and ' + args.o + '_sequences.tsv files.\n')
+    sys.stderr.write(f'Saving {file_coverages}, {file_kmers} and {file_indices}.\n')
     # Read each line of the input file in order to load the kmers and coverages and process the kmer halves.
     current_kmer_L = ""
-    for i1, line in enumerate(args.infile):
-        kmer, coverage1 = line.split()
-        coverage1 = int(coverage1)
 
-        new_kmer_L = kmer[i_L_L:i_L_R+1]
-        kmer_R = kmer[i_R_L:i_R_R+1]
-        if new_kmer_L == current_kmer_L:
-            if kmer_R in kmer_R_to_index_family:
-                if kmer_R in duplicated:
-                    filtered.discard(kmer_R)
-                else:
-                    duplicated.add(kmer_R)
-                    filtered.add(kmer_R)
-        else:
-            for kmer_R in filtered:
+    with open(file_coverages, 'w') as cov_file, open(file_kmers, 'w') as kmer_file, open(file_indices, 'w') as ind_file:
+        for i1, line in enumerate(args.infile):  # This is deterministic
+            kmer, coverage1 = line.split()  # Deterministic
+            coverage1 = int(coverage1)  # Deterministic
+
+            new_kmer_L = kmer[i_L_L:i_L_R+1]  # Deterministic
+            kmer_R = kmer[i_R_L:i_R_R+1]  # Deterministic
+            if new_kmer_L == current_kmer_L:
+                # This part is to filter out triplets or quadruplets, so ABC and ABCD, whereas pairs AB are stored in filtered
+                # So basically if k=4, then looking at pos 3 we can have 4 options: AAAA, AAAC, AAAG and AAAT. As
+                # long as there are 2, the right part is stored in filtered. Is another one detected it is removed from
+                # filtered and added to duplicated so it is not added again.
+                if kmer_R in kmer_R_to_index_family:
+                    if kmer_R in duplicated:
+                        filtered.pop(kmer_R, None)
+                    else:
+                        duplicated[kmer_R] = None
+                        filtered[kmer_R] = None
+            else:
+                # Because the input is sorted, if the left part changed, it is time to write output of the pairs currently tracked
+                for kmer_R in filtered.keys():
+                    (i1, coverage1), (i2, coverage2) = kmer_R_to_index_family[kmer_R]
+                    if coverage2 < coverage1:
+                        cov_file.write(str(coverage2) + '\t' + str(coverage1) + '\n')
+                        ind_file.write(str(i2) + '\t' + str(i1) + '\n')
+                    else:
+                        cov_file.write(str(coverage1) + '\t' + str(coverage2) + '\n')
+                        ind_file.write(str(i1) + '\t' + str(i2) + '\n')
+                    kmer_file.write(current_kmer_L + 'N' + kmer_R + '\n')
+                # Reset for new left k-mer part
+                duplicated = dict()  # Deterministic
+                filtered = dict()  # Deterministic
+                kmer_R_to_index_family = defaultdict(list)  # Deterministic
+                current_kmer_L = new_kmer_L  # Deterministic
+            kmer_R_to_index_family[kmer_R].append((i1, coverage1))  # Deterministic
+
+        # Any leftovers also need to be written
+        if len(filtered) > 0:
+            print(f"Leftovers: {len(filtered)}")
+            for kmer_R in filtered.keys():
                 (i1, coverage1), (i2, coverage2) = kmer_R_to_index_family[kmer_R]
                 if coverage2 < coverage1:
-                    file_coverages.write(str(coverage2) + '\t' + str(coverage1) + '\n')
+                    cov_file.write(str(coverage2) + '\t' + str(coverage1) + '\n')
                 else:
-                    file_coverages.write(str(coverage1) + '\t' + str(coverage2) + '\n')
-                file_kmers.write(current_kmer_L + 'N' + kmer_R + '\n')
-            duplicated = set()
-            filtered = set()
-            kmer_R_to_index_family = defaultdict(list)
-            current_kmer_L = new_kmer_L
-        kmer_R_to_index_family[kmer_R].append((i1,coverage1))
+                    cov_file.write(str(coverage1) + '\t' + str(coverage2) + '\n')
+                kmer_file.write(current_kmer_L + 'N' + kmer_R + '\n')
+                ind_file.write(str(i1) + '\t' + str(i2) + '\n')
 
-    file_coverages.close()
-    file_kmers.close()
+
+def aggregate(args, all_id_pairs=None):
+
+    # read in all files to memory. TO DO: check for better memory efficiency
+    if not all_id_pairs:
+        all_id_pairs = [line.split() for file in args.index_files for line in file]
+
+    repeated = {}
+    for i1, i2 in all_id_pairs:
+        repeated[i1] = i1 in repeated
+        repeated[i2] = i2 in repeated
+
+    sys.stderr.write('Kmers in unique kmer pairs identified.\n')
+
+    # Initiate kmer and coverages lists.
+    kmers = []
+    coverages = []
+
+    # Read each line of the input file in order to
+    # load the kmers and coverages and process the kmer halves.
+    for i, line in enumerate(args.infile):
+        kmer, coverage = line.split()
+        coverage = int(coverage)
+        coverages.append(coverage)
+        kmers.append(kmer)
+
+    coverages_out = args.o + "_aggregated_coverages.tsv"
+    sequences_out = args.o + "_aggregated_sequences.tsv"
+    indices_out = args.o + "_aggregated_indices.tsv"
+
+    with open(coverages_out, mode='w') as cov_out, open(sequences_out, mode='w') as seq_out, \
+            open(indices_out, mode='w') as id_out:
+        for id1, id2 in all_id_pairs:
+            if not repeated[id1] and not repeated[id2]:
+                cov1 = coverages[int(id1)]
+                cov2 = coverages[int(id2)]
+                if cov1 > cov2:
+                    cov_out.write(f"{cov1}\t{cov2}\n")
+                    seq_out.write(f"{kmers[int(id1)]}\t{kmers[int(id2)]}\n")
+                    id_out.write(f"{id1}\t{id2}\n")
+                else:
+                    cov_out.write(f"{cov2}\t{cov1}\n")
+                    seq_out.write(f"{kmers[int(id2)]}\t{kmers[int(id1)]}\n")
+                    id_out.write(f"{id2}\t{id1}\n")
+
 
 def all_one_away(args):
     #Initiate kmer and coverages lists.
@@ -279,10 +364,13 @@ def main():
 
     if _parser.task == "hetkmers":
         args = _parser.arguments
-        if args.pos:
+        if hasattr(args, "pos"):
             get_pairs_at_pos(args)
-        else :
+        else:
             all_one_away(args)
+
+    if _parser.task == "aggregate":
+        aggregate(_parser.arguments)
 
     if _parser.task == "plot":
         # the plotting script is expected ot be installed in the system as well as the R library supporting it
