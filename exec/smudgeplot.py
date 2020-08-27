@@ -424,7 +424,7 @@ def main():
 
     if _parser.task == "hetkmers":
         args = _parser.arguments
-        if hasattr(args, "pos"):
+        if args.pos is not None:  # Don't use  | if args.pos: | because args.pos can be 0!
             get_pairs_at_pos(args)
         else:
             all_one_away(args)
