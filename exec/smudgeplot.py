@@ -374,6 +374,9 @@ def aggregate(args, all_id_pairs=None):
                     seq_out.write(f"{kmers[int(id2)]}\t{kmers[int(id1)]}\n")
                     id_out.write(f"{id2}\t{id1}\n")
 
+    sys.stderr.write(f"Saved output to {coverages_out}, {sequences_out} and {indices_out}\n"
+                     f"File {coverages_out} can be used as input to smudgeplot.py plot\n")
+
 
 def all_one_away(args):
     """
@@ -400,26 +403,7 @@ def all_one_away(args):
 
     sys.stderr.write('Kmer pairs identified.\n')
 
-    repeated = {}
-    for (i1, i2) in one_away_pairs:
-        repeated[i1] = i1 in repeated
-        repeated[i2] = i2 in repeated
-
-    sys.stderr.write('Kmers in unique kmer pairs identified.\n')
-
-    with open(args.o + '_sequences.tsv', 'w') as file_seqs, open(args.o + '_coverages.tsv', 'w') as file_coverages:
-        for (i1, i2) in one_away_pairs:
-            if not repeated[i1] and not repeated[i2]:
-                cov1 = coverages[i1]
-                cov2 = coverages[i2]
-                if cov1 < cov2:
-                    file_coverages.write(str(cov1) + '\t' + str(cov2) + '\n')
-                    file_seqs.write(kmers[i1] + '\t' + kmers[i2] + '\n')
-                else:
-                    file_coverages.write(str(cov2) + '\t' + str(cov1) + '\n')
-                    file_seqs.write(kmers[i2] + '\t' + kmers[i1] + '\n')
-
-    sys.stderr.write(args.o + '_families.tsv and ' + args.o + '_coverages.tsv files saved.\n')
+    aggregate(args, one_away_pairs)
 
 
 #####################
