@@ -74,7 +74,11 @@ echo $L $U # these need to be sane values
 # U should be like 500 - 3000
 ```
 
-Then, extract kmers in the coverage range from `L` to `U` using `kmc_tools`. Then run `smudge_pairs` on the reduced file to compute the set of kmer pairs.
+Then, extract kmers in the coverage range from `L` to `U` using `kmc_tools`. Following that, 3 options are available to compute pairs of unique kmers: 
+
+### Option 1 `smudge_pairs`
+**Single thread, memory efficient, relatively slow**
+`smudge_pairs` runs on the reduced file to compute the set of kmer pairs.
 
 `smudge_pairs` is available at [tbenavi1/KMC](https://github.com/tbenavi1/KMC). Specifically, after compiling this version of KMC, `smudge_pairs` will be in the bin directory.
 
@@ -82,12 +86,28 @@ Then, extract kmers in the coverage range from `L` to `U` using `kmc_tools`. The
 kmc_tools transform kmcdb -ci"$L" -cx"$U" reduce kmcdb_L"$L"_U"$U"
 smudge_pairs kmcdb_L"$L"_U"$U" kmcdb_L"$L"_U"$U"_coverages.tsv kmcdb_L"$L"_U"$U"_pairs.tsv > kmcdb_L"$L"_U"$U"_familysizes.tsv
 ```
+### Option 2 `smudgeplot.py hetkmers`
+**Single threaded, memory consuming, fast**
 
 Alternatively, if you don't have [tbenavi1/KMC](https://github.com/tbenavi1/KMC) installed, you can extract kmers in the coverage range from `L` to `U` using `kmc_dump`. Then run `smudgeplot.py hetkmers` on the dump of kmers the compute the set of kmer pairs.
 ```
 kmc_tools transform kmcdb -ci"$L" -cx"$U" dump -s kmcdb_L"$L"_U"$U".dump
 smudgeplot.py hetkmers -o kmcdb_L"$L"_U"$U" < kmcdb_L"$L"_U"$U".dump
 ```
+### Option 3 `smudgeplot.py hetkmers --pos`
+**Parallel, fastest**
+
+By running `smudgeplot.py hetkmers --pos x` where x is 0 >= x =< k, only pairs at that position in the kmer are generated. By using `GNU parallel` or a job scheduling system like `SLURM`
+parallelization can be achieved followed by a filtering step to remove pairs that contain non-unique kmers.
+```
+kmc_tools transform kmcdb -ci"$L" -cx"$U" dump -s kmcdb_L"$L"_U"$U".dump
+\# For kmer length 21
+parallel -j 21 smudgeplot.py hetkmers -o kmcdb_L"$L"_U"$U" --pos \{\} kmcdb_L"$L"_U"$U".dump ::: {0..20}
+
+smudgeplot.py aggregate --infile kmcdb_L"$L"_U"$U".dump -o  kmcdb_L"$L"_U"$U" --index_files  kmcdb_L"$L"_U"$U"_pos*_indices.tsv
+
+```
+
 
 Now you can finally generate the smudgeplot using the coverages of the identified kmer pairs (`*_coverages.tsv` file). You can either supply the haploid kmer coverage (reported by GenomeScope) or let it be estimated directly from the data. Something like this
 
