@@ -327,7 +327,7 @@ def get_pairs_at_pos(args):
                 ind_file.write(str(i1) + '\t' + str(i2) + '\n')
 
 
-def aggregate(args, all_id_pairs=None):
+def aggregate(args, all_id_pairs=None, kmers=None, coverages=None):
     """
     Read in files with index pairs and check if both IDs are unique. Write out coverage, sequence and index files for
     those pairs.
@@ -337,23 +337,23 @@ def aggregate(args, all_id_pairs=None):
         all_id_pairs = [line.split() for file in args.index_files for line in file]
 
     repeated = {}
-    for i1, i2 in all_id_pairs:
-        repeated[i1] = i1 in repeated
-        repeated[i2] = i2 in repeated
+    for id1, id2 in all_id_pairs:
+        repeated[id1] = id1 in repeated
+        repeated[id2] = id2 in repeated
 
     sys.stderr.write('Kmers in unique kmer pairs identified.\n')
 
-    # Initiate kmer and coverages lists.
-    kmers = []
-    coverages = []
-
     # Read each line of the input file in order to
     # load the kmers and coverages and process the kmer halves.
-    for i, line in enumerate(args.infile):
-        kmer, coverage = line.split()
-        coverage = int(coverage)
-        coverages.append(coverage)
-        kmers.append(kmer)
+    if not kmers and not coverages:
+        # Initiate kmer and coverages lists if not given.
+        kmers = []
+        coverages = []
+        for i, line in enumerate(args.infile):
+            kmer, coverage = line.split()
+            coverage = int(coverage)
+            coverages.append(coverage)
+            kmers.append(kmer)
 
     coverages_out = args.o + "_aggregated_coverages.tsv"
     sequences_out = args.o + "_aggregated_sequences.tsv"
@@ -403,7 +403,7 @@ def all_one_away(args):
 
     sys.stderr.write('Kmer pairs identified.\n')
 
-    aggregate(args, one_away_pairs)
+    aggregate(args, one_away_pairs, kmers, coverages)
 
 
 #####################
