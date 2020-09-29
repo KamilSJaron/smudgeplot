@@ -300,13 +300,13 @@ def get_pairs_at_pos(args):
                 # Because the input is sorted, if the left part changed, it is time to write output of the pairs
                 # currently tracked
                 for kmer_R in filtered.keys():
-                    (i1, coverage1), (i2, coverage2) = kmer_R_to_index_family[kmer_R]
-                    if coverage2 < coverage1:
-                        cov_file.write(str(coverage2) + '\t' + str(coverage1) + '\n')
-                        ind_file.write(str(i2) + '\t' + str(i1) + '\n')
+                    (index_1, cov_1), (index_2, cov_2) = kmer_R_to_index_family[kmer_R]
+                    if cov_2 < cov_1:
+                        cov_file.write(str(cov_2) + '\t' + str(cov_1) + '\n')
+                        ind_file.write(str(index_2) + '\t' + str(index_1) + '\n')
                     else:
-                        cov_file.write(str(coverage1) + '\t' + str(coverage2) + '\n')
-                        ind_file.write(str(i1) + '\t' + str(i2) + '\n')
+                        cov_file.write(str(cov_1) + '\t' + str(cov_2) + '\n')
+                        ind_file.write(str(index_1) + '\t' + str(index_2) + '\n')
                     kmer_file.write(current_kmer_L + 'N' + kmer_R + '\n')
                 # Reset for new left k-mer part
                 duplicated = dict()
@@ -318,13 +318,13 @@ def get_pairs_at_pos(args):
         # Any leftovers also need to be written
         if len(filtered) > 0:
             for kmer_R in filtered.keys():
-                (i1, coverage1), (i2, coverage2) = kmer_R_to_index_family[kmer_R]
-                if coverage2 < coverage1:
-                    cov_file.write(str(coverage2) + '\t' + str(coverage1) + '\n')
+                (index_1, cov_1), (index_2, cov_2) = kmer_R_to_index_family[kmer_R]
+                if cov_2 < cov_1:
+                    cov_file.write(str(cov_2) + '\t' + str(cov_1) + '\n')
                 else:
-                    cov_file.write(str(coverage1) + '\t' + str(coverage2) + '\n')
+                    cov_file.write(str(cov_1) + '\t' + str(cov_2) + '\n')
                 kmer_file.write(current_kmer_L + 'N' + kmer_R + '\n')
-                ind_file.write(str(i1) + '\t' + str(i2) + '\n')
+                ind_file.write(str(index_1) + '\t' + str(index_2) + '\n')
 
 
 def aggregate(args, all_id_pairs=None, kmers=None, coverages=None):
