@@ -2,7 +2,7 @@
 
 import argparse
 import sys
-from os import system
+from os import system, devnull
 from math import log
 from math import ceil
 import numpy as np
@@ -137,6 +137,10 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
                                help='Multiple indices files output of smudgeplot.py hetkmers --pos.')
         argparser.add_argument('-o',
                                help='The pattern used to name the output (kmerpairs).', default='kmerpairs')
+        argparser.add_argument('--cov_only',
+                               action='store_true',
+                               default=False,
+                               help='Only write one file for the coverage of the pairs.')
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def cutoff(self):
@@ -332,6 +336,12 @@ def aggregate(args, all_id_pairs=None, kmers=None, coverages=None):
     Read in files with index pairs and check if both IDs are unique. Write out coverage, sequence and index files for
     those pairs.
     """
+    # Check for the args.cov_only call
+    try:
+        cov_only = args.cov_only
+    except AttributeError as AE:
+        cov_only = False
+
     # Read in all files to memory.
     if not all_id_pairs:
         all_id_pairs = [line.split() for file in args.index_files for line in file]
@@ -353,11 +363,17 @@ def aggregate(args, all_id_pairs=None, kmers=None, coverages=None):
             kmer, coverage = line.split()
             coverage = int(coverage)
             coverages.append(coverage)
-            kmers.append(kmer)
+            if not cov_only:
+                kmers.append(kmer)
+
+    if not cov_only:
+        sequences_out = args.o + "_aggregated_sequences.tsv"
+        indices_out = args.o + "_aggregated_indices.tsv"
+    else:
+        sequences_out = devnull
+        indices_out = devnull
 
     coverages_out = args.o + "_aggregated_coverages.tsv"
-    sequences_out = args.o + "_aggregated_sequences.tsv"
-    indices_out = args.o + "_aggregated_indices.tsv"
 
     with open(coverages_out, mode='w') as cov_out, open(sequences_out, mode='w') as seq_out, \
             open(indices_out, mode='w') as id_out:
@@ -367,12 +383,14 @@ def aggregate(args, all_id_pairs=None, kmers=None, coverages=None):
                 cov2 = coverages[int(id2)]
                 if cov1 > cov2:
                     cov_out.write(f"{cov1}\t{cov2}\n")
-                    seq_out.write(f"{kmers[int(id1)]}\t{kmers[int(id2)]}\n")
-                    id_out.write(f"{id1}\t{id2}\n")
+                    if not cov_only:
+                        seq_out.write(f"{kmers[int(id1)]}\t{kmers[int(id2)]}\n")
+                        id_out.write(f"{id1}\t{id2}\n")
                 else:
                     cov_out.write(f"{cov2}\t{cov1}\n")
-                    seq_out.write(f"{kmers[int(id2)]}\t{kmers[int(id1)]}\n")
-                    id_out.write(f"{id2}\t{id1}\n")
+                    if not cov_only:
+                        seq_out.write(f"{kmers[int(id2)]}\t{kmers[int(id1)]}\n")
+                        id_out.write(f"{id2}\t{id1}\n")
 
     sys.stderr.write(f"Saved output to {coverages_out}, {sequences_out} and {indices_out}\n"
                      f"File {coverages_out} can be used as input to smudgeplot.py plot\n")
