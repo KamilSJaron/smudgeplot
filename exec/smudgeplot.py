@@ -381,7 +381,7 @@ def aggregate(args, all_id_pairs=None, kmers=None, coverages=None):
             if not repeated[id1] and not repeated[id2]:
                 cov1 = coverages[int(id1)]
                 cov2 = coverages[int(id2)]
-                if cov1 > cov2:
+                if cov1 < cov2:
                     cov_out.write(f"{cov1}\t{cov2}\n")
                     if not cov_only:
                         seq_out.write(f"{kmers[int(id1)]}\t{kmers[int(id2)]}\n")
