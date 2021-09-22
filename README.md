@@ -14,38 +14,13 @@ This tool is planned to be a part of [GenomeScope](https://github.com/tbenavi1/g
 
 You will need a program for counting kmers such as [KMC](https://github.com/refresh-bio/KMC) installed, and you should definitely also run [GenomeScope](https://github.com/tbenavi1/genomescope2.0) (a classical kmer spectra analysis). It's not rare that both GenomeScope and Smudgeplot are needed to make sense out of the sequencing data. We recommend using [tbenavi1/KMC](https://github.com/tbenavi1/KMC). This version of KMC has an additional `smudge_pairs` program which finds heterozygous kmer pairs more quickly and using less memory than the python version of hetkmers.
 
-To run Smudgeplot, you will need `python3` with a couple of standard packages and `R`.
-
-1. Download this repository
+The easiest way to install smudgeplot is certainly using [conda](https://docs.conda.io/en/latest/miniconda.html), where [smudgeplot package](https://bioconda.github.io/recipes/smudgeplot/README.html#package-smudgeplot) is available. If you have conda installed, you can get smudgeplot simply by
 
 ```
-git clone https://github.com/KamilSJaron/smudgeplot
-cd smudgeplot
+conda install -c bioconda smudgeplot
 ```
 
-2. Install the R package that is needed for plotting. For the installation you will need the R package `devtools`, and the rest of the dependencies are installed automatically.
-
-```
-Rscript install.R
-```
-
-3. install two scripts
-
-```
-install -C exec/smudgeplot.py /usr/local/bin
-install -C exec/smudgeplot_plot.R /usr/local/bin
-```
-
-Congratulations, `smudgeplot` should be operational.
-Just to be sure, check that the smudgeplot script works:
-
-```
-smudgeplot.py --version
-```
-
-Something like `Running smudgeplot v0.2.2` is expected to be printed.
-
-If the installation procedure does not work, if you encounter any other problem, or if you would like to get help with the interpretation of your smudgeplot, please open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new).
+For more detailed installation instructions, see our [installation wiki page](https://github.com/KamilSJaron/smudgeplot/wiki/installation). If the installation procedure does not work, if you encounter any other problem, or if you would like to get help with the interpretation of your smudgeplot, please open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new).
 
 ## Usage
 
