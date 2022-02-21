@@ -11,7 +11,7 @@ from scipy.signal import argrelextrema
 from collections import defaultdict
 from itertools import combinations
 
-version = '0.2.3dev'
+version = '0.2.4'
 
 ############################
 # processing of user input #
