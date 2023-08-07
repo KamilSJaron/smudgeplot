@@ -258,6 +258,7 @@ def all_one_away(args):
         repeated[i2] = i2 in repeated
 
     sys.stderr.write('Kmers in unique kmer pairs identified.\n')
+    coverage_pair_hist = defaultdict(int)
 
     with open(args.o + '_sequences.tsv', 'w') as file_seqs, open(args.o + '_coverages.tsv', 'w') as file_coverages:
         for (i1, i2) in one_away_pairs:
@@ -267,11 +268,19 @@ def all_one_away(args):
                 if cov1 < cov2:
                     file_coverages.write(str(cov1) + '\t' + str(cov2) + '\n')
                     file_seqs.write(kmers[i1] + '\t' + kmers[i2] + '\n')
+                    coverage_pair_hist[(cov1,cov2)] += 1
                 else:
                     file_coverages.write(str(cov2) + '\t' + str(cov1) + '\n')
                     file_seqs.write(kmers[i2] + '\t' + kmers[i1] + '\n')
+                    coverage_pair_hist[(cov2,cov1)] += 1
 
     sys.stderr.write(args.o + '_families.tsv and ' + args.o + '_coverages.tsv files saved.\n')
+
+    with open(args.o + '_coverage_pair_hist.tsv', 'w') as file_coverage_hist:
+        for cov1, cov2 in coverage_pair_hist:
+            file_coverage_hist.write(str(cov1) + '\t' + str(cov2) + '\t' + str(coverage_pair_hist[(cov1, cov2)]) + '\n')
+
+    sys.stderr.write(args.o + '_coverage_pair_hist.tsv file saved.\n')
 
 def extract_kmer_pairs(args):
     index2covs = defaultdict(list)
