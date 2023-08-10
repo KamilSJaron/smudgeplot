@@ -5,13 +5,11 @@ import sys
 from os import system
 from math import log
 from math import ceil
-import numpy as np
-from scipy.signal import argrelextrema
 # hetkmers dependencies
 from collections import defaultdict
 from itertools import combinations
 
-version = '0.2.5'
+version = '0.3.0dev'
 
 ############################
 # processing of user input #
@@ -102,6 +100,12 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
 # task cutoff #
 ###############
 
+# taken from https://stackoverflow.com/a/29614335
+def local_min(ys):
+    return [i for i, y in enumerate(ys)
+            if ((i == 0) or (ys[i - 1] >= y))
+            and ((i == len(ys) - 1) or (y < ys[i+1]))]
+
 def round_up_nice(x):
     digits = ceil(log(x, 10))
     if digits <= 1:
@@ -111,17 +115,20 @@ def round_up_nice(x):
     return(ceil(x / multiplier) * multiplier)
 
 def cutoff(args):
-    # kmer_hist = open("data/Mflo2/kmer.hist","r")
+    # kmer_hist = open("data/Scer/kmc_k31.hist","r")
     kmer_hist = args.infile
-    hist = np.array([int(line.split()[1]) for line in kmer_hist])
+    hist = [int(line.split()[1]) for line in kmer_hist]
     if args.boundary == "L":
-        local_minima = argrelextrema(hist, np.less)[0][0]
+        local_minima = local_min(hist)[0]
         L = max(10, int(round(local_minima * 1.25)))
         sys.stdout.write(str(L))
     else:
+        sys.stderr.write('Warning: We discourage using the original hetmer algorithm.\n\tThe updated (recommended) version does not take the argument U\n')
         # take 99.8 quantile of kmers that are more than one in the read set
-        hist_rel_cumsum = np.cumsum(hist[1:]) / np.sum(hist[1:])
-        U = round_up_nice(np.argmax(hist_rel_cumsum > 0.998))
+        number_of_kmers = sum(hist[1:])
+        hist_rel_cumsum = [sum(hist[1:i+1]) / number_of_kmers for i in range(1, len(hist))]
+        min(range(len(hist_rel_cumsum))) 
+        U = round_up_nice(min([i for i, q in enumerate(hist_rel_cumsum) if q > 0.998]))
         sys.stdout.write(str(U))
     sys.stdout.flush()
 
