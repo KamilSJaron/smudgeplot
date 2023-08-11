@@ -1,3 +1,41 @@
+*** Sploidyplot branch ***
+
+This is a merger of PloidyPlot from https://github.com/KamilSJaron/MERQURY.FK
+& Smudgeplot
+
+The big changes will be
+ + the search for the kmer pair will be within both canonical and non-canonical k-mer sets (Gene demonstrated it makes a difference)
+ + the tool will be supporting FastK kmer counter only
+ + the backend by Gene Myers is paralelized and massively faster
+ + the intermediate file will be a flat file with the 2d histogram with cov1, cov2, freq columns (as opposed to list of coverages of pairs cov1 cov2);
+ + at least for now WE LOSE the ability to extract sequences of the kmers in the pair; this functionality will hopefully restore at some point together with functionality to assess the quality of assembly.
+ + we will add "run everything" functionality for people that want "FastK database -> plot" type of solution.
+ + the smudge detection algorithm is under revision at the moment
+
+The strategy on the merger is an ongoing discussion, but for now the plan is to keep the same pythonic interface, to keep a similar interface between the versions.
+
+Current state:
+
+### The PloidyPlot backend
+
+Install
+
+```
+make exec/PloidyPlot
+```
+
+Run
+
+```
+./exec/PloidyPlot -e30 -k -v -T4 -pdf -oPloidyPlot_output input_FastK_Table
+```
+
+This generates also a text file with the 2d histogram `PloidyPlot_output_text.smu` (I think).
+
+This histogram can't be piped to smudgeplot directly at the moment (there is a draft of this, but does not revolve all the conflics of the formats yet).
+
+***
+
 # Smudgeplot
 
 This tool extracts heterozygous kmer pairs from kmer count databases and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovB / (CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc.
