@@ -20,7 +20,7 @@ $(INSTAL_PREFIX)/bin/% : exec/%
 $(R_INSTALLATION) : R/*
 	Rscript install.R
 
-exec/PloidyPlot: src/PloidyPlot.c src/smu_plot.R.h src/libfastk.c src/libfastk.h src/matrix.c src/matrix.h
+exec/PloidyPlot: src/PloidyPlot.c src/libfastk.c src/libfastk.h src/matrix.c src/matrix.h
 	gcc $(CFLAGS) -o $@ src/PloidyPlot.c src/libfastk.c src/matrix.c -lpthread -lm
 
 

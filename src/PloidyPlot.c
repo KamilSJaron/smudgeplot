@@ -1,11 +1,11 @@
 /******************************************************************************************
  *
- *  Hetrez: Analyze and compare het-mers between two k-mer tables to see if they
- *    represent the same sample, different sample but same species, or are from
- *    two different species.
+ *  PloidyPlot: A C-backed searching quickly for hetmers:
+ *                 unique k-mer pairs different by exactly one nucleotide
  *
  *  Author:  Gene Myers
  *  Date  :  May, 2021
+ *  Reduced to the k-mer pair search by Kamil Jaron in August, 2023
  *
  ********************************************************************************************/
 
@@ -18,8 +18,6 @@
 #include <math.h>
 #include <pthread.h>
 
-#define KAMIL
-
 #undef  SOLO_CHECK
 
 #undef  DEBUG_GENERAL
@@ -28,16 +26,11 @@
 #undef  DEBUG_BOUNDARY
 #undef  DEBUG_SCAN
 #undef  DEBUG_BIG_SCAN
-#undef  DEBUG_PLOIDY
-#undef  ANALYZE_PLOIDY
 
 #include "libfastk.h"
 #include "matrix.h"
 
-#include "smu_plot.R.h"
-
-static char *Usage[] = { " [-w<double(6.0)>] [-h<double(4.5)>]",
-                         " [-vk] [-lfs] [-pdf] [-T<int(4)>] [-P<dir(/tmp)>]",
+static char *Usage[] = { " [-v] [-T<int(4)>] [-P<dir(/tmp)>]",
                          " [-o<output>] [-e<int(4)>] <source>[.ktab]"
                        };
 
@@ -55,9 +48,6 @@ static int ETHRESH;   //  Error threshold
 
 #define SMAX  1000    //  Max. value of CovA+CovB
 #define FMAX   500    //  Max. value of min(CovA,CovB)
-
-#define PIXELS  50    //  pixels in area plot (both x & y)
-#define PIXEL2 100    //  2*PIXELS
 
 static int BLEVEL;     //  <= 4
 static int BWIDTH;     //  = 4^BLEVEL
@@ -1049,430 +1039,6 @@ static void *small_window(void *args)
   return (NULL);
 }
 
-
-/****************************************************************************************
- *
- *  Ploidy fitting
- *
- *****************************************************************************************/
-
-char  *Ploidy[5]   = { "diploid", "triploid", "tetraploid", "hexaploid", "octaploid" };
-int    Nloidy[6]   = { 2, 3, 4, 6, 8 };
-
-int    Nsmu[5]     = { 1, 1, 2, 3, 4 };
-char  *Names[5][4] = { { "AB", NULL, NULL, NULL },
-                       { "AAB", NULL, NULL, NULL },
-                       { "AAAB", "AABB", NULL, NULL },
-                       { "5A1B", "4A2B", "3A3B", NULL },
-                       { "7A1B", "6A2B", "5A3B", "4A4B" } };
-int    Rail[5][4]  = { { 48, 0, 0, 0 },
-                       { 33, 0, 0, 0 },
-                       { 25, 48, 0, 0 },
-                       { 17, 33, 48, 0 },
-                       { 12, 25, 37, 48 } };
-int64  Deco[5][4];
-
-double PFrac[5] = { 1., 1.5, 2., 3., 4. };
-
-int determine_ploidy(int cover, int64 *row)
-{ double C8[PIXELS];
-  double C6[PIXELS];
-  double C4[PIXELS];
-  double C38[PIXELS];
-  double C3[PIXELS];
-  double C2[PIXELS];
-  double D2, T3, Q4, Q2, H6, H3, H2, O8, O4, O3, O2;
-  int64  Df, Tf, Qf, Hf, Of;
-  int64  lsqr[5];
-  int64  Ds, Ts, Qs, Hs, Os;
-  int64  DB1, TB1, QB1, QB2, HB1, HB2, HB3;
-  int64  OB1, OB2, OB3, OB4;
-  int    ploidy;
-  int    j, first, hmax;
-
-  hmax = 0;
-  for (j = 0; j < PIXELS; j++)
-    if (row[j] > hmax)
-      hmax = row[j];
-
-  for (j = 0; j < PIXELS; j++)
-    { double del;
-      int    k;
-
-#ifdef DEBUG_PLOIDY
-      printf(" %2d: %10lld\n",j,row[j]);
-#endif
-      if (j+1 < PIXELS && row[j] < row[j+1])
-        continue;
-      if (j > 0 && row[j] < row[j-1])
-        continue;
-      if (row[j] < .10*hmax)
-        continue;
-      del = PIXELS;
-      for (k = 0; k < 5; k++)
-        if (fabs(PIXELS/PFrac[k] - j) < del)
-          { del    = fabs(PIXELS/PFrac[k] - j);
-            ploidy = k;
-          }
-#ifdef ANALYZE_PLOIDY
-      printf("  Peak at %d (%d)\n",j,ploidy);
-#endif
-      break;
-    }
-
-  for (j = 0; j < PIXELS; j++)
-    if (row[j] > 0)
-      break;
-  first = j;
-
-  //  Compute smudge double Poisson distributions
-
-  { double c8, c6, c4, c38, c3, c2;
-    double d8, d6, d4, d38, d3, d2;
-    int    a, b, k;
-
-    c8  = cover/8.;
-    c6  = cover/6.;
-    c4  = cover/4.;
-    c38 = cover*.375;
-    c3  = cover/3.;
-    c2  = cover/2.;
-
-    d8  = exp(-c8)*exp(c8-cover);
-    d6  = exp(-c6)*exp(c6-cover);
-    d4  = exp(-c4)*exp(c4-cover);
-    d38 = exp(-c38)*exp(c38-cover);
-    d3  = exp(-c3)*exp(c3-cover);
-    d2  = exp(-c2)*exp(c2-cover);
-    for (k = 1; k <= cover; k++)
-      { d8  *= ((cover-c8)/k);
-        d6  *= ((cover-c6)/k);
-        d4  *= ((cover-c4)/k);
-        d38 *= ((cover-c38)/k);
-        d3  *= ((cover-c3)/k);
-        d2  *= ((cover-c2)/k);
-      }
-
-    b   = 0;
-    for (j = first; j < PIXELS; j++)
-      { a = (j*cover)/(2*PIXELS);
-        for (k = b+1; k <= a; k++)
-          { d8  *= (c8/k);
-            d6  *= (c6/k);
-            d4  *= (c4/k);
-            d38 *= (c38/k);
-            d3  *= (c3/k);
-            d2  *= (c2/k);
-          }
-        for (k = cover-b; k > cover-a; k--)
-          { d8  *= k/(cover-c8);
-            d6  *= k/(cover-c6);
-            d4  *= k/(cover-c4);
-            d38 *= k/(cover-c38);
-            d3  *= k/(cover-c3);
-            d2  *= k/(cover-c2);
-          }
-        C8[j]  = d8;
-        C6[j]  = d6;
-        C4[j]  = d4;
-        C38[j] = d38;
-        C3[j]  = d3;
-        C2[j]  = d2;
-        b = a;
-      }
-  }
-
-  //  Fit DIPOID
-
-  { double a2, o2;
-    int64  r, v;
-
-    a2 = o2 = 0.;
-    for (j = first; j < PIXELS; j++)
-      { a2 += C2[j]*C2[j];
-        o2 += C2[j]*row[j];
-      }
-    D2 = o2/a2;
-
-    Ds = Df = 0;
-    DB1 = 0;
-    for (j = first; j < PIXELS; j++)
-      { v = (int64) (C2[j]*D2);
-        r = row[j];
-        Df += (v-r)*(v-r);
-        Ds += v;
-        DB1 += D2*C2[j];
-      }
-  }
-
-  //  Fit TRIPLOID
-
-  { double a3, o3;
-    int64  r, v;
-
-    a3 = o3 = 0.;
-    for (j = first; j < PIXELS; j++)
-      { a3 += C3[j]*C3[j];
-        o3 += C3[j]*row[j];
-      }
-    T3 = o3/a3;
-
-    Ts = Tf = 0;
-    TB1 = 0;
-    for (j = first; j < PIXELS; j++)
-      { v = (int64) (C3[j]*T3);
-        r = row[j];
-        Tf += (v-r)*(v-r);
-        Ts += v;
-        TB1 += T3*C3[j];
-      }
-  }
-
-  //  Fit QUADRAPLOID
-
-  { double a44, a42, a22, o4, o2;
-    Double_Matrix Q, B;
-    LU_Factor    *QU;
-    double        m[4], q[2];
-    int           stable;
-    int64         r, v;
-
-    a44 = a42 = a22 = o4 = o2 = 0.;
-    for (j = first; j < PIXELS; j++)
-      { a44 += C4[j]*C4[j];
-        a42 += C4[j]*C2[j];
-        a22 += C2[j]*C2[j];
-        o4 += C4[j]*row[j];
-        o2 += C2[j]*row[j];
-      }
-
-    Q.n = B.n = 2;
-    Q.m = m;
-    B.m = q;
-    m[0] = a44; m[1] = a42;
-    m[2] = a42; m[3] = a22;
-    q[0] = o4;  q[1] = o2;
-
-    QU = LU_Decompose(&Q,&stable);
-    LU_Solve(&B,QU);
-
-    Q4 = q[0]; Q2 = q[1];
-
-    Qs = Qf = 0;
-    QB2 = 0;
-    QB1 = 0;
-    for (j = first; j < PIXELS; j++)
-      { v = (int64) (C4[j]*Q4+C2[j]*Q2);
-        r = row[j];
-        Qf += (v-r)*(v-r);
-        Qs += v;
-        QB1 += Q4*C4[j];
-        QB2 += Q2*C2[j];
-      }
-  }
-
-  //  Fit HEXAPLOID
-
-  { double a66, a63, a62, a33, a32, a22, o6, o3, o2;
-    Double_Matrix Q, B;
-    LU_Factor    *QU;
-    double        m[9], q[3];
-    int           stable;
-    int64         r, v;
-
-    a66 = a63 = a62 = a33 = a32 = a22 = o6 = o3 = o2 = 0.;
-    for (j = first; j < PIXELS; j++)
-      { a66 += C6[j]*C6[j];
-        a63 += C6[j]*C3[j];
-        a62 += C6[j]*C2[j];
-        a33 += C3[j]*C3[j];
-        a32 += C3[j]*C2[j];
-        a22 += C2[j]*C2[j];
-        o6 += C6[j]*row[j];
-        o3 += C3[j]*row[j];
-        o2 += C2[j]*row[j];
-      }
-
-    Q.n = B.n = 3;
-    Q.m = m;
-    B.m = q;
-    m[0] = a66; m[1] = a63; m[2] = a62;
-    m[3] = a63; m[4] = a33; m[5] = a32;
-    m[6] = a62; m[7] = a32; m[8] = a22;
-    q[0] = o6;  q[1] = o3;  q[2] = o2;
-
-    QU = LU_Decompose(&Q,&stable);
-    LU_Solve(&B,QU);
-
-    H6 = q[0]; H3 = q[1]; H2 = q[2];
-
-    Hs = Hf = 0;
-    HB3 = 0;
-    HB2 = 0;
-    HB1 = 0;
-    for (j = first; j < PIXELS; j++)
-      { v = (int64) (C2[j]*H2 + C3[j]*H3 + C6[j]*H6);
-        r = row[j];
-        Hf += (v-r)*(v-r);
-        Hs += v;
-        HB1 += H6*C6[j];
-        HB2 += H3*C3[j];
-        HB3 += H2*C2[j];
-      }
-  }
-
-  //  Fit OCTAPLOID
-
-  { double a88, a84, a83, a82, a44, a43, a42, a33, a32, a22, o8, o4, o3, o2;
-    Double_Matrix Q, B;
-    LU_Factor    *QU;
-    double        m[16], q[4];
-    int           stable;
-    int64         r, v;
-
-    a88 = a84 = a83 = a82 = a44 = a43 = a42 = a33 = a32 = a22 = o8 = o4 = o3 = o2 = 0.;
-    for (j = first; j < PIXELS; j++)
-      { a88 += C8[j]*C8[j];
-        a84 += C8[j]*C4[j];
-        a83 += C8[j]*C38[j];
-        a82 += C8[j]*C2[j];
-        a44 += C4[j]*C4[j];
-        a43 += C4[j]*C38[j];
-        a42 += C4[j]*C2[j];
-        a33 += C38[j]*C38[j];
-        a32 += C38[j]*C2[j];
-        a22 += C2[j]*C2[j];
-
-        o8 += C8[j]*row[j];
-        o4 += C4[j]*row[j];
-        o3 += C38[j]*row[j];
-        o2 += C2[j]*row[j];
-      }
-
-    Q.n = B.n = 4;
-    Q.m = m;
-    B.m = q;
-    m[ 0] = a88; m[ 1] = a84; m[ 2] = a83; m[ 3] = a82;
-    m[ 4] = a84; m[ 5] = a44; m[ 6] = a43; m[ 7] = a42;
-    m[ 8] = a83; m[ 9] = a43; m[10] = a33; m[11] = a32;
-    m[12] = a82; m[13] = a42; m[14] = a32; m[15] = a22;
-    q[ 0] = o8;  q[ 1] = o4;  q[ 2] = o3;  q[ 3] = o2;
-
-    QU = LU_Decompose(&Q,&stable);
-    LU_Solve(&B,QU);
-
-    O8 = q[0]; O4 = q[1]; O3 = q[2]; O2 = q[3];
-
-    Os = Of = 0;
-    OB4 = 0;
-    OB3 = 0;
-    OB2 = 0;
-    OB1 = 0;
-    for (j = first; j < PIXELS; j++)
-      { v = (int64) (C2[j]*O2 + C38[j]*O3 + C4[j]*O4 + C8[j]*O8);
-        r = row[j];
-        Of += (v-r)*(v-r);
-        Os += v;
-        OB1 += O8*C8[j];
-        OB2 += O4*C4[j];
-        OB3 += O3*C38[j];
-        OB4 += O2*C2[j];
-      }
-  }
-
-  //  Examine fits
- 
-#ifdef DEBUG_PLOIDY
-  { int    j;
-    int64  r, v;
-
-    for (j = first; j < PIXELS; j++)
-      { r = row[j];
-        printf(" %2d: %10lld",j,row[j]);
-        v = (int64) (C2[j]*D2);
-        printf(" %10lld (%10lld)",v,v-r);
-        v = (int64) (C3[j]*T3);
-        printf(" %10lld (%10lld)",v,v-r);
-        v = (int64) (C4[j]*Q4+C2[j]*Q2);
-        printf(" %10lld (%10lld)",v,v-r);
-        v = (int64) (C2[j]*H2 + C3[j]*H3 + C6[j]*H6);
-        printf(" %10lld (%10lld)",v,v-r);
-        v = (int64) (C2[j]*O2 + C38[j]*O3 + C4[j]*O4 + C8[j]*O8);
-        printf(" %10lld (%10lld)",v,v-r);
-        printf("\n");
-      }
-  }
-#endif
-
-  Df = lsqr[0] = sqrt((1.*Df)/(PIXELS-first));
-  Tf = lsqr[1] = sqrt((1.*Tf)/(PIXELS-first));
-  Qf = lsqr[2] = sqrt((1.*Qf)/(PIXELS-first));
-  Hf = lsqr[3] = sqrt((1.*Hf)/(PIXELS-first));
-  Of = lsqr[4] = sqrt((1.*Of)/(PIXELS-first));
-
-  DB1 = Deco[0][0] = 1000;
-  TB1 = Deco[1][0] = 1000;
-  QB1 = Deco[2][0] = (1000.*QB1)/Qs;
-  QB2 = Deco[2][1] = (1000.*QB2)/Qs;
-  HB1 = Deco[3][0] = (1000.*HB1)/Hs;
-  HB2 = Deco[3][1] = (1000.*HB2)/Hs;
-  HB3 = Deco[3][2] = (1000.*HB3)/Hs;
-  OB1 = Deco[4][0] = (1000.*OB1)/Os;
-  OB2 = Deco[4][1] = (1000.*OB2)/Os;
-  OB3 = Deco[4][2] = (1000.*OB3)/Os;
-  OB4 = Deco[4][3] = (1000.*OB4)/Os;
-
-#ifdef ANALYZE_PLOIDY
-  printf("\n%10lld : %10lld : AB 100%%\n",Df,Ds);
-  printf("%10lld : %10lld : AAB 100%%\n",Tf,Ts);
-  printf("%10lld : %10lld : AAAB %.1f%% + AABB %.1f%%\n",Qf,Qs,QB1/10.,QB2/10.);
-  printf("%10lld : %10lld : 6A1B %.1f%% + 4A2B %.1f%% + 3A3B %.1f%%\n",
-         Hf,Hs,HB1/10.,HB2/10.,HB3/10.);
-  printf("%10lld : %10lld : 7A1B %.1f%% + 6A2B %.1f%% + 5A3B %.1f%% + 4A4B %.1f%%\n",
-         Of,Os,OB1/10.,OB2/10.,OB3/10.,OB4/10.);
-#endif
-
-  { int b, i;
-
-    b = 0;
-    for (i = 1; i <= 4; i++)
-      if (lsqr[b] > lsqr[i])
-        b = i; 
-
-#ifdef ANALYZE_PLOIDY
-    if (ploidy != b)
-      { printf("Conflict %d vs %d\n",ploidy,b);
-        if (ploidy < b)
-          { if (Deco[b][0] < .5*Deco[ploidy][0])
-              printf("  Peak choice seems OK\n");
-            else
-              printf("  Switch to greater fit choice\n");
-          }
-        else
-          printf("  Peak choice is greater, so OK\n");
-      }
-    else
-      printf("Fit & Ploidy match %d\n",b);
-#endif
-
-    if (ploidy < b)
-      { if (Deco[b][0] >= .5*Deco[ploidy][0])
-          ploidy = b;
-      }
-  }
-
-  if (ploidy != 1)
-    { int k = 48;
-      while (row[k-1] > row[k] && k > 43)
-        k -= 1;
-      if (k > 43)
-        Rail[ploidy][Nsmu[ploidy]-1] = k;
-    }
-
-  return (ploidy);
-}
-
-
 /****************************************************************************************
  *
  *  Main
@@ -1626,10 +1192,6 @@ int main(int argc, char *argv[])
   int          bypass;
 
   char  *SORT_PATH;
-  int    KEEP;
-  int    LINE, FILL, BOTH;
-  int    PDF;
-  double XDIM, YDIM;
   char  *OUT;
   char  *SRC;
 
@@ -1642,9 +1204,6 @@ int main(int argc, char *argv[])
     char  *eptr;
 
     ARG_INIT("PloidyPlot");
-    XDIM = 6.0;
-    YDIM = 4.5;
-    PDF  = 0;
     OUT  = NULL;
     ETHRESH  = 4;
     NTHREADS = 4;
@@ -1660,26 +1219,12 @@ int main(int argc, char *argv[])
           case 'e':
             ARG_POSITIVE(ETHRESH,"Error-mer threshold")
             break;
-          case 'h':
-            ARG_REAL(YDIM);
-            break;
           case 'o':
             if (OUT == NULL)
               free(OUT);
             OUT = Strdup(argv[i]+2,"Allocating name");
             if (OUT == NULL)
               exit (1);
-            break;
-          case 'p':
-            if (strcmp("df",argv[i]+2) == 0)
-              PDF = 1;
-            else
-              { fprintf(stderr,"%s: don't recognize option %s\n",Prog_Name,argv[i]);
-                exit (1);
-              }
-            break;
-          case 'w':
-            ARG_REAL(XDIM);
             break;
           case 'P':
             SORT_PATH = argv[i]+2;
@@ -1697,13 +1242,6 @@ int main(int argc, char *argv[])
     argc = j;
 
     VERBOSE = flags['v'];
-    KEEP    = flags['k'];
-    LINE    = flags['l'];
-    FILL    = flags['f'];
-    BOTH    = flags['s'];
-
-    if (LINE+FILL+BOTH == 0)
-      LINE = FILL = BOTH = 1;
 
 #ifdef SOLO_CHECK
     if (argc != 3)
@@ -1712,25 +1250,14 @@ int main(int argc, char *argv[])
 #endif
       { fprintf(stderr,"\nUsage: %s %s\n",Prog_Name,Usage[0]);
         fprintf(stderr,"       %*s %s\n",(int) strlen(Prog_Name),"",Usage[1]);
-        fprintf(stderr,"       %*s %s\n",(int) strlen(Prog_Name),"",Usage[2]);
-        fprintf(stderr,"\n");
-        fprintf(stderr,"      -w: width in inches of plots\n");
-        fprintf(stderr,"      -h: height in inches of plots\n");
-        fprintf(stderr,"\n");
-        fprintf(stderr,"      -l: draw line plot\n");
-        fprintf(stderr,"      -f: draw fill plot\n");
-        fprintf(stderr,"      -s: draw stack plot\n");
-        fprintf(stderr,"          any combo allowed, none => draw all\n");
-        fprintf(stderr,"\n");
-        fprintf(stderr,"    -pdf: output .pdf (default is .png)\n");
         fprintf(stderr,"\n");
         fprintf(stderr,"      -o: root name for output plots\n");
         fprintf(stderr,"          default is root path of <asm> argument\n");
         fprintf(stderr,"\n");
         fprintf(stderr,"      -e: count threshold below which k-mers are considered erroneous\n");
         fprintf(stderr,"      -v: verbose mode\n");
-        fprintf(stderr,"      -k: keep het-mer table for re-use\n");
         fprintf(stderr,"      -T: number of threads to use\n");
+        // This P argument does not work properly, only some of the files are saved where it claims it does
         fprintf(stderr,"      -P: Place all temporary files in directory -P.\n");
         exit (1);
       }
@@ -2054,8 +1581,6 @@ int main(int argc, char *argv[])
 
 skip_build:
 
-#ifdef KAMIL
-
 fprintf(stderr,"\n  About to save stuff\n");
 
 FILE  *f;
@@ -2076,285 +1601,11 @@ for (a = 0; a <= SMAX; a++)
   }
 fclose(f);
 
-#else
+free(OUT);
 
-  if (KEEP && !bypass)
-    { FILE  *f;
+Catenate(NULL,NULL,NULL,NULL);
+Numbered_Suffix(NULL,0,NULL);
+free(Prog_Name);
 
-      f = fopen(Catenate(OUT,".smu","",""),"w");
-      fwrite(PLOT[0],sizeof(int64),(SMAX+1)*(FMAX+1),f);
-      fclose(f);
-    }
-
-  //  Create smudge table
-
-  { int    i, j, a;
-    int    p, q, r, w;
-    int64  low, hgh;
-    int    nov, smax, wide;
-    int64  inter[SMAX];
-    int64 *row, v, vmax;
-    double fact;
-    FILE  *f;
-    char  *command, *capend;
-    int64  rsum[SMAX];
-    int64  cmax;
-    int    cwch, cover, ploidy;
-
-    //  Begin table output
-
-    f = fopen(Catenate(troot,".smu","",""),"w");
-#ifdef DEBUG
-    if (f == NULL)
-      printf("Could not open %s\n",Catenate(troot,".smu","",""));
-    else
-      printf("Writing %s\n",Catenate(troot,".smu","",""));
-    fflush(stdout);
-#endif
-    fprintf(f,"KF1\tKF2\tCount\n");
-
-    //  Stretch rows to fractional axis in place, scale to preserve row sums!
-    //    Row goes from [0,FMAX) to [0,PIXEL)
-
-    for (i = 2*ETHRESH; i < SMAX; i++)
-      { int64  old, new;
-        double imp;
-
-        row = PLOT[i];
-
-        for (p = 0; p < PIXELS; p++)
-          inter[p] = -1;
-
-        old = 0;
-        for (a = ETHRESH; a <= i/2; a++)
-          { if (i%2 == 0)
-              p = (PIXEL2*a)/i;
-            else
-              p = (PIXEL2*a)/(i-1);
-            if (p >= PIXELS)
-              p = PIXELS-1;
-	    if (inter[p] < 0)
-              inter[p] = row[a];
-            else
-              inter[p] += row[a];
-            old += row[a];
-          }
-
-        new = 0;
-        nov = 1;
-        for (p = 0; p < PIXELS; p++)
-          if (inter[p] < 0)
-            { if (nov)
-                row[p] = -1;
-              else
-                { r = p-1;
-                  q = p;
-                  while (q < PIXELS && inter[q] < 0)
-                    q ++;
-                  if (q == PIXELS)
-                    hgh = low;
-                  else
-                    hgh = inter[q];
-                  low = inter[r];
-                  w = q-r;
-                  while (p < q)
-                    { row[p] = (low*(q-p) + hgh*(p-r))/w;
-                      new += row[p];
-                      p += 1;
-                    }
-                  p -= 1;
-                }
-            }
-          else
-            { row[p] = inter[p];
-              new += row[p];
-              nov = 0;
-            }
-
-        rsum[i] = old;
-        if (new == 0)
-          imp = 1.;
-        else
-          imp = (1.*old)/new;
-
-        for (p = 0; p < PIXELS; p++)
-          if (row[p] > 0)
-            row[p] *= imp;
-      }
-
-    //  Determine A+B scaling and max in wide/smax
-
-    vmax = 0;
-    for (i = 2*ETHRESH; i < SMAX; i++)
-      if (vmax < rsum[i])
-        { vmax = rsum[i];
-          smax = i;
-        }
-    for (i = SMAX-1; i > 2*smax; i--)
-      { if (rsum[i] > .02*vmax)
-          break;
-      }
-    wide = (i-1)/PIXELS+1;
-    smax = PIXELS*wide;
-
-    //  reduce A+B resolution by scaling factor and output array
-
-    a = wide;
-    while (a <= 2*ETHRESH)
-      a += wide;
-    for (i = 2*ETHRESH; i < smax; a += wide)
-      { fact = wide/(a-i);
-        for (p = 0; p < PIXELS; p++)
-          { v = -1;
-            for (j = i; j < a; j++)
-              if (PLOT[j][p] >= 0)
-                { if (v < 0)
-                    v = PLOT[j][p];
-                  else
-                    v += PLOT[j][p];
-                }
-            if (v >= 0)
-              { fprintf(f,"%d.5 %d.5 %lld\n",i/wide,p,(int64) (v*fact));
-                PLOT[i/wide][p] = v*fact;
-              }
-            else
-              PLOT[i/wide][p] = 0;
-          }
-        i = a;
-      }
-
-    fclose(f);
-
-    //  determine row cwch with max count in reduced space
-
-    cmax = 0;
-    cwch = -1;
-    for (i = (2*ETHRESH)/wide; i < PIXELS; i++)
-      { v = 0;
-        for (p = 0; p < PIXELS; p++)
-          v += PLOT[i][p];
-        if (v > cmax)
-          { cmax = v;
-            cwch = i;
-          }
-      }
-
-    //  refine coverage to row in original spcae with max count (among rows comprising cwch)
-
-    cover = cwch*wide;
-    for (i = cwch*wide+1; i < cwch*wide + (cwch-1); i++)
-      if (rsum[i] > rsum[cover])
-        cover = i;
-
-#ifdef ANALYZE_PLOIDY
-    printf("\nCoverage is %d\n",cover);
-#endif
-
-    //  ploidy analysis on the row cwch
-
-    ploidy = determine_ploidy(cover, PLOT[cwch]);
-
-    //  output analysis for R script
-
-    f = fopen(Catenate(troot,".sma","",""),"w");
-#ifdef DEBUG
-    if (f == NULL)
-      printf("Could not open %s\n",Catenate(troot,".smu","",""));
-    else
-      printf("Writing %s\n",Catenate(troot,".smu","",""));
-    fflush(stdout);
-#endif
-    fprintf(f,"Name\tx\ty\tAmount\tCover\tPloidy\n");
-    for (i = 0; i < Nsmu[ploidy]; i++)
-      fprintf(f,"%s\t%d\t%d\t%.1f\t%d\t%d\n",
-                Names[ploidy][i],Rail[ploidy][i],cwch,Deco[ploidy][i]/10.,cover,ploidy);
-    fclose(f);
-
-    free(PLOT[0]);
-    free(PLOT);
-
-    //  Generate the R plot script in another temp file
-
-    f = fopen(Catenate(troot,".R","",""),"w");
-#ifdef DEBUG
-    if (f == NULL)
-      printf("Could not open %s\n",Catenate(troot,".R","",""));
-    else
-      printf("Generating %s\n",Catenate(troot,".R","",""));
-    fflush(stdout);
-#endif
-    fwrite(smu_plot,strlen(smu_plot),1,f);
-    fclose(f);
-
-    //  Call the R plotter with arguments
-
-   command = Malloc(strlen(troot)*3 + strlen(OUT)*2 + 500,"Allocating strings");
-   if (command == NULL)
-     exit (1);
-
-    sprintf(command,"Rscript %s.R -f %s.smu -a %s.sma -o %s%s -x %g -y %g -s %s",
-                    troot,troot,troot,OUT,PDF?" -p":" ",XDIM,YDIM,OUT);
-    capend = command+strlen(command);
-    if (LINE)
-      { sprintf(capend," -t contour 2>/dev/null");
-#ifdef DEBUG
-        printf("%s\n",command);
-        fflush(stdout);
-#endif
-        system(command);
-      }
-    if (FILL)
-      { sprintf(capend," -t heat 2>/dev/null");
-#ifdef DEBUG
-        printf("%s\n",command);
-        fflush(stdout);
-#endif
-        system(command);
-      }
-    if (BOTH)
-      { sprintf(capend," -t combo 2>/dev/null");
-#ifdef DEBUG
-        printf("%s\n",command);
-        fflush(stdout);
-#endif
-        system(command);
-      }
-
-    //  Remove the temp files
-
-    sprintf(command,"rm -f %s.smu %s.sma %s.R",troot,troot,troot);
-    system(command);
-
-    if ( ! KEEP)
-      { sprintf(command,"rm -f %s.smu",OUT);
-        system(command);
-      }
-
-    free(command);
-
-    if (VERBOSE)
-      { fprintf(stderr,"\nAnalysis summary:\n");
-        fprintf(stderr,"  k = %d\n",KMER);
-        fprintf(stderr,"  p = %d\n",Nloidy[ploidy]);
-        fprintf(stderr,"  ploidy = %s\n",Ploidy[ploidy]);
-        fprintf(stderr,"  1n = %.1f\n",(1.*cover)/Nloidy[ploidy]);
-        fprintf(stderr,"  partition =");
-        for (i = 0; i < Nsmu[ploidy]; i++)
-          { if (i > 0)
-              fprintf(stderr,", ");
-            fprintf(stderr," %s:%.1f%%",Names[ploidy][i],Deco[ploidy][i]/10.);
-          }
-        fprintf(stderr,"\n");
-      }
-  }
-
-#endif  //  KAMIL
-
-  free(OUT);
-
-  Catenate(NULL,NULL,NULL,NULL);
-  Numbered_Suffix(NULL,0,NULL);
-  free(Prog_Name);
-
-  exit (0);
+exit (0);
 }
