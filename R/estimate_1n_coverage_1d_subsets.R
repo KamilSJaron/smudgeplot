@@ -5,21 +5,22 @@
 #'
 #' @export
 
-estimate_1n_coverage_1d_subsets <- function(.total_pair_cov, .minor_variant_rel_cov){
-    total_kmers <- length(.minor_variant_rel_cov)
+estimate_1n_coverage_1d_subsets <- function(.cov_tab){
+    total_kmers <- sum(.cov_tab[, 3])
+    
     minor_freq_subsets <- list(
-        AB_subset = .minor_variant_rel_cov > 0.48,
-        AAB_subset = .minor_variant_rel_cov < 0.3433333 & .minor_variant_rel_cov > 0.3233333,
-        AAAB_subset = .minor_variant_rel_cov < 0.26 & .minor_variant_rel_cov > 0.24,
-        AAAAB_subset = .minor_variant_rel_cov < 0.21 & .minor_variant_rel_cov > 0.19,
-        AAAAAB_subset = .minor_variant_rel_cov < 0.1766667 & .minor_variant_rel_cov > 0.1566667
+        AB_subset = .cov_tab[, 'minor_variant_rel_cov'] > 0.48,
+        AAB_subset = .cov_tab[, 'minor_variant_rel_cov'] < 0.3433333 & .cov_tab[, 'minor_variant_rel_cov'] > 0.3233333,
+        AAAB_subset = .cov_tab[, 'minor_variant_rel_cov'] < 0.26 & .cov_tab[, 'minor_variant_rel_cov'] > 0.24,
+        AAAAB_subset = .cov_tab[, 'minor_variant_rel_cov'] < 0.21 & .cov_tab[, 'minor_variant_rel_cov'] > 0.19,
+        AAAAAB_subset = .cov_tab[, 'minor_variant_rel_cov'] < 0.1766667 & .cov_tab[, 'minor_variant_rel_cov'] > 0.1566667
     )
 
-    peak_frame_2 <- get_1d_peaks(.total_pair_cov, minor_freq_subsets[[1]], 3)
-    peak_frame_3 <- get_1d_peaks(.total_pair_cov, minor_freq_subsets[[2]], 2)
-    peak_frame_4 <- get_1d_peaks(.total_pair_cov, minor_freq_subsets[[3]], 1)
-    peak_frame_5 <- get_1d_peaks(.total_pair_cov, minor_freq_subsets[[4]], 1)
-    peak_frame_6 <- get_1d_peaks(.total_pair_cov, minor_freq_subsets[[5]], 1)
+    peak_frame_2 <- get_1d_peaks(.cov_tab[minor_freq_subsets[[1]], ], 3)
+    peak_frame_3 <- get_1d_peaks(.cov_tab[minor_freq_subsets[[2]], ], 2)
+    peak_frame_4 <- get_1d_peaks(.cov_tab[minor_freq_subsets[[3]], ], 1)
+    peak_frame_5 <- get_1d_peaks(.cov_tab[minor_freq_subsets[[4]], ], 1)
+    peak_frame_6 <- get_1d_peaks(.cov_tab[minor_freq_subsets[[5]], ], 1)
     peak_frame_6_max_height = which.max(peak_frame_6$height)
 
     skip_peak_4 = FALSE
