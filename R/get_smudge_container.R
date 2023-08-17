@@ -22,7 +22,7 @@ get_smudge_container <- function(.cov_tab, .nbins = 20,
   xcoords <- findInterval(minor_variant_rel_cov, smudge_container$x, left.open = TRUE)
   ycoords <- findInterval(total_pair_cov, smudge_container$y, left.open = TRUE) # all >.ylim[2] will be in nbin+1 th bin
 
-  if (ncol(.cov_tab) == 3) { # ploidy-plot style "cov1 cov2 density" table
+  if ("freq" %in% colnames(.cov_tab)) { # ploidy-plot style "cov1 cov2 density" table
     group_by <- list(paste(xcoords, ycoords))
     agregated_counts <- aggregate(.cov_tab[, 3], by = group_by, sum)
     agregated_coordinates <- matrix(as.numeric(unlist(strsplit(agregated_counts[, 1], " "))), ncol = 2, byrow = TRUE)

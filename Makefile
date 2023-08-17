@@ -8,7 +8,7 @@ ifndef INSTAL_PREFIX
 endif
 
 R_INSTALLATION = $(PATH)/$(RPACKAGE)
-HET_KMERS_INST = $(INSTAL_PREFIX)/bin/smudgeplot.py
+HET_KMERS_INST = $(INSTAL_PREFIX)/bin/smudgeplot.py $(INSTAL_PREFIX)/bin/PloidyPlot
 SMUDGEPLOT_INST = $(INSTAL_PREFIX)/bin/smudgeplot_plot.R
 
 .PHONY : install
@@ -26,6 +26,6 @@ exec/PloidyPlot: src/PloidyPlot.c src/libfastk.c src/libfastk.h src/matrix.c src
 
 .PHONY : clean
 clean :
-	rm -r build
+	rm exec/PloidyPlot
 	rm -r dist/
 	rm -r smudgeplot_KamilSJaron.egg-info/

@@ -14,6 +14,4 @@
 
 ## language
 
-The future is `python3`, and potentially in a low level language if we will ever need a speed-up.
-
-R will be abolished as some point. It's just that some of the R libraries (for kernel smoothing) seems to work way faster than the pythonic ones and I have not really figured why. The pythonic smudgpelot is not there yet (although a lot of code is already written, check `dev` branch).
+The future is `C` backend based on [FastK](https://github.com/thegenemyers/FASTK), inference and plotting in `R` and `python` user interface.
