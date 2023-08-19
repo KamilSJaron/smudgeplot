@@ -5,23 +5,28 @@
 #'
 #' @export
 
-plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax, .smudge_summary,
-                            .nbins, .fig_title = NA, .cex = 1.4, .col = NA){
-    to_filter <- .total_pair_cov < .ymax - (.ymax / .nbins)
-    .total_pair_cov <- .total_pair_cov[to_filter]
-    .minor_variant_rel_cov <- .minor_variant_rel_cov[to_filter]
-    h1 <- hist(.minor_variant_rel_cov, breaks = 100, plot = F)
-    h2 <- hist(.total_pair_cov, breaks = 100, plot = F)
-    top <- max(h1$counts, h2$counts)
+# .cov_tab <- cov_tab
+# .smudge_summary <- smudge_summary
+# .fig_title <- NA
+# .ylim <- ylim
+# .bins <- 150
+
+plot_histograms <- function(.cov_tab, .smudge_summary,
+                            .fig_title = NA, .cex = 1.4, .col = NA,
+                            .ylim = NA, .bins = 100){
 
     if( is.na(.col) ){
         .col <- rgb(0.8352, 0.2431, 0.3098)
     }
 
+    # removing pairs with excess coverage
+    .cov_tab <- .cov_tab[.cov_tab[, 'total_pair_cov'] < .ylim[2], ]
+   
     # minor_variant_rel_cov HISTOGRAM - top
-    par(mar=c(0,3.8,1,0))
-    barplot(h1$counts, axes=F, ylim=c(0, top), space=0, col = .col)
-    if(!(is.na(.fig_title))){
+    coverage_histogram(.cov_tab, bins = .bins, xlim = c(0, 0.5), 
+                       column = 'minor_variant_rel_cov', horiz = FALSE, .col)
+
+    if (!(is.na(.fig_title))) {
         mtext(bquote(italic(.(.fig_title))), side=3, adj=0, line=-3, cex = .cex + 0.2)
     }
 
@@ -43,8 +48,8 @@ plot_histograms <- function(.minor_variant_rel_cov, .total_pair_cov, .ymax, .smu
     }
 
     # total pair coverage HISTOGRAM - right
-    par(mar=c(3.8,0,0.5,1))
-    barplot(h2$counts, axes=F, xlim=c(0, top), space=0, col = .col, horiz = T)
+    coverage_histogram(.cov_tab, bins = .bins, xlim = .ylim, # this is because horizonal is TRUE 
+                       column = 'total_pair_cov', horiz = TRUE, .col)
     legend('bottomright', bty = 'n', paste('1n = ', round(.smudge_summary$n)), cex = .cex - 0.1)
 
     .peak_sizes <- .smudge_summary$peak_sizes[,c(11,3)]
