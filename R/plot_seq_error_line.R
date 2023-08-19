@@ -5,7 +5,7 @@
 #'
 #' @export
 
-plot_seq_error_line <- function(.total_pair_covm, .L = NA){
+plot_seq_error_line <- function(.total_pair_cov, .L = NA){
     if (is.na(.L)){ .L <- min(.total_pair_cov) / 2 }
     max_cov_pair <- max(.total_pair_cov)
     cov_range <- seq(2 * .L, max_cov_pair, length = 30)
