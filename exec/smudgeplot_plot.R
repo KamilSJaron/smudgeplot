@@ -11,7 +11,7 @@ suppressPackageStartupMessages(library("smudgeplot"))
 parser <- ArgumentParser()
 parser$add_argument("--homozygous", action="store_true", default = F,
                     help="Assume no heterozygosity in the genome - plotting a paralog structure; [default FALSE]")
-parser$add_argument("-i", "--input", default = "coverages_2.tsv",
+parser$add_argument("-i", "--input", default = "*_smu.txt",
                     help="name of the input tsv file with covarages [default \"coverages_2.tsv\"]")
 parser$add_argument("-o", "--output", default = "smudgeplot",
                     help="name pattern used for the output files (OUTPUT_smudgeplot.png, OUTPUT_summary.txt, OUTPUT_warrnings.txt) [default \"smudgeplot\"]")
@@ -47,29 +47,31 @@ if ( !file.exists(args$input) ) {
     stop("The input file not found. Please use --help to get help", call.=FALSE)
 }
 
-cov <- read.table(args$input)
+cov_tab <- read.table(args$input, col.names = c('covB', 'covA', 'freq'))
 
-# calcualte relative coverage of the minor allele
-minor_variant_rel_cov <- cov$V1 / (cov$V1 + cov$V2)
 # total covarate of the kmer pair
-total_pair_cov <- cov$V1 + cov$V2
+cov_tab[, 'total_pair_cov'] <- cov_tab[, 'covA'] + cov_tab[, 'covB']
+# calcualte relative coverage of the minor allele
+cov_tab[, 'minor_variant_rel_cov'] <- cov_tab[, 'covB'] / cov_tab[, 'total_pair_cov']
 
 if ( !is.null(args$q) ){
-    # quantile filtering (remove top 1%, it's not really informative)
-    high_cov_filt <- quantile(total_pair_cov, args$q) > total_pair_cov
-    smudge_warn(args$output, "Removing", sum(!high_cov_filt), "kmer pairs with coverage higher than",
-               quantile(total_pair_cov, args$q), paste0("(", args$q, " quantile)"))
-    minor_variant_rel_cov <- minor_variant_rel_cov[high_cov_filt]
-    total_pair_cov <- total_pair_cov[high_cov_filt]
+    # quantile filtering (remove top q%, it's not really informative)
+    threshold <- quantile(cov_tab[, 'total_pair_cov'], args$q)
+    high_cov_filt <- cov_tab[, 'total_pair_cov'] < threshold
+    smudge_warn(args$output, "Removing", sum(cov_tab[!high_cov_filt, 'freq']), 
+                "kmer pairs with coverage higher than",
+                threshold, paste0("(", args$q, " quantile)"))
+    cov_tab <- cov_tab[high_cov_filt, ]
 }
 
-L <- ifelse( length(args$L) == 0, min(total_pair_cov) / 2, args$L)
-smudge_summary$n_subset_est <- round(estimate_1n_coverage_1d_subsets(total_pair_cov, minor_variant_rel_cov), 1)
+L <- ifelse(length(args$L) == 0, min(cov_tab[, 'covB']), args$L)
+smudge_summary$n_subset_est <- round(estimate_1n_coverage_1d_subsets(cov_tab), 1)
 
 draft_n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_subset_est, args$n_cov)
 
-ymax <- min(10*draft_n, max(total_pair_cov))
-ymin <- min(total_pair_cov) - 1
+xlim <- c(0, 0.5)
+ylim <- c(min(cov_tab[, 'total_pair_cov']) - 1, # or 0?
+          min(10*draft_n, max(cov_tab[, 'total_pair_cov'])))
 
 smudge_warn(args$output, "\n#############")
 smudge_warn(args$output, "## SUMMARY ##")
@@ -77,14 +79,13 @@ smudge_warn(args$output, "#############")
 
 dulpicit_structures <- T
 repeat {
-    smudge_container <- get_smudge_container(minor_variant_rel_cov, total_pair_cov,
-                                             .nbins = args$nbins, .ylim = c(ymin, ymax))
+    smudge_container <- get_smudge_container(cov_tab, .nbins = args$nbins, .xlim = xlim, .ylim = ylim)
 
     peak_points <- peak_agregation(smudge_container)
     peak_sizes <- get_peak_summary(peak_points, smudge_container, 0.02)
 
     the_smallest_n <- min(get_trinoploid_1n_est(peak_sizes), draft_n)
-    smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, minor_variant_rel_cov, total_pair_cov, the_smallest_n)
+    smudge_summary$n_peak_est <- estimate_1n_coverage_highest_peak(peak_sizes, cov_tab, the_smallest_n)
     if (length(args$n_cov) == 0) {
         if( (abs(log2(smudge_summary$n_subset_est / smudge_summary$n_peak_est)) > .95 | smudge_summary$n_peak_est < smudge_summary$n_subset_est) & !args$homozygous){
             smudge_summary$n <- smudge_summary$n_subset_est
@@ -188,8 +189,7 @@ layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
 plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
 # 2,3 hist
-plot_histograms(minor_variant_rel_cov, total_pair_cov,
-                ymax, smudge_summary, args$nbins, fig_title)
+plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = 100)
 # 4 legend
 plot_legend(smudge_container, colour_ramp)
 
@@ -205,8 +205,9 @@ layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
 plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
 # 2,3 hist
-plot_histograms(minor_variant_rel_cov, total_pair_cov,
-                ymax, smudge_summary, args$nbins, fig_title)
+plot_histograms(cov_tab, smudge_summary, fig_title,
+                .ylim = ylim, .bins = 100)
+
 # 4 legend
 plot_legend(smudge_container, colour_ramp, F)
 
