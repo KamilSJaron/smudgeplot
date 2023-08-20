@@ -41,7 +41,7 @@ get_smudge_container <- function(.cov_tab, .nbins = 20,
   smudge_container$dens <- matrix(0, .nbins, .nbins)
   smudge_container$dens[agregated_coordinates] <- agregated_counts
 
-  smudge_container$y <- smudge_container$y[1:nbins]
+  smudge_container$y <- smudge_container$y[1:.nbins]
   smudge_container$z <- log10(smudge_container$dens)
   smudge_container$z[is.infinite(smudge_container$z)] <- 0
 
