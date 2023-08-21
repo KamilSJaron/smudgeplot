@@ -14,27 +14,72 @@ The big changes will be
 
 The strategy on the merger is an ongoing discussion, but for now the plan is to keep the same pythonic interface, to keep a similar interface between the versions.
 
-Current state:
+Current state: RUNNING; beta-testing;
 
-### The PloidyPlot backend
+### Install the whole thing
 
-Install
+This version of smudgeplot operates on FastK k-mer databases. So, before installing smudgeplot, please install [FastK](https://github.com/thegenemyers/FASTK).
 
-```
-make exec/PloidyPlot
-```
+The smudgeplot installation consist of one R package (visible by the R instance that is run by the shell), and three executables that need to also be visible (i.e. in one of the locations in the $PATH). One of the three executables needs to be compiled - that is the C-backend.
 
-Run
-
-```
-./exec/PloidyPlot -e30 -k -v -T4 -pdf -oPloidyPlot_output input_FastK_Table
+```bash
+Rscript install.R # this should create documentation and install smudgeplot R package;
+make exec/PloidyPlot # this will compile PloidyPlot backend
 ```
 
-This generates also a text file with the 2d histogram `PloidyPlot_output_text.smu` (I think).
+Now you can move all three files from the `exec` directory somewhere your system will see it (or alternativelly, you can add that directory to `$PATH` variable). 
 
-This histogram can't be piped to smudgeplot directly at the moment (there is a draft of this, but does not revolve all the conflics of the formats yet).
+If you would like install to `/usr/local/bin`, you can simply run
 
-***
+```bash
+make
+```
+
+if there is a different special directory where you store your executables, you can specify `INSTALL_PREFIX` variable. The binaries are then added to `$INSTALL_PREFIX/bin`. For example 
+
+```bash
+make -s INSTALL_PREFIX=~
+```
+
+will install smudgeplot to `~/bin/`.
+
+Once everything is installed `smudgeplot.py --help` should print a helppage.
+
+### Runing this version on Sacharomyces data
+
+Requires ~2.1GB of space and `FastK` and `smudgeplot` installed.
+
+```bash
+# download data
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR326/001/SRR3265401/SRR3265401_1.fastq.gz
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR326/001/SRR3265401/SRR3265401_2.fastq.gz
+
+# sort them in a reasonable place
+mkdir data/Scer
+mv *fastq.gz data/Scer/
+
+# run FastK to create a k-mer database
+FastK -v -t4 -k31 -M16 -T4 data/Scer/SRR3265401_[12].fastq.gz -Ndata/Scer/FastK_Table
+
+# Run PloidyPlot to find all k-mer pairs in the dataset
+PloidyPlot -e12 -k -v -T4 -odata/Scer/kmerpairs data/Scer/FastK_Table
+# this now generated `data/Scer/kmerpairs_text.smu` file;
+# it's a flat file with three columns; covB, covA and freq (the number of k-mer pairs with these respective coverages)
+
+# use the .smu file to infer ploidy and create smudgeplot
+smudgeplot.py plot -n 15 -t Sacharomyces -o data/Scer/trial_run data/Scer/kmerpairs_text.smu 
+
+# check that 5 files are generated (2 pdfs; a summary tsv table, and two txt logs)
+ls data/Scer/trial_run_*
+```
+
+And that's it for now! I will be streamlining this over the next few days so hopefully it will all work with a single command;
+
+---
+
+The rest of this README is the original Smudgeplot README, please ignore it;
+
+---
 
 # Smudgeplot
 
