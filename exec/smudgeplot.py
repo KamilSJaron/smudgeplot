@@ -344,7 +344,7 @@ def main():
     if _parser.task == "plot":
         # the plotting script is expected ot be installed in the system as well as the R library supporting it
         args = _parser.arguments
-        plot_args = "-i \"" + args.infile + "\" -o \"" + args.o + "\" -k " + str(args.k)
+        plot_args = "-i \"" + args.infile + "\" -o \"" + args.o + "\""
         if args.q != 1:
             plot_args += " -q " + str(args.q)
         if args.L != 0:

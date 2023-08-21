@@ -5,9 +5,9 @@
 #'
 #' @export
 
-plot_seq_error_line <- function(.total_pair_cov, .L = NA){
-    if (is.na(.L)){ .L <- min(.total_pair_cov) / 2 }
-    max_cov_pair <- max(.total_pair_cov)
-    cov_range <- seq(2 * .L, max_cov_pair, length = 30)
-    lines(.L / cov_range, cov_range, lwd = 2, lty = 2)
+plot_seq_error_line <- function(.cov_tab, .L = NA, .col = 'red'){
+    if (is.na(.L)){ .L <- min(.cov_tab[, 'covB']) }
+    max_cov_pair <- max(.cov_tab[, 'total_pair_cov'])
+    cov_range <- seq(2 * .L, max_cov_pair, length = 500)
+    lines((.L - 1) / cov_range, cov_range, lwd = 2, lty = 2, col = .col)
 }
