@@ -16,7 +16,7 @@ coverage_histogram <- function(.cov_tab, bins, xlim, column, horiz, .col){
 
     # define breaks of the histogram
     prettified_bins <- length(pretty(c(xlim[1],xlim[2]), n = bins))
-    x_breaks <- seq(0, xlim[2], length = prettified_bins)
+    x_breaks <- seq(xlim[1], xlim[2], length = prettified_bins)
     # identify buckets of each kmer pair
     # Note: these are right open intervals so the last ratio bucket contain 0.5
     kmerpairs2buckets <- list(findInterval(.cov_tab[, column], x_breaks, left.open = TRUE))

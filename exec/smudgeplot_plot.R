@@ -25,8 +25,6 @@ parser$add_argument("-L", "--low_cutoff", type = "integer",
                     help="the lower boundary used when dumping kmers [default min(total_pair_cov) / 2]")
 parser$add_argument("-nbins", type = "integer",
                     help="the number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]")
-parser$add_argument("-k", "--kmer_size", type = "integer", default = 21,
-                    help="The kmer size used to calculate kmer spectra [default 21]")
 
 args <- parser$parse_args()
 
@@ -182,12 +180,13 @@ smudge_warn(args$output, "##########")
 fig_title <- ifelse(length(args$title) == 0, NA, args$title[1])
 colour_ramp <- get_default_col_ramp() # get the default colour ramp (Spectral, 11)
 
-png(paste0(args$output,'_smudgeplot_log10.png'))
+pdf(paste0(args$output,'_smudgeplot_log10.pdf'))
 
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
 plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
+plot_seq_error_line(cov_tab)
 # 2,3 hist
 plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = 100)
 # 4 legend
@@ -198,12 +197,15 @@ dev.off()
 # replace the log transformed values by non-transformed
 smudge_container$z <- smudge_container$dens
 
-png(paste0(args$output,'_smudgeplot.png'))
+pdf(paste0(args$output,'_smudgeplot.pdf'))
 
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
 plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
+# plot error line L - 1 / cov ~ cov
+# plot_seq_error_line(cov_tab) 
+
 # 2,3 hist
 plot_histograms(cov_tab, smudge_summary, fig_title,
                 .ylim = ylim, .bins = 100)
