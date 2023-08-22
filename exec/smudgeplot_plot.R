@@ -25,8 +25,16 @@ parser$add_argument("-L", "--low_cutoff", type = "integer",
                     help="the lower boundary used when dumping kmers [default min(total_pair_cov) / 2]")
 parser$add_argument("-nbins", type = "integer",
                     help="the number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]")
+parser$add_argument("-col_ramp", default = "viridis",
+                    help="A colour ramp available in your R session [viridis]")
+parser$add_argument("--invert_cols", action="store_true", default = F,
+                    help="Set this flag to invert colorus of Smudgeplot (dark for high, light for low densities)")
+parser$add_argument("--plot_err_line", action="store_true", default = F,
+                    help="Set this flag to add a line of theh higher expected occurance of errors paired with genomic k-mers")
+
 
 args <- parser$parse_args()
+colour_ramp <- get_col_ramp(args) # create palette for the plots
 
 iterative_nbins <- F
 if( is.null(args$nbins) ){
@@ -178,7 +186,6 @@ smudge_warn(args$output, "## PLOT ##")
 smudge_warn(args$output, "##########")
 
 fig_title <- ifelse(length(args$title) == 0, NA, args$title[1])
-colour_ramp <- get_default_col_ramp() # get the default colour ramp (Spectral, 11)
 
 pdf(paste0(args$output,'_smudgeplot_log10.pdf'))
 
@@ -186,7 +193,10 @@ layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
 plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
-plot_seq_error_line(cov_tab)
+if (args$plot_err_line){
+    plot_seq_error_line(cov_tab)
+}
+
 # 2,3 hist
 plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = 100)
 # 4 legend
@@ -204,7 +214,9 @@ layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
 plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
 # plot error line L - 1 / cov ~ cov
-# plot_seq_error_line(cov_tab) 
+if (args$plot_err_line){
+    plot_seq_error_line(cov_tab)
+}
 
 # 2,3 hist
 plot_histograms(cov_tab, smudge_summary, fig_title,
