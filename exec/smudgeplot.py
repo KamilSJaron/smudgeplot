@@ -61,7 +61,7 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         Generate 2d histogram; infer ploidy and plot a smudgeplot.
         '''
         argparser = argparse.ArgumentParser(prog = 'smudgeplot plot', description='Generate 2d histogram for smudgeplot')
-        argparser.add_argument('infile', nargs='?', help='name of the input tsv file with covarages (default \"coverages_2.tsv\")."')
+        argparser.add_argument('infile', nargs='?', help='name of the input tsv file with covarages and frequencies (default \"coverages_2.smu\")."')
         argparser.add_argument('-o', help='The pattern used to name the output (smudgeplot).', default='smudgeplot')
         argparser.add_argument('-q', help='Remove kmer pairs with coverage over the specified quantile; (default none).', type=float, default=1)
         argparser.add_argument('-L', help='The lower boundary used when dumping kmers (default min(total_pair_cov) / 2).', type=int, default=0)
@@ -69,9 +69,14 @@ tasks: cutoff    Calculate meaningful values for lower/upper kmer histogram cuto
         argparser.add_argument('-t', '--title', help='name printed at the top of the smudgeplot (default none).', default='')
         # argparser.add_argument('-m', '-method', help='The algorithm for annotation of smudges (default \'local_aggregation\')', default='local_aggregation')
         argparser.add_argument('-nbins', help='The number of nbins used for smudgeplot matrix (nbins x nbins) (default autodetection).', type=int, default=0)
-        argparser.add_argument('-k', help='The length of the kmer.', default=21)
         # argparser.add_argument('-kmer_file', help='Name of the input files containing kmer seuqences (assuming the same order as in the coverage file)', default = "")
         argparser.add_argument('--homozygous', action="store_true", default = False, help="Assume no heterozygosity in the genome - plotting a paralog structure; (default False).")
+
+        # plotting arugments
+        argparser.add_argument('-col_ramp', help='An R palette used for the plot (default "viridis", other sensible options are "magma", "mako" or "grey.colors" - recommended in combination with --invert_cols).', default='viridis')
+        argparser.add_argument('--invert_cols', action="store_true", default = False, help="Revert the colour palette (default False).")
+        argparser.add_argument('--plot_err_line', action="store_true", default = False, help="Add a line to the plot denoting where the error k-mers and genomic k-mers will likely pair up the most (default False).")
+        
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def cutoff(self):
@@ -353,10 +358,17 @@ def main():
             plot_args += " -n " + str(args.n)
         if args.title:
             plot_args += " -t \"" + args.title + "\""
+        if args.col_ramp:
+            plot_args += " -col_ramp \"" + args.col_ramp + "\""
         if args.nbins != 0:
             plot_args += " -nbins " + str(args.nbins)
         if args.homozygous:
             plot_args += " --homozygous"
+        if args.invert_cols:
+            plot_args += " --invert_cols"
+        if args.plot_err_line:
+            plot_args += " --plot_err_line"
+
         sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
         system("smudgeplot_plot.R " + plot_args)
 
