@@ -34,7 +34,9 @@ parser$add_argument("--plot_err_line", action="store_true", default = F,
 
 
 args <- parser$parse_args()
-colour_ramp <- get_col_ramp(args) # create palette for the plots
+
+colour_ramp_log <- get_col_ramp(args, 16) # create palette for the log plots
+colour_ramp <- get_col_ramp(args) # create palette for the linear plots
 
 iterative_nbins <- F
 if( is.null(args$nbins) ){
@@ -191,7 +193,7 @@ pdf(paste0(args$output,'_smudgeplot_log10.pdf'))
 
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
-plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
+plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp_log)
 plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
 if (args$plot_err_line){
     plot_seq_error_line(cov_tab)
@@ -200,7 +202,7 @@ if (args$plot_err_line){
 # 2,3 hist
 plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = 100)
 # 4 legend
-plot_legend(smudge_container, colour_ramp)
+plot_legend(smudge_container, colour_ramp_log)
 
 dev.off()
 

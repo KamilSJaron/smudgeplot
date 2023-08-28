@@ -8,11 +8,12 @@
 #'
 #' @export
 
-get_col_ramp <- function(.args){
-    colour_ramp <- eval(parse(text = paste0(.args$col_ramp,"(", 32, ")")))
+get_col_ramp <- function(.args, delay = 0){
+    colour_ramp <- eval(parse(text = paste0(.args$col_ramp,"(", 32 - delay, ")")))
     if (.args$invert_cols){
         colour_ramp <- rev(colour_ramp)
     }
+    colour_ramp <- c(rep(colour_ramp[1], delay), colour_ramp)
     return(colour_ramp)
 }
 
