@@ -1,6 +1,6 @@
 # PATH for libraries is guessed
 RPACKAGE = smudgeplot
-$(eval PATH := $(shell Rscript -e "noquote(.libPaths())" | tail -1 | cut -f 2 -d ' '))
+#$(eval PATH := $(shell Rscript -e "noquote(.libPaths())" | tail -1 | cut -f 2 -d ' '))
 CFLAGS = -O3 -Wall -Wextra -Wno-unused-result -fno-strict-aliasing
 
 ifndef INSTALL_PREFIX
