@@ -27,7 +27,10 @@ cov_tab[, 'minor_variant_rel_cov'] <- cov_tab[, 1] / cov_tab[, 'total_pair_cov']
 
 smudge_container <- get_smudge_container(cov_tab, nbins, xlim, ylim)
 plot_smudgeplot(smudge_container, 15.5, colour_ramp)
-
+rect(0.4375, smudge_container$y[6], 0.4500, smudge_container$y[7], col = 'white')
+rect(0, 15.5*2, 0.500, 15.5*2, col = 'grey')
+rect(0.49, 0, 0.49, 475, col = 'grey')
+rect(0.4935, 0, 0.49, 475, col = 'grey')
 
 ########
 

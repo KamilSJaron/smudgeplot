@@ -6,3 +6,4 @@ playground
 docs
 exec/PloidyPlot
 *.o
+.DS_Store
