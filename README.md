@@ -1,12 +1,13 @@
 *** Sploidyplot branch ***
 
-This is a merger of PloidyPlot from https://github.com/KamilSJaron/MERQURY.FK
-& Smudgeplot
+<font size ="4">**_Authors: [Gene W Myers](https://github.com/thegenemyers) and [Kamil S. Jaron](https://github.com/KamilSJaron)._**</font>
 
-The big changes will be
+This is a merger of PloidyPlot from https://github.com/KamilSJaron/MERQURY.FK & Smudgeplot.
+
+The big changes are
  + the search for the kmer pair will be within both canonical and non-canonical k-mer sets (Gene demonstrated it makes a difference)
  + the tool will be supporting FastK kmer counter only
- + the backend by Gene Myers is paralelized and massively faster
+ + the backend by Gene is paralelized and massively faster
  + the intermediate file will be a flat file with the 2d histogram with cov1, cov2, freq columns (as opposed to list of coverages of pairs cov1 cov2);
  + at least for now WE LOSE the ability to extract sequences of the kmers in the pair; this functionality will hopefully restore at some point together with functionality to assess the quality of assembly.
  + we will add "run everything" functionality for people that want "FastK database -> plot" type of solution.
