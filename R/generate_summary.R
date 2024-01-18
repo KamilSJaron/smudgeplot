@@ -19,7 +19,7 @@ generate_summary <- function(.args, .smudge_summary){
     minimal_number_of_heterozygous_loci <- ceiling(sum(.smudge_summary$peak_sizes$abs_size[for_sure_heterozygous]) / .args$kmer_size)
 
     smudge_summary(.args$output, "* Minimal number of heterozygous loci:", minimal_number_of_heterozygous_loci)
-    smudge_summary(.args$output, "Note: This number is NOT an estimate of the total number heterozygous loci, it's merly setting the lower boundary if the inference of heterozygosity peaks is correct.")
+    smudge_summary(.args$output, "Note: This number is NOT an estimate of the total number of heterozygous loci, it's merely setting the lower boundary if the inference of heterozygosity peaks is correct.")
 
     smudge_summary(.args$output, "* Proportion of heterozygosity carried by pairs in different genome copies (table)")
     tab_to_print <- data.frame( genome_copies = 2:max(.smudge_summary$peak_sizes$ploidy),
