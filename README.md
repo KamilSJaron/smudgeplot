@@ -21,14 +21,15 @@ Current state: RUNNING; beta-testing;
 
 This version of smudgeplot operates on FastK k-mer databases. So, before installing smudgeplot, please install [FastK](https://github.com/thegenemyers/FASTK).
 
-The smudgeplot installation consist of one R package (visible by the R instance that is run by the shell), and three executables that need to also be visible (i.e. in one of the locations in the $PATH). One of the three executables needs to be compiled - that is the C-backend.
+The smudgeplot installation consist of one R package (visible by the R instance that is run by the shell), and three executables that need to also be visible (i.e. in one of the locations in the `$PATH`). One of the three executables needs to be compiled - that is the C-backend.
 
 ```bash
-Rscript install.R # this should create documentation and install smudgeplot R package;
+# cd smudgeplot
+Rscript -e 'install.packages(".", repos = NULL, type="source")' # this will install smudgeplot R package;
 make exec/PloidyPlot # this will compile PloidyPlot backend
 ```
 
-Now you can move all three files from the `exec` directory somewhere your system will see it (or alternativelly, you can add that directory to `$PATH` variable). 
+Now you can move all three files from the `exec` directory somewhere your system will see it (or alternativelly, you can add that directory to `$PATH` variable).
 
 If you would like install to `/usr/local/bin`, you can simply run
 
@@ -36,7 +37,7 @@ If you would like install to `/usr/local/bin`, you can simply run
 make
 ```
 
-if there is a different special directory where you store your executables, you can specify `INSTALL_PREFIX` variable. The binaries are then added to `$INSTALL_PREFIX/bin`. For example 
+if there is a different special directory where you store your executables, you can specify `INSTALL_PREFIX` variable. The binaries are then added to `$INSTALL_PREFIX/bin`. For example
 
 ```bash
 make -s INSTALL_PREFIX=~
@@ -68,7 +69,7 @@ PloidyPlot -e12 -k -v -T4 -odata/Scer/kmerpairs data/Scer/FastK_Table
 # it's a flat file with three columns; covB, covA and freq (the number of k-mer pairs with these respective coverages)
 
 # use the .smu file to infer ploidy and create smudgeplot
-smudgeplot.py plot -n 15 -t Sacharomyces -o data/Scer/trial_run data/Scer/kmerpairs_text.smu 
+smudgeplot.py plot -n 15 -t Sacharomyces -o data/Scer/trial_run data/Scer/kmerpairs_text.smu
 
 # check that 5 files are generated (2 pdfs; a summary tsv table, and two txt logs)
 ls data/Scer/trial_run_*
