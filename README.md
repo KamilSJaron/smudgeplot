@@ -19,25 +19,20 @@ Current state: RUNNING; beta-testing;
 
 ### Install the whole thing
 
-This version of smudgeplot operates on FastK k-mer databases. So, before installing smudgeplot, please install [FastK](https://github.com/thegenemyers/FASTK).
+This version of smudgeplot operates on FastK k-mer databases. So, before installing smudgeplot, please install [FastK](https://github.com/thegenemyers/FASTK). The smudgeplot installation consist of one R package, and three executables. One of the three needs to be compiled - that is the C-backend to search for all the k-mer pairs.
 
-The smudgeplot installation consist of one R package (visible by the R instance that is run by the shell), and three executables that need to also be visible (i.e. in one of the locations in the `$PATH`). One of the three executables needs to be compiled - that is the C-backend.
+#### Quick
 
-```bash
-# cd smudgeplot
-Rscript -e 'install.packages(".", repos = NULL, type="source")' # this will install smudgeplot R package;
-make exec/PloidyPlot # this will compile PloidyPlot backend
-```
-
-Now you can move all three files from the `exec` directory somewhere your system will see it (or alternativelly, you can add that directory to `$PATH` variable).
-
-If you would like install to `/usr/local/bin`, you can simply run
+Assuming you have admin right / can write to `/usr/local/bin`, you can simply run
 
 ```bash
-make
+sudo make
 ```
+That should do everything necesarry to make smudgeplot fully operational. You can run `smudgeplot.py --help` to see if it worked.
 
-if there is a different special directory where you store your executables, you can specify `INSTALL_PREFIX` variable. The binaries are then added to `$INSTALL_PREFIX/bin`. For example
+#### Custom installation location
+
+If there is a different directory where you store your executables, you can specify `INSTALL_PREFIX` variable to make. The binaries are then added to `$INSTALL_PREFIX/bin`. For example
 
 ```bash
 make -s INSTALL_PREFIX=~
@@ -45,7 +40,22 @@ make -s INSTALL_PREFIX=~
 
 will install smudgeplot to `~/bin/`.
 
-Once everything is installed `smudgeplot.py --help` should print a helppage.
+#### Manual installation
+
+Installing the `R` package:
+
+```bash
+# cd smudgeplot
+Rscript -e 'install.packages(".", repos = NULL, type="source")' # this will install smudgeplot R package;
+```
+
+Compiling the `C` executable
+
+```
+make exec/PloidyPlot # this will compile PloidyPlot backend
+```
+
+Now you can move all three files from the `exec` directory somewhere your system will see it (or alternativelly, you can add that directory to `$PATH` variable).
 
 ### Runing this version on Sacharomyces data
 
