@@ -23,6 +23,10 @@ parser$add_argument("-n", "--n_cov", type = "double",
                     help="the haploid coverage of the sequencing data [default inference from data]")
 parser$add_argument("-L", "--low_cutoff", type = "integer",
                     help="the lower boundary used when dumping kmers [default min(total_pair_cov) / 2]")
+parser$add_argument("-c", "-cov_filter", type = "integer",
+                    help="Filter pairs with one of them having coverage bellow specified threshold [default 0; disables parameter L]")
+parser$add_argument("-ylim", type = "integer", 
+                    help="The upper limit for the coverage sum (the y axis)")
 parser$add_argument("-nbins", type = "integer",
                     help="the number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]")
 parser$add_argument("-col_ramp", default = "viridis",
@@ -31,6 +35,8 @@ parser$add_argument("--invert_cols", action="store_true", default = F,
                     help="Set this flag to invert colorus of Smudgeplot (dark for high, light for low densities)")
 parser$add_argument("--plot_err_line", action="store_true", default = F,
                     help="Set this flag to add a line of theh higher expected occurance of errors paired with genomic k-mers")
+parser$add_argument("--just_plot", action="store_true", default = F,
+                    help="Turns off the inference of coverage and annotation of smudges; simply generates smudgeplot. (default False)")
 
 
 args <- parser$parse_args()
@@ -72,14 +78,34 @@ if ( !is.null(args$q) ){
     cov_tab <- cov_tab[high_cov_filt, ]
 }
 
-L <- ifelse(length(args$L) == 0, min(cov_tab[, 'covB']), args$L)
+if ( !is.null(args$c) ){
+    threshold <- args$c
+    low_cov_filt <- cov_tab[, 'covA'] < threshold | cov_tab[, 'covB'] < threshold 
+    smudge_warn(args$output, "Removing", sum(cov_tab[low_cov_filt, 'freq']), 
+                "kmer pairs for which one of the pair had coverage below",
+                threshold, paste0("(Specified by argument -c ", args$c, ")"))
+    cov_tab <- cov_tab[!low_cov_filt, ]
+    smudge_warn(args$output, "Processing", sum(cov_tab[, 'freq']), "kmer pairs")
+    L <- min(cov_tab[, 'covB'])
+} else {
+    L <- ifelse(length(args$L) == 0, min(cov_tab[, 'covB']), args$L)
+}
 smudge_summary$n_subset_est <- round(estimate_1n_coverage_1d_subsets(cov_tab), 1)
 
-draft_n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_subset_est, args$n_cov)
+if (!args$just_plot){
+    draft_n <- ifelse(length(args$n_cov) == 0, smudge_summary$n_subset_est, args$n_cov)
+    ylim <- c(min(cov_tab[, 'total_pair_cov']) - 1, # or 0?
+          min(10*draft_n, max(cov_tab[, 'total_pair_cov'])))
+} else {
+    ylim <- c(0,max(cov_tab[, 'total_pair_cov'])) # if there is no inference, the default coverage is max cov
+}
 
 xlim <- c(0, 0.5)
-ylim <- c(min(cov_tab[, 'total_pair_cov']) - 1, # or 0?
-          min(10*draft_n, max(cov_tab[, 'total_pair_cov'])))
+
+if (!is.null(args$ylim)){ # if ylim is specified, set the bounday by the argument instead
+    ylim[2] <- args$ylim
+}
+
 
 smudge_warn(args$output, "\n#############")
 smudge_warn(args$output, "## SUMMARY ##")
@@ -90,6 +116,9 @@ repeat {
     smudge_container <- get_smudge_container(cov_tab, .nbins = args$nbins, .xlim = xlim, .ylim = ylim)
 
     peak_points <- peak_agregation(smudge_container)
+    if (args$just_plot){
+        break
+    }
     peak_sizes <- get_peak_summary(peak_points, smudge_container, 0.02)
 
     the_smallest_n <- min(get_trinoploid_1n_est(peak_sizes), draft_n)
@@ -129,59 +158,63 @@ repeat {
     }
 }
 
-if( abs(log2(smudge_summary$n_subset_est / smudge_summary$n_peak_est)) > 1 & !args$homozygous){
-    smudge_warn(args$output, "!! Warning, the two types of estimates of 1n coverage differ a lot (",
-                smudge_summary$n_subset_est, "and", smudge_summary$n_peak_est, ")")
-    smudge_warn(args$output, "i.e. at least of one of the smudgeplot methods to estimate the haploid coverage got it wrong")
-    smudge_warn(args$output, "Using subset estimate instead of highest peak estimate (less precise but also less often completely wrong)")
-    smudge_warn(args$output, "Does the smudgeplot look sane? Is at least one of the 1n estimates close a GenomeScope estimate?")
-    smudge_warn(args$output, "You can help us imrove this software by sharing this strange smudgeplot on https://github.com/KamilSJaron/smudgeplot/issues.")
-}
-
-if( L > (smudge_summary$n / 2) & !args$homozygous ){
-    smudge_warn(args$output, "!! Warning, your coverage filter on the lower end (L = ", L,
-                ") is higher than half of the 1n coverage estimate ( 1n / 2 = ", round(smudge_summary$n / 2, 2))
-    smudge_warn(args$output, "If the real 1n coverage is half of your estimate you would not picked it up due to the filtering.")
-    smudge_warn(args$output, "If you have sufficient coverage, consider reruning the analysis with lower L (something like (1n / 2) - 5)")
-    smudge_warn(args$output, "One good way for verificaiton would be to compare it to GenomeScope estimate of haploid coverage")
-}
-
-peak_sizes$corrected_minor_variant_cov <- sapply(peak_sizes$structure, function(x){round(mean(unlist(strsplit(x, split = '')) == 'B'), 2)})
-peak_sizes$ploidy <- sapply(peak_sizes$structure, nchar)
-
-to_filter <- peak_sizes$ploidy <= 1
-if( any(to_filter) ){
-    smudge_warn(args$output, paste(sum(to_filter), "peaks of kmer pairs detected with coverage < (1n_coverage * 2) =", round(smudge_summary$n * 2, 1)))
-    tab_to_print <- peak_sizes[to_filter,c(2,3,8,9)]
-    tab_to_print <- round(tab_to_print, 2)
-    colnames(tab_to_print) <- c('kmers_in_peak[#]', 'kmers_in_peak[proportion]', 'summit B / (A + B)', 'summit A + B')
-    smudge_warn(args$output, paste0(capture.output(tab_to_print), collapse = "\n"))
-    peak_sizes <- peak_sizes[!to_filter,]
-    smudge_warn(args$output, "This might be due to kmers with sequencing errors present in the kmer dump.")
-    smudge_warn(args$output, "Increasing L might help remove erroneous kmers.")
-}
-
-peak_sizes$rel_size <- peak_sizes$rel_size / sum(peak_sizes$rel_size)
-peak_sizes <- peak_sizes[order(peak_sizes$rel_size, decreasing = T),]
-smudge_summary$peak_sizes <- peak_sizes
-
-# genome ploidy is the ploidy with highest number of corresponding kmer pairs regardless of topology
-considered_ploidies <- unique(peak_sizes$ploidy)
-ploidy_with_most_smudges <- which.max(sapply(considered_ploidies, function(x){ sum(peak_sizes[peak_sizes$ploidy == x,'rel_size']) }) )
-smudge_summary$genome_ploidy <- considered_ploidies[ploidy_with_most_smudges]
-# smudge_summary$genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)]
-
-# this will be probably diploid,
-# but theoretically one can imagine a species that si completely homozygous tetraploid
-if( args$homozygous ){
-    smudge_summary$genome_ploidy <- smudge_summary$genome_ploidy / 2
-    if(!smudge_summary$genome_ploidy %in% c(2,4,6,8)){
-        smudge_warn(args$output, "Guessing really strange ploidy", smudge_summary$genome_ploidy, "perhaps there is not enough coverage for a good inference.")
-        smudge_warn(args$output, "You can trust the plot, but guessed ploidy or peak detection might be completely off.")
+if (!args$just_plot){
+    # checks / warnings for potential inference problems
+    if( abs(log2(smudge_summary$n_subset_est / smudge_summary$n_peak_est)) > 1 & !args$homozygous){
+        smudge_warn(args$output, "!! Warning, the two types of estimates of 1n coverage differ a lot (",
+                    smudge_summary$n_subset_est, "and", smudge_summary$n_peak_est, ")")
+        smudge_warn(args$output, "i.e. at least of one of the smudgeplot methods to estimate the haploid coverage got it wrong")
+        smudge_warn(args$output, "Using subset estimate instead of highest peak estimate (less precise but also less often completely wrong)")
+        smudge_warn(args$output, "Does the smudgeplot look sane? Is at least one of the 1n estimates close a GenomeScope estimate?")
+        smudge_warn(args$output, "You can help us imrove this software by sharing this strange smudgeplot on https://github.com/KamilSJaron/smudgeplot/issues.")
     }
-}
+    if( L > (smudge_summary$n / 2) & !args$homozygous ){
+        smudge_warn(args$output, "!! Warning, your coverage filter on the lower end (L = ", L,
+                    ") is higher than half of the 1n coverage estimate ( 1n / 2 = ", round(smudge_summary$n / 2, 2))
+        smudge_warn(args$output, "If the real 1n coverage is half of your estimate you would not picked it up due to the filtering.")
+        smudge_warn(args$output, "If you have sufficient coverage, consider reruning the analysis with lower L (something like (1n / 2) - 5)")
+        smudge_warn(args$output, "One good way for verificaiton would be to compare it to GenomeScope estimate of haploid coverage")
+    }
 
-generate_summary(args, smudge_summary)
+    peak_sizes$corrected_minor_variant_cov <- sapply(peak_sizes$structure, function(x){round(mean(unlist(strsplit(x, split = '')) == 'B'), 2)})
+    peak_sizes$ploidy <- sapply(peak_sizes$structure, nchar)
+
+    to_filter <- peak_sizes$ploidy <= 1
+    if( any(to_filter) ){
+        smudge_warn(args$output, paste(sum(to_filter), "peaks of kmer pairs detected with coverage < (1n_coverage * 2) =", round(smudge_summary$n * 2, 1)))
+        tab_to_print <- peak_sizes[to_filter,c(2,3,8,9)]
+        tab_to_print <- round(tab_to_print, 2)
+        colnames(tab_to_print) <- c('kmers_in_peak[#]', 'kmers_in_peak[proportion]', 'summit B / (A + B)', 'summit A + B')
+        smudge_warn(args$output, paste0(capture.output(tab_to_print), collapse = "\n"))
+        peak_sizes <- peak_sizes[!to_filter,]
+        smudge_warn(args$output, "This might be due to kmers with sequencing errors present in the kmer dump.")
+        smudge_warn(args$output, "Increasing L might help remove erroneous kmers.")
+    }
+
+    peak_sizes$rel_size <- peak_sizes$rel_size / sum(peak_sizes$rel_size)
+    peak_sizes <- peak_sizes[order(peak_sizes$rel_size, decreasing = T),]
+    smudge_summary$peak_sizes <- peak_sizes
+
+    # genome ploidy is the ploidy with highest number of corresponding kmer pairs regardless of topology
+    considered_ploidies <- unique(peak_sizes$ploidy)
+    ploidy_with_most_smudges <- which.max(sapply(considered_ploidies, function(x){ sum(peak_sizes[peak_sizes$ploidy == x,'rel_size']) }) )
+    smudge_summary$genome_ploidy <- considered_ploidies[ploidy_with_most_smudges]
+    # smudge_summary$genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)]
+
+    # this will be probably diploid,
+    # but theoretically one can imagine a species that si completely homozygous tetraploid
+    if( args$homozygous ){
+        smudge_summary$genome_ploidy <- smudge_summary$genome_ploidy / 2
+        if(!smudge_summary$genome_ploidy %in% c(2,4,6,8)){
+            smudge_warn(args$output, "Guessing really strange ploidy", smudge_summary$genome_ploidy, "perhaps there is not enough coverage for a good inference.")
+            smudge_warn(args$output, "You can trust the plot, but guessed ploidy or peak detection might be completely off.")
+        }
+    }
+
+    generate_summary(args, smudge_summary)
+} else {
+    smudge_summary$n <- 0 # this is interpreted as "no infered"
+}
 
 smudge_warn(args$output, "\n##########")
 smudge_warn(args$output, "## PLOT ##")
@@ -194,13 +227,16 @@ pdf(paste0(args$output,'_smudgeplot_log10.pdf'))
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp_log)
+if (!args$just_plot){
 plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
+}
 if (args$plot_err_line){
     plot_seq_error_line(cov_tab)
 }
 
+histogram_bins = max(30, args$nbins)
 # 2,3 hist
-plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = 100)
+plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = histogram_bins) # I am testing here setting the number of bars to the same number as the number of squares
 # 4 legend
 plot_legend(smudge_container, colour_ramp_log)
 
@@ -214,7 +250,9 @@ pdf(paste0(args$output,'_smudgeplot.pdf'))
 layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp)
-plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
+if (!args$just_plot){
+    plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
+}
 # plot error line L - 1 / cov ~ cov
 if (args$plot_err_line){
     plot_seq_error_line(cov_tab)
@@ -222,7 +260,7 @@ if (args$plot_err_line){
 
 # 2,3 hist
 plot_histograms(cov_tab, smudge_summary, fig_title,
-                .ylim = ylim, .bins = 100)
+                .ylim = ylim, .bins = histogram_bins)
 
 # 4 legend
 plot_legend(smudge_container, colour_ramp, F)

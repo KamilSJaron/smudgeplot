@@ -68,12 +68,16 @@ tasks: cutoff    Calculate meaningful values for lower kmer histogram cutoff.
         argparser.add_argument('-o', help='The pattern used to name the output (smudgeplot).', default='smudgeplot')
         argparser.add_argument('-q', help='Remove kmer pairs with coverage over the specified quantile; (default none).', type=float, default=1)
         argparser.add_argument('-L', help='The lower boundary used when dumping kmers (default min(total_pair_cov) / 2).', type=int, default=0)
+        argparser.add_argument('-c', '-cov_filter', help='Filter pairs with one of them having coverage bellow specified threshold (default 0; disables parameter L)', type=int, default=0)
         argparser.add_argument('-n', help='The expected haploid coverage (default estimated from data).', type=float, default=0)
         argparser.add_argument('-t', '--title', help='name printed at the top of the smudgeplot (default none).', default='')
+        argparser.add_argument('-ylim', help='The upper limit for the coverage sum (the y axis)', type = int, default=0)
         # argparser.add_argument('-m', '-method', help='The algorithm for annotation of smudges (default \'local_aggregation\')', default='local_aggregation')
         argparser.add_argument('-nbins', help='The number of nbins used for smudgeplot matrix (nbins x nbins) (default autodetection).', type=int, default=0)
         # argparser.add_argument('-kmer_file', help='Name of the input files containing kmer seuqences (assuming the same order as in the coverage file)', default = "")
         argparser.add_argument('--homozygous', action="store_true", default = False, help="Assume no heterozygosity in the genome - plotting a paralog structure; (default False).")
+        argparser.add_argument('--just_plot', action="store_true", default = False, help="Turns off the inference of coverage and annotation of smudges; simply generates smudgeplot. (default False)")
+
 
         # plotting arugments
         argparser.add_argument('-col_ramp', help='An R palette used for the plot (default "viridis", other sensible options are "magma", "mako" or "grey.colors" - recommended in combination with --invert_cols).', default='viridis')
@@ -179,10 +183,14 @@ def main():
             plot_args += " -q " + str(args.q)
         if args.L != 0:
             plot_args += " -L " + str(args.L)
+        if args.c != 0:
+            plot_args += " -c " + str(args.c)
         if args.n != 0:
             plot_args += " -n " + str(args.n)
         if args.title:
             plot_args += " -t \"" + args.title + "\""
+        if args.ylim != 0:
+            plot_args += " -ylim " + str(args.ylim)
         if args.col_ramp:
             plot_args += " -col_ramp \"" + args.col_ramp + "\""
         if args.nbins != 0:
@@ -193,6 +201,8 @@ def main():
             plot_args += " --invert_cols"
         if args.plot_err_line:
             plot_args += " --plot_err_line"
+        if args.just_plot:
+            plot_args += " --just_plot"
 
         sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
         system("smudgeplot_plot.R " + plot_args)

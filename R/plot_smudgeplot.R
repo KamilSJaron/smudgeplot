@@ -26,7 +26,11 @@ plot_smudgeplot <- function(.k, .n, .colour_ramp, .cex = 1.4){
         axes=F
     )
 
-    axis(2, at = 2:8 * .n, labels = paste(2:8, 'n'))
-    axis(1, at = c(1/5, 1/4, 1/3, 2/5, max(.k$x)),
-            labels = c('1/5', '1/4', '1/3', '2/5', '1/2'))
+    if (.n == 0){
+        axis(2)
+    } else {
+        axis(2, at = 2:8 * .n, labels = paste(2:8, 'n'))
+    }
+    axis(1, at = c(1/5, 1/4, 1/3, max(.k$x)),
+            labels = c('1/5', '1/4', '1/3', '1/2'))
 }
