@@ -5,3 +5,4 @@ docs
 exec/PloidyPlot
 *.o
 .DS_Store
+smu2text_smu
