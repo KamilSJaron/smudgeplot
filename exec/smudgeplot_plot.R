@@ -37,6 +37,8 @@ parser$add_argument("--plot_err_line", action="store_true", default = F,
                     help="Set this flag to add a line of theh higher expected occurance of errors paired with genomic k-mers")
 parser$add_argument("--just_plot", action="store_true", default = F,
                     help="Turns off the inference of coverage and annotation of smudges; simply generates smudgeplot. (default False)")
+parser$add_argument("--alt_plot", action="store_true", default = F,
+                    help="Uses a new way to plot smudgeplots using tiling strategy, which is likely to be the default for the Oriel 0.3.0 release (default False)")
 
 
 args <- parser$parse_args()
@@ -77,6 +79,21 @@ if ( !is.null(args$q) ){
                 threshold, paste0("(", args$q, " quantile)"))
     cov_tab <- cov_tab[high_cov_filt, ]
 }
+
+##### alt plot
+if( args$alt_plot ){
+    ylim <- c(0, max(cov_tab[, 'total_pair_cov']))
+    if (!is.null(args$ylim)){ # if ylim is specified, set the bounday by the argument instead
+        ylim[2] <- args$ylim
+    }
+    plot_name <- paste0(args$output,'_alt_smudgeplot.pdf')
+    pdf(plot_name)
+        plot_alt(cov_tab, ylim, colour_ramp)
+    dev.off()
+    stop(paste("Alt plot has been generated: ", plot_name, " we are done here!"), call.=FALSE)
+}
+
+#####
 
 if ( !is.null(args$c) ){
     threshold <- args$c

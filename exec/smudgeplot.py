@@ -77,7 +77,7 @@ tasks: cutoff    Calculate meaningful values for lower kmer histogram cutoff.
         # argparser.add_argument('-kmer_file', help='Name of the input files containing kmer seuqences (assuming the same order as in the coverage file)', default = "")
         argparser.add_argument('--homozygous', action="store_true", default = False, help="Assume no heterozygosity in the genome - plotting a paralog structure; (default False).")
         argparser.add_argument('--just_plot', action="store_true", default = False, help="Turns off the inference of coverage and annotation of smudges; simply generates smudgeplot. (default False)")
-
+        argparser.add_argument('--alt_plot', action="store_true", default = False, help="Uses a new way to plot smudgeplots using tiling strategy, which is likely to be the default for the Oriel 0.3.0 release (default False)")
 
         # plotting arugments
         argparser.add_argument('-col_ramp', help='An R palette used for the plot (default "viridis", other sensible options are "magma", "mako" or "grey.colors" - recommended in combination with --invert_cols).', default='viridis')
@@ -203,6 +203,8 @@ def main():
             plot_args += " --plot_err_line"
         if args.just_plot:
             plot_args += " --just_plot"
+        if args.alt_plot:
+            plot_args += " --alt_plot"
 
         sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
         system("smudgeplot_plot.R " + plot_args)
