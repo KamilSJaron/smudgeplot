@@ -71,8 +71,8 @@ cov_tab[, 'total_pair_cov'] <- cov_tab[, 'covA'] + cov_tab[, 'covB']
 cov_tab[, 'minor_variant_rel_cov'] <- cov_tab[, 'covB'] / cov_tab[, 'total_pair_cov']
 
 if ( !is.null(args$q) ){
-    # quantile filtering (remove top q%, it's not really informative)
-    threshold <- quantile(cov_tab[, 'total_pair_cov'], args$q)
+    # quantile filtering (remove top q%, it's not really informative)    
+    threshold <- wtd.quantile(cov_tab[, 'total_pair_cov'], args$q, cov_tab[, 'freq'])
     high_cov_filt <- cov_tab[, 'total_pair_cov'] < threshold
     smudge_warn(args$output, "Removing", sum(cov_tab[!high_cov_filt, 'freq']), 
                 "kmer pairs with coverage higher than",
