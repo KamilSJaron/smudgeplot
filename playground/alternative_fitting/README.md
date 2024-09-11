@@ -1,0 +1,343 @@
+# Sploidyplot
+
+The goal is to have a smudge inference based on an explicit model. I hoped for a model that would make a lot of sense - based on negative binomials.
+
+Gene - made his own EM algorithm, I think. I could not decipher it
+Richard and Tianyi - made me an EM algorithm that work on simply coverage A and B; also using normal distributions
+
+
+## alternative plotting
+
+A minimalist attempt
+
+```R
+minidata <- daArtCamp1[daArtCamp1[, 'total_pair_cov'] < 20, ]
+coverages_to_plot <- unique(minidata[, 'total_pair_cov'])
+number_of_coverages_to_plot <- length(coverages_to_plot)
+mini_ylim <- c(5, 20)
+L <- 4
+cols <- c(rgb(1,0,0, 0.5), rgb(1,1,0, 0.5), rgb(0,1,1, 0.5), rgb(1,0,1, 0.5), rgb(0,1,0, 0.5), rgb(0,0,1, 0.5))
+# plot(1:6, pch = 20, cex = 5, col = cols)
+
+plot_dot_smudgeplot(minidata, rep('black', 32), xlim, mini_ylim, cex = 3)
+points((L - 1) / coverages_to_plot, coverages_to_plot, cex = 3, pch = 20, col = 'blue')
+
+for( cov in 8:19){
+    rect(0, cov - 0.5, 0.5, cov + 0.5, col = NA, border = 'black')
+    width <- 1 / (2 * cov)
+    min_ratio <- L / cov
+    rect(min_ratio - width, cov - 0.5, min(0.5, min_ratio + width), cov + 0.5, col = sample(cols, 1))    
+}
+
+text(rep(0.05, number_of_coverages_to_plot), 8:19, 8:19)
+```
+
+This is more serious attempt that does not really work.
+
+```R
+library(smudgeplot)
+source('playground/alternative_fitting/alternative_plotting_functions.R')
+
+args <- list()
+args$col_ramp <- 'viridis'
+args$invert_cols <- F
+args$ylim <- 30
+colour_ramp <- get_col_ramp(args)
+
+
+cov_tab <- read.table('playground/alternative_fitting/smudgeplot testing datasets/6_low_coverage_real/daArtCamp1.k31_ploidy.smu.txt', header = F)
+colnames(cov_tab) <- c('covB','covA', 'freq')
+
+cov_tab[, 'total_pair_cov'] <- cov_tab[, 'covA'] + cov_tab[, 'covB']
+cov_tab[, 'minor_variant_rel_cov'] <- cov_tab[, 'covB'] / cov_tab[, 'total_pair_cov']
+cols <- colour_ramp[1 + round(31 * cov_tab$freq / max(cov_tab$freq))]
+
+head(cov_tab)
+
+xlim = c(0, 0.5)
+ylim = c(0, 20)
+# ylim = c(0, max(cov_tab[, 'total_pair_cov']))
+
+# plot_dot_smudgeplot(cov_tab, colour_ramp, xlim, ylim)
+
+# plot_unsquared_smudgeplot(cov_tab, colour_ramp, xlim, ylim)
+
+cov_tab[cov_tab$covA == cov_tab$covB, 'freq'] <- cov_tab[cov_tab$covA == cov_tab$covB, 'freq'] * 2
+cov_tab$col = colour_ramp[1 + round(31 * cov_tab$freq / max(cov_tab$freq))]
+
+plot(NULL, xlim = xlim, ylim = c(0,1000),
+        xlab = 'Normalized minor kmer coverage: B / (A + B)',
+        ylab = 'Total coverage of the kmer pair: A + B', cex.lab = 1.4)
+
+L = floor(min(cov_tab[, 'total_pair_cov']) / 2)
+
+plot_one_coverage <- function(cov, L){
+    err <- (L - 1) / cov
+    cov_row_to_plot <- cov_tab[cov_tab[, 'total_pair_cov'] == cov, ]
+    width <- min(cov_row_to_plot[ , 'minor_variant_rel_cov']) - err
+    cov_row_to_plot$left <- cov_row_to_plot[, 'minor_variant_rel_cov'] - width
+    cov_row_to_plot$right <- sapply(cov_row_to_plot[, 'minor_variant_rel_cov'], function(x){ min(0.5, x + width)})
+    apply(cov_row_to_plot, 1, plot_one_box, cov)
+}
+
+plot_one_box <- function(one_box_row, cov){
+    left <- as.numeric(one_box_row['left'])
+    right <- as.numeric(one_box_row['right'])
+    rect(left, cov - 0.5, right, cov + 0.5, col = one_box_row['col'], border = NA)
+}
+
+cov_tab[cov_tab$covA == cov_tab$covB, 'freq'] <- cov_tab[cov_tab$covA == cov_tab$covB, 'freq'] * 2
+
+args$ylim <- 50
+plot(NULL, xlim = xlim, ylim = c(0,args$ylim),
+        xlab = 'Normalized minor kmer coverage: B / (A + B)',
+        ylab = 'Total coverage of the kmer pair: A + B', cex.lab = 1.4)
+sapply(min(cov_tab[, 'total_pair_cov']):args$ylim, plot_one_coverage, 4)
+
+for ( cov in min(cov_tab[, 'total_pair_cov']):args$ylim ){
+    err <- (L - 1) / cov
+    cov_row_to_plot <- cov_tab[cov_tab[, 'total_pair_cov'] == cov, ]
+    width <- min(cov_row_to_plot[ , 'minor_variant_rel_cov']) - err
+    cov_row_to_plot$left <- cov_row_to_plot[, 'minor_variant_rel_cov'] - width
+    cov_row_to_plot$right <- sapply(cov_row_to_plot[, 'minor_variant_rel_cov'], function(x){ min(0.5, x + width)})
+    apply(cov_row_to_plot, 1, plot_one_box, cov)
+}
+
+
+
+```
+
+
+
+
+
+
+OS X gives this funny error when one plots too many rectangles in an interactive session
+
+```
+> Fatal error: Duplicate keys of type 'DisplayList' were found in a Dictionary.
+This usually means either that the type violates Hashable's requirements, or
+that members of such a dictionary were mutated after insertion.
+Trace/BPT trap: 5
+```
+
+The problem is reported here: https://stackoverflow.com/q/78615561/2962344 and this is a reproducible example of the error
+
+```R
+pal <- c("coral", "dodgerblue", "darkseagreen2")
+table_with_data <- data.frame(left = 0:9, right = 1:10, bot = rep(0:999, each = 10), top = rep(1:1000, each = 10), col = sample(pal, replace = T, 10000))
+plot(NULL, xlim = c(0, 10), ylim = c(0,1000))
+for (i in 1:nrow(table_with_data)){
+    rect(table_with_data$left[i], table_with_data$bot[i], table_with_data$right[i], table_with_data$top[i], col = table_with_data$col[i], border = NA)
+}
+
+```
+
+alternative local aggregation
+
+```bash
+for ToLID in daAchMill1 daAchPtar1 daAdoMosc1 daAjuCham1 daAjuRept1 daArcMinu1 daArtCamp1 daArtMari1 daArtVulg1 daAtrBela1; do
+    python3 playground/alternative_fitting/pair_clustering.py data/dicots/smu_files/$ToLID.k31_ploidy.smu.txt --mask_errors > data/dicots/peak_agregation/$ToLID.cov_tab_peaks
+    Rscript playground/alternative_fitting/alternative_plotting_testing.R -i data/dicots/peak_agregation/$ToLID.cov_tab_peaks -o data/dicots/peak_agregation/$ToLID
+done
+```
+
+This worked well. The agregation produced beautiful blocks, and vastly of the same shape as noticed by Richard. He suggested we should fix their shape and fit only a single parameter - coverage.
+
+```R
+smudge_tab <- read.table('data/dicots/peak_agregation/daArtMari1.cov_tab_peaks', col.names = c('covB', 'covA', 'freq', 'smudge'))
+
+all_smudges <- unique(smudge_tab[, 'smudge'])
+all_smudge_sizes <- sapply(all_smudges, function(x){ sum(smudge_tab[smudge_tab[, 'smudge'] == x, 'freq']) })
+
+# plot(sort(all_smudge_sizes, decreasing = T) / sum(all_smudge_sizes), ylim = c(0, 1))
+# sort(all_smudge_sizes, decreasing = T) / sum(all_smudge_sizes) > 0.02
+# 2% of data soiunds reasonable
+
+smudges <- all_smudges[all_smudge_sizes / sum(all_smudge_sizes) > 0.02 & all_smudges != 0]
+smudge_sizes <- all_smudge_sizes[all_smudge_sizes / sum(all_smudge_sizes) > 0.02 & all_smudges != 0]
+
+smudge_tab[, 'total_pair_cov'] <- smudge_tab[, 1] + smudge_tab[, 2]
+smudge_tab[, 'minor_variant_rel_cov'] <- smudge_tab[, 1] / smudge_tab[, 'total_pair_cov']
+
+
+smudge_tab_reduced <- smudge_tab[smudge_tab[, 'smudge'] %in% smudges, ]
+source('playground/alternative_fitting/alternative_plotting_functions.R')
+
+per_smudge_cov_list <- lapply(smudges, function(x){ smudge_tab_reduced[smudge_tab_reduced$smudge == x, ] })
+names(per_smudge_cov_list) <- smudges
+
+cov_sum_summary <- sapply(per_smudge_cov_list, function(x){ summary(x[, 'total_pair_cov']) } )
+rel_cov_summary <- sapply(per_smudge_cov_list, function(x){ summary(x[, 'minor_variant_rel_cov']) } )
+
+colnames(cov_sum_summary) <- colnames(rel_cov_summary) <- smudges
+
+data.frame(smudges = smudges, total_pair_cov = round(cov_sum_summary[4, ], 1), minor_variant_rel_cov = round(rel_cov_summary[4, ], 3))
+
+head(per_smudge_cov_list[['2']])
+
+one_smudge <- per_smudge_cov_list[['2']]
+one_smudge[one_smudge[, 'minor_variant_rel_cov'] == 0.5, ]
+
+table(one_smudge[, 'covB'])
+(one_smudge[, 'minor_variant_rel_cov'])
+
+
+
+    # cov_range <- seq((2 * .L) - 2, max_cov_pair, length = 500)
+    # lines((.L - 1)/cov_range, cov_range, lwd = 2.5, lty = 2, 
+
+plot_peakmap(smudge_tab_reduced, xlim = c(0, 0.5), ylim = c(0, 300))
+
+plot_seq_error_line(smudge_tab, 4)
+plot_seq_error_line(smudge_tab, 13)
+plot_seq_error_line(smudge_tab, 48)
+plot_seq_error_line(smudge_tab, 80)
+
+one_smudge <- per_smudge_cov_list[['4']]
+min(one_smudge[ ,'total_pair_cov'])
+
+one_smudge[one_smudge[ ,'total_pair_cov'] == 61, ]
+one_smudge <- one_smudge[order(one_smudge[, 'minor_variant_rel_cov']), ]
+
+right_part_of_the_smudge <- one_smudge[one_smudge[ ,'minor_variant_rel_cov'] > 0.2131147, ]
+
+all_minor_var_rel_covs <- sort(unique(round(right_part_of_the_smudge[, 'minor_variant_rel_cov'], 2)))
+corresponding_min_cov_sums <- sapply(all_minor_var_rel_covs, function(x){ min(right_part_of_the_smudge[round(right_part_of_the_smudge[, 'minor_variant_rel_cov'], 2) == x, 'total_pair_cov']) } )
+
+lines(all_minor_var_rel_covs, corresponding_min_cov_sums, lwd = 3, lty = 3, col = 'red')
+
+subtract_line <- function(rel_cov, cov_tab){
+    approx_rel_cov = round(rel_cov, 2)
+    band_covs = round(cov_tab[, 'minor_variant_rel_cov'], 2) == approx_rel_cov
+    cov_tab[band_covs, ][which.min(cov_tab[band_covs, 'total_pair_cov']), ]
+}
+
+edge_points <- t(sapply(all_minor_var_rel_covs, subtract_line, right_part_of_the_smudge))
+total_pair_cov <- sapply(1:29, function(x){edge_points[[x,5]]})
+minor_variant_rel_cov <- sapply(1:29, function(x){edge_points[[x,6]]})
+lm(total_pair_cov ~ minor_variant_rel_cov + I(minor_variant_rel_cov^2))
+
+plot_isoA_line <- function (.covA, .cov_tab, .col = "black") {
+    min_covB <- min(.cov_tab[, 'covB']) # should be L really
+    max_covB <- .covA
+    B_covs <- seq(min_covB, max_covB, length = 500)
+    lines(B_covs/ (B_covs + .covA), B_covs + .covA, lwd = 2.5, lty = 2, 
+        col = .col)
+}
+
+plot_isoA_line(48, smudge_tab, 'blue')
+plot_isoA_line(79, smudge_tab, 'blue')
+plot_isoA_line(110, smudge_tab, 'blue')
+plot_isoA_line(141, smudge_tab, 'blue')
+plot_isoA_line(172, smudge_tab, 'blue')
+
+```
+
+HA, looks great! Let's plot it on the background...
+
+```R
+library(smudgeplot)
+source('playground/alternative_fitting/alternative_plotting_functions.R')
+colour_ramp <- viridis(32)
+
+
+smudge_tab <- read.table('data/dicots/peak_agregation/daAchMill1.cov_tab_errors', col.names = c('covB', 'covA', 'freq', 'is_error'))
+# smudge_tab <- read.table('data/dicots/peak_agregation/daArtMari1.cov_tab_peaks', col.names = c('covB', 'covA', 'freq', 'smudge'))
+smudge_tab[, 'total_pair_cov'] <- smudge_tab[, 1] + smudge_tab[, 2]
+smudge_tab[, 'minor_variant_rel_cov'] <- smudge_tab[, 1] / smudge_tab[, 'total_pair_cov']
+cov = 31.1 # this is from GenomeScope this time
+
+plot_alt(smudge_tab[smudge_tab[, 'is_error'] != 0, ], c(0, 300), colour_ramp, T) 
+plot_alt(smudge_tab[smudge_tab[, 'is_error'] != 1, ], c(0, 300), colour_ramp, T)0
+plot_alt(smudge_tab, c(0, 500), colour_ramp, T)
+plot_iso_grid(31.1, 4, 300)
+plot_smudge_labels(18.1, 300)
+# .peak_points, .peak_sizes, .min_kmerpair_cov, .max_kmerpair_cov, col = "red"
+
+
+plot_iso_grid()
+
+plot_smudge_labels(cov, 240)
+text(0.49, cov / 2, "2err", offset = 0, cex = 1.3, xpd = T, pos = 2)
+```
+
+Say we will test ploidy up to 16 (capturing up to octoploid paralogs). That makes
+
+```R
+smudge_tab_with_err <- read.table('data/dicots/peak_agregation/daAchMill1.cov_tab_errors', col.names = c('covB', 'covA', 'freq', 'is_error'))
+
+smudge_filtering_threshold <- 0.01 # at least 1% of genomic kmers
+
+# # error band, done on non filtered data
+# smudge_tab[, 'edgepoint'] <- F
+# smudge_tab[smudge_tab[, 'covB'] < L + 3, 'edgepoint'] <- T
+# plot_alt(smudge_tab[smudge_tab[, 'edgepoint'], ], c(0, 500), colour_ramp, T)
+
+cov <- 19.55 # this will be unknown
+L <- min(smudge_tab_with_err[, 'covB'])
+smudge_tab <- smudge_tab_with_err[smudge_tab_with_err[, 'is_error'] == 0, ]
+genomic_kmer_pairs <- sum(smudge_tab[ ,'freq'])
+
+plot_alt(smudge_tab, c(0, 300), colour_ramp, T)
+
+smudge_tab[, 'total_pair_cov'] <- smudge_tab[, 1] + smudge_tab[, 2]
+smudge_tab[, 'minor_variant_rel_cov'] <- smudge_tab[, 1] / smudge_tab[, 'total_pair_cov']
+
+plot_alt(smudge_tab, c(0, 300), colour_ramp, T) 
+plot_smudge_labels(cov, 300)
+
+#### isolating all smudges given cov
+
+# total_genomic_kmer_pairs <- sum(smudge_tab[, 'freq'])
+
+# plot_alt(smudge_container[[1]], c(0, 300), colour_ramp, T) 
+# looks good!
+
+run_replicate <- function(cov, smudge_tab, smudge_filtering_threshold){
+    smudge_container <- create_smudge_container(cov, smudge_tab, smudge_filtering_threshold)
+    get_centrality(cov, smudge_container)
+}
+
+get_centrality <- function(cov, smudge_container){
+    ### 1; % of kmer pairs in smudges
+    per_smudge_size <- sapply(smudge_container, function(x){ sum(x[, 'freq'])})
+    # prop_of_kmers <- sum(per_smudge_size) / total_genomic_kmer_pairs ##
+
+    ### 2. measure of centrality
+
+    As <- sapply(strsplit(names(smudge_container), 'A'), function(x){ as.numeric(x[1])})
+    Bs <- sapply(strsplit(names(smudge_container), 'A'), function(x){ as.numeric(substr(x[2], 1, 1))})
+
+    cutoffs_tab <- data.frame(name = names(smudge_container), As = As, Bs = Bs, size = per_smudge_size, centrality = NA)
+
+    for(i in 1:length(smudge_container)){
+        test_smudge <- smudge_container[[i]]
+        A_range <- c(cov * (As[i] - 0.5), cov * (As[i] + 0.5))
+        B_range <- c(cov * (Bs[i] - 0.5), cov * (Bs[i] + 0.5))
+        summit <- test_smudge[which.max(test_smudge[, 'freq']), ]
+        cutoffs_tab[i,'centrality'] <- sum(min(abs(summit[, 'covB'] - B_range)) + min(abs(summit[, 'covA'] - A_range))) ##
+    }
+
+    sum(cutoffs_tab[,'centrality'] * (cutoffs_tab[,'size'] / sum(cutoffs_tab[,'size'])))
+}
+
+covs_to_test <- seq(10.05, 40.05, by = 0.1)
+centrality_grid <- sapply(covs_to_test, run_replicate, smudge_tab, smudge_filtering_threshold)
+```
+
+## Homopolymer compressed testing
+
+Datasets with lots of errors.
+
+## Other
+
+
+### .smu to smu.txt
+
+For the legacy `.smu` files, we have a convertor for to flat files.
+
+```bash
+gcc src_ploidyplot/smu2text_smu.c -o exec/smu2text_smu
+exec/smu2text_smu data/ddSalArbu1/ddSalArbu1.k31_ploidy.smu | less
+```
