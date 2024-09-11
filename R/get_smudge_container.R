@@ -17,7 +17,7 @@ get_smudge_container <- function(.cov_tab, .nbins = 20,
 
   smudge_container <- list()
   smudge_container$x <- seq(.xlim[1], ((.nbins - 1) / .nbins) * .xlim[2], length = .nbins)
-  smudge_container$y <- c(seq(.ylim[1], ((.nbins - 1) / .nbins) * .ylim[2], length = .nbins), .ylim[2])
+  smudge_container$y <- seq(.ylim[1], .ylim[2], length = .nbins + 1) # the one extra bin will be disposed
 
   xcoords <- findInterval(minor_variant_rel_cov, smudge_container$x, left.open = TRUE)
   ycoords <- findInterval(total_pair_cov, smudge_container$y, left.open = TRUE) # all >.ylim[2] will be in nbin+1 th bin
