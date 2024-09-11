@@ -19,7 +19,7 @@ args$invert_cols <- F
 cov_tab <- read.table(args$i, col.names = c('covB', 'covA', 'freq','peak'))
 
 xlim = c(0, 0.5)
-ylim = c(0, 150)
+ylim = c(0, 300)
 
 
 cov_tab[, 'total_pair_cov'] <- cov_tab[, 1] + cov_tab[, 2]
