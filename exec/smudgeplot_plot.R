@@ -70,6 +70,22 @@ cov_tab[, 'total_pair_cov'] <- cov_tab[, 'covA'] + cov_tab[, 'covB']
 # calcualte relative coverage of the minor allele
 cov_tab[, 'minor_variant_rel_cov'] <- cov_tab[, 'covB'] / cov_tab[, 'total_pair_cov']
 
+##### coverage filtering
+
+if ( !is.null(args$c) ){
+    threshold <- args$c
+    low_cov_filt <- cov_tab[, 'covA'] < threshold | cov_tab[, 'covB'] < threshold 
+    smudge_warn(args$output, "Removing", sum(cov_tab[low_cov_filt, 'freq']), 
+                "kmer pairs for which one of the pair had coverage below",
+                threshold, paste0("(Specified by argument -c ", args$c, ")"))
+    cov_tab <- cov_tab[!low_cov_filt, ]
+    smudge_warn(args$output, "Processing", sum(cov_tab[, 'freq']), "kmer pairs")
+    L <- min(cov_tab[, 'covB'])
+} else {
+    L <- ifelse(length(args$L) == 0, min(cov_tab[, 'covB']), args$L)
+}
+
+##### quantile filtering
 if ( !is.null(args$q) ){
     # quantile filtering (remove top q%, it's not really informative)    
     threshold <- wtd.quantile(cov_tab[, 'total_pair_cov'], args$q, cov_tab[, 'freq'])
@@ -93,20 +109,6 @@ if( args$alt_plot ){
     stop(paste("Alt plot has been generated: ", plot_name, " we are done here!"), call.=FALSE)
 }
 
-#####
-
-if ( !is.null(args$c) ){
-    threshold <- args$c
-    low_cov_filt <- cov_tab[, 'covA'] < threshold | cov_tab[, 'covB'] < threshold 
-    smudge_warn(args$output, "Removing", sum(cov_tab[low_cov_filt, 'freq']), 
-                "kmer pairs for which one of the pair had coverage below",
-                threshold, paste0("(Specified by argument -c ", args$c, ")"))
-    cov_tab <- cov_tab[!low_cov_filt, ]
-    smudge_warn(args$output, "Processing", sum(cov_tab[, 'freq']), "kmer pairs")
-    L <- min(cov_tab[, 'covB'])
-} else {
-    L <- ifelse(length(args$L) == 0, min(cov_tab[, 'covB']), args$L)
-}
 smudge_summary$n_subset_est <- round(estimate_1n_coverage_1d_subsets(cov_tab), 1)
 
 if (!args$just_plot){
