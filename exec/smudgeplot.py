@@ -214,7 +214,19 @@ def peak_agregation(args):
 def get_smudge_container(cov_tab, cov, smudge_filter):
     smudge_container = dict()
     total_kmer_pairs = sum(cov_tab['freq'])
-    return(total_kmer_pairs)
+
+    for Bs in range(1,9):
+        min_cov = 0 if Bs == 1 else cov * (Bs - 0.5)
+        max_cov = cov * (Bs + 0.5)
+        cov_tab_isoB = cov_tab.loc[(cov_tab["covB"] > min_cov) & (cov_tab["covB"] < max_cov)] #  
+
+        for As in range(Bs,(17 - Bs)):
+            min_cov = 0 if As == 1 else cov * (As - 0.5)
+            max_cov = cov * (As + 0.5)
+            cov_tab_iso_smudge = cov_tab_isoB.loc[(cov_tab_isoB["covA"] > min_cov) & (cov_tab_isoB["covA"] < max_cov)]
+            sys.stdout.write(f"{As}A{Bs}B: {cov_tab_iso_smudge.shape[0]}\n")
+            smudge_container["A" * As + "B" * Bs] = cov_tab_iso_smudge
+    return(smudge_container)
 
 #####################
 # the script itself #
@@ -303,7 +315,8 @@ def main():
         sys.stderr.write("\nInfering 1n coverage using grid algorihm\n")
 
         smudge_container = get_smudge_container(cov_tab, 15, 0.02)
-        sys.stderr.write("\nTotal:" + str(smudge_container) + " kmers\n")
+        smudges = len(smudge_container)
+        sys.stderr.write(f"\nStoring {smudges} smudges\n")
         
         sys.stderr.write("\nPlotting\n")
 
