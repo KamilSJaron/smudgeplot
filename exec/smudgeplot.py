@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+from pandas import read_csv
 from os import system
 from math import log
 from math import ceil
@@ -20,9 +21,11 @@ class parser():
         argparser = argparse.ArgumentParser(
             # description='Inference of ploidy and heterozygosity structure using whole genome sequencing data',
             usage='''smudgeplot <task> [options] \n
-tasks: cutoff    Calculate meaningful values for lower kmer histogram cutoff.
-       hetmers   Calculate unique kmer pairs from a FastK k-mer database.
-       plot      Generate 2d histogram; infere ploidy and plot a smudgeplot.\n\n''')
+tasks: cutoff           Calculate meaningful values for lower kmer histogram cutoff.
+       hetmers          Calculate unique kmer pairs from a FastK k-mer database.
+       peak_agregation  Agregates smudges using local agregation algorithm.
+       plot             Generate 2d histogram; infere ploidy and plot a smudgeplot.
+       all (default)    Runs all the steps ()\n\n''')
         # removing this for now;
         #        extract   Extract kmer pairs within specified coverage sum and minor covrage ratio ranges
         argparser.add_argument('task', help='Task to execute; for task specific options execute smudgeplot <task> -h')
@@ -95,17 +98,21 @@ tasks: cutoff    Calculate meaningful values for lower kmer histogram cutoff.
         argparser.add_argument('boundary', help='Which bounary to compute L (lower) or U (upper)')
         self.arguments = argparser.parse_args(sys.argv[2:])
 
-    def extract(self):
+    def peak_agregation(self):
         '''
         Extract kmer pairs within specified coverage sum and minor covrage ratio ranges.
         '''
-        argparser = argparse.ArgumentParser(prog = 'smudgeplot extract', description='Extract kmer pairs within specified coverage sum and minor covrage ratio ranges.')
-        argparser.add_argument("-cov", "--coverageFile",required=True, help="coverage file for the kmer pairs")
-        argparser.add_argument("-seq", "--seqFile",required=True, help="sequences of the kmer pairs")
-        argparser.add_argument("-minc", "--countMin",required=True, help="lower bound of the summed coverage", type=int)
-        argparser.add_argument("-maxc", "--countMax",required=True, help="upper bound of the summed coverage", type=int)
-        argparser.add_argument("-minr", "--ratioMin",required=True, help="lower bound of minor allele ratio", type=float)
-        argparser.add_argument("-maxr", "--ratioMax",required=True, help="upper bound of minor allele ratio", type=float)
+        argparser = argparse.ArgumentParser()
+        argparser.add_argument('infile', nargs='?', help='name of the input tsv file with covarages and frequencies.')
+        argparser.add_argument('-nf', '-noise_filter', help='Do not agregate into smudge k-mer pairs with frequency lower than this parameter', type=int, default=50)
+        argparser.add_argument('-d', '-distance', help='Manthattan distance of k-mer pairs that are considered neioboring for the local agregation purposes.', type=int, default=5)
+        argparser.add_argument('--mask_errors', help='instead of reporting assignments to individual smudges, just remove all monotonically decreasing points from the error line', action="store_true", default = False)
+        self.arguments = argparser.parse_args(sys.argv[2:])
+
+    def all(self):
+        argparser = argparse.ArgumentParser()
+        argparser.add_argument('infile', nargs='?', help='name of the input tsv file with covarages and frequencies.')
+        argparser.add_argument('-o', help='The pattern used to name the output (smudgeplot).', default='smudgeplot')
         self.arguments = argparser.parse_args(sys.argv[2:])
 
 ###############
@@ -143,6 +150,71 @@ def cutoff(args):
         U = round_up_nice(min([i for i, q in enumerate(hist_rel_cumsum) if q > 0.998]))
         sys.stdout.write(str(U))
     sys.stdout.flush()
+
+########################
+# task peak_agregation #
+########################
+
+def load_hetmers(smufile):
+    cov_tab = read_csv(smufile, names = ['covB', 'covA', 'freq'], sep='\t')
+    cov_tab = cov_tab.sort_values('freq', ascending = False)
+    return(cov_tab)
+
+def local_agregation(cov_tab, distance, noise_filter, mask_errors):
+    # generate a dictionary that gives us for each combination of coverages a frequency
+    cov2freq = defaultdict(int)
+    cov2peak = defaultdict(int)
+
+    L = min(cov_tab['covB']) # important only when --mask_errors is on
+
+    ### clustering
+    next_peak = 1
+    for idx, covB, covA, freq in cov_tab.itertuples():
+        cov2freq[(covA, covB)] = freq # a make a frequency dictionary on the fly, because I don't need any value that was not processed yet
+        if freq < noise_filter:
+            break
+        highest_neigbour_coords = (0, 0)
+        highest_neigbour_freq = 0
+        # for each kmer pair I will retrieve all neibours (Manhattan distance)
+        for xA in range(covA - distance,covA + distance + 1):
+            # for explored A coverage in neiborhood, we explore all possible B coordinates
+            distanceB = distance - abs(covA - xA)
+            for xB in range(covB - distanceB,covB + distanceB + 1):
+                xB, xA = sorted([xA, xB]) # this is to make sure xB is smaller than xA
+                # iterating only though those that were assigned already
+                # and recroding only the one with highest frequency
+                if cov2peak[(xA, xB)] and cov2freq[(xA, xB)] > highest_neigbour_freq:
+                    highest_neigbour_coords = (xA, xB)
+                    highest_neigbour_freq = cov2freq[(xA, xB)]
+        if highest_neigbour_freq > 0:
+            cov2peak[(covA, covB)] = cov2peak[(highest_neigbour_coords)]
+        else:
+            # print("new peak:", (covA, covB))
+            if mask_errors:
+                if covB < L + distance:
+                    cov2peak[(covA, covB)] = 1 # error line
+                else:
+                    cov2peak[(covA, covB)] = 0 # central smudges
+            else:
+                cov2peak[(covA, covB)] = next_peak # if I want to keep info about all locally agregated smudges
+                next_peak += 1
+    return(cov2peak)
+
+def peak_agregation(args):
+    ### load data
+    cov_tab = load_hetmers(args.infile)
+
+    cov2peak = local_agregation(cov_tab, args.d, args.nf, mask_errors = False)
+
+    cov_tab = cov_tab.sort_values(['covA', 'covB'], ascending = True)
+    for idx, covB, covA, freq in cov_tab.itertuples():
+        peak = cov2peak[(covA, covB)]
+        sys.stdout.write(f"{covB}\t{covA}\t{freq}\t{peak}\n")
+
+def get_smudge_container(cov_tab, cov, smudge_filter):
+    smudge_container = dict()
+    total_kmer_pairs = sum(cov_tab['freq'])
+    return(total_kmer_pairs)
 
 #####################
 # the script itself #
@@ -209,9 +281,31 @@ def main():
         sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
         system("smudgeplot_plot.R " + plot_args)
 
-    if _parser.task == "extract":
-        extract_kmer_pairs(_parser.arguments)
+    if _parser.task == "peak_agregation":
+        peak_agregation(_parser.arguments)
 
+    if _parser.task == "all":
+        args = _parser.arguments
+
+        sys.stderr.write("\nLoading data\n")
+        cov_tab = load_hetmers(args.infile)
+
+        sys.stderr.write("\nMasking errors using local agregation algorithm\n")
+        cov2peak = local_agregation(cov_tab, distance = 1, noise_filter = 1000, mask_errors = True)
+
+        cov_tab = cov_tab.sort_values(['covA', 'covB'], ascending = True)
+        with open(args.o + "_masked_errors_smu.txt", 'w') as error_annotated_smu:
+            error_annotated_smu.write("covB\tcovA\tfreq\tis_error\n")
+            for idx, covB, covA, freq in cov_tab.itertuples():
+                peak = cov2peak[(covA, covB)]
+                error_annotated_smu.write(f"{covB}\t{covA}\t{freq}\t{peak}\n") # might not be needed
+
+        sys.stderr.write("\nInfering 1n coverage using grid algorihm\n")
+
+        smudge_container = get_smudge_container(cov_tab, 15, 0.02)
+        sys.stderr.write("\nTotal:" + str(smudge_container) + " kmers\n")
+        
+        sys.stderr.write("\nPlotting\n")
 
     sys.stderr.write("\nDone!\n")
     exit(0)
