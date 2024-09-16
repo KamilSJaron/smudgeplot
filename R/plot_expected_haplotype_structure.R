@@ -19,3 +19,23 @@ plot_expected_haplotype_structure <- function(.n, .peak_sizes,
              offset = 0, cex = .cex, xpd = T, pos = ifelse( borercases[i] & .adjust, 2, 1))
     }
 }
+
+#' @export
+plot_all_smudge_labels <- function(cov_est, ymax, xmax = 0.49, .cex = 1.3, .L = 4, err = F){
+    if (err){
+        for (As in 1:(floor(ymax / cov_est) - 1)){
+            label <- paste0(As, "Aerr")
+            text(.L / (As * cov_est), (As * cov_est) + .L, label,
+                    offset = 0, cex = .cex, xpd = T, pos = ifelse(As == 1, 3, 4))
+        }
+    }
+    for (ploidy in 2:floor(ymax / cov_est)){
+        for (Bs in 1:floor(ploidy / 2)){
+            As = ploidy - Bs
+            label <- paste0(As, "A", Bs, "B")
+            text(ifelse(As == Bs, (xmax + 0.49)/2, Bs / ploidy), ploidy * cov_est, label, 
+                 offset = 0, cex = .cex, xpd = T, 
+                 pos = ifelse(As == Bs, 2, 1))
+        }
+    }
+}

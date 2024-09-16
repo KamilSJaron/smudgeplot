@@ -8,7 +8,7 @@ import argparse
 from pandas import read_csv # type: ignore
 from collections import defaultdict
 from statistics import mean
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 ####
 
