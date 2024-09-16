@@ -5,13 +5,16 @@
 #'
 #' @export
 
-plot_alt <- function(cov_tab, ylim, colour_ramp){
+plot_alt <- function(cov_tab, ylim, colour_ramp, log = F){
     A_equals_B <- cov_tab[, 'covA'] == cov_tab[, 'covB']
     cov_tab[A_equals_B, 'freq'] <- cov_tab[A_equals_B, 'freq'] * 2
+    if (log){
+        cov_tab[, 'freq'] <- log10(cov_tab[, 'freq'])
+    }
     cov_tab$col <- colour_ramp[1 + round(31 * cov_tab[, 'freq'] / max(cov_tab[, 'freq']))]
 
     # c(bottom, left, top, right)
-    par(mar=c(0,0,1,1))
+    par(mar=c(4.8,4.8,1,1))
     plot(NULL, xlim = c(0, 0.5), ylim = ylim,
          xlab = 'Normalized minor kmer coverage: B / (A + B)',
          ylab = 'Total coverage of the kmer pair: A + B', cex.lab = 1.4, bty = 'n')

@@ -4,7 +4,7 @@
 \alias{reduce_structure_representation}
 \title{reduce_structure_representation}
 \usage{
-reduce_structure_representation(.peak_sizes)
+reduce_structure_representation(long_smudge_labels)
 }
 \arguments{
 \item{.peak_sizes}{- a table with peak sizes, the truly important column in there is just the "structure" one}

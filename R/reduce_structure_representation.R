@@ -7,13 +7,13 @@
 #'
 #' @export
 
-reduce_structure_representation <- function(.peak_sizes){
-    structures_to_adjust <- sapply(.peak_sizes$structure, nchar) > 4
+reduce_structure_representation <- function(long_smudge_labels){
+    structures_to_adjust <- sapply(long_smudge_labels, nchar) > 4
     if (any(structures_to_adjust)) {
-        decomposed_struct <- strsplit(.peak_sizes$structure[structures_to_adjust], '')
+        decomposed_struct <- strsplit(long_smudge_labels[structures_to_adjust], '')
         As <- sapply(decomposed_struct, function(x){ sum(x == 'A') } )
         Bs <- sapply(decomposed_struct, length) - As
-        .peak_sizes$structure[structures_to_adjust] <- paste0(As, 'A', Bs, 'B')
+        long_smudge_labels[structures_to_adjust] <- paste0(As, 'A', Bs, 'B')
     }
-    .peak_sizes$structure
+    long_smudge_labels
 }

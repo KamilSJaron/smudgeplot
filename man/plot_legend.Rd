@@ -4,7 +4,7 @@
 \alias{plot_legend}
 \title{plot_legend}
 \usage{
-plot_legend(.k, .colour_ramp, .log_scale = T)
+plot_legend(kmer_max, .colour_ramp, .log_scale = T)
 }
 \description{
 \code{plot_legend} generate topright corener in the smudgeplot

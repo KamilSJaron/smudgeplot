@@ -12,7 +12,9 @@ parser <- ArgumentParser()
 parser$add_argument("--homozygous", action="store_true", default = F,
                     help="Assume no heterozygosity in the genome - plotting a paralog structure; [default FALSE]")
 parser$add_argument("-i", "--input", default = "*_smu.txt",
-                    help="name of the input tsv file with covarages [default \"coverages_2.tsv\"]")
+                    help="name of the input tsv file with covarages [default \"*_smu.txt\"]")
+parser$add_argument("-s", "--smudges", default = "not_specified",
+                    help="name of the input tsv file with annotated smudges and their respective sizes")
 parser$add_argument("-o", "--output", default = "smudgeplot",
                     help="name pattern used for the output files (OUTPUT_smudgeplot.png, OUTPUT_summary.txt, OUTPUT_warrnings.txt) [default \"smudgeplot\"]")
 parser$add_argument("-t", "--title",
@@ -37,10 +39,7 @@ parser$add_argument("--plot_err_line", action="store_true", default = F,
                     help="Set this flag to add a line of theh higher expected occurance of errors paired with genomic k-mers")
 parser$add_argument("--just_plot", action="store_true", default = F,
                     help="Turns off the inference of coverage and annotation of smudges; simply generates smudgeplot. (default False)")
-parser$add_argument("--alt_plot", action="store_true", default = F,
-                    help="Uses a new way to plot smudgeplots using tiling strategy, which is likely to be the default for the Oriel 0.3.0 release (default False)")
-
-
+ 
 args <- parser$parse_args()
 
 colour_ramp_log <- get_col_ramp(args, 16) # create palette for the log plots
@@ -64,6 +63,7 @@ if ( !file.exists(args$input) ) {
 }
 
 cov_tab <- read.table(args$input, col.names = c('covB', 'covA', 'freq'))
+smudge_tab <- read.table(args$smudges, col.names = c('structure', 'size'))
 
 # total covarate of the kmer pair
 cov_tab[, 'total_pair_cov'] <- cov_tab[, 'covA'] + cov_tab[, 'covB']
@@ -149,52 +149,18 @@ smudge_warn(args$output, "## PLOT ##")
 smudge_warn(args$output, "##########")
 
 fig_title <- ifelse(length(args$title) == 0, NA, args$title[1])
-
-# ##### alt plotcov
-# if( args$alt_plot ){
-#     ylim <- c(0, max(cov_tab[, 'total_pair_cov']))
-#     if (!is.null(args$ylim)){ # if ylim is specified, set the bounday by the argument instead
-#         ylim[2] <- args$ylim
-#     }
-#     plot_name <- paste0(args$output,'_alt_smudgeplot.pdf')
-#     pdf(plot_name)
-#         plot_alt(cov_tab, ylim, colour_ramp)
-#     dev.off()
-#     stop(paste("Alt plot has been generated: ", plot_name, " we are done here!"), call.=FALSE)
-# }
-
-# pdf(paste0(args$output,'_smudgeplot_log10.pdf'))
-
-# layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
-# # 1 smudge plot
-# # plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp_log)
-# plot_alt(cov_tab, ylim, colour_ramp_log)
-# if (!args$just_plot){
-#     plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
-# }
-# if (args$plot_err_line){
-#     plot_seq_error_line(cov_tab)
-# }
-
 histogram_bins = max(30, args$nbins)
-# # 2,3 hist
-# plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = histogram_bins) # I am testing here setting the number of bars to the same number as the number of squares
-# # 4 legend
-# plot_legend(smudge_container, colour_ramp_log)
-
-# dev.off()
-
-# # replace the log transformed values by non-transformed
-# smudge_container$z <- smudge_container$dens
 
 pdf(paste0(args$output,'_smudgeplot.pdf'))
 
-layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
+# layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
+layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_alt(cov_tab, ylim, colour_ramp_log)
 if (!args$just_plot){
     # plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
-    plot_all_smudge_labels(smudge_summary$n, ylim[2], xmax = 0.49, .cex = 1.3, .L = L, err = F)
+    # plot_all_smudge_labels(smudge_summary$n, ylim[2], xmax = 0.49, .cex = 1.3, .L = L, err = F)
+    plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
 }
 # plot error line L - 1 / cov ~ cov
 if (args$plot_err_line){
@@ -202,10 +168,40 @@ if (args$plot_err_line){
 }
 
 # 2,3 hist
-plot_histograms(cov_tab, fig_title,
-                .ylim = ylim, .bins = histogram_bins)
+# plot_histograms(cov_tab, fig_title,
+#                 .ylim = ylim, .bins = histogram_bins)
 
 # 4 legend
-# plot_legend(smudge_container, colour_ramp, F)
+plot_legend(max(cov_tab[, 'freq']), colour_ramp, F)
+
+### add annotation
+
+dev.off()
+
+
+pdf(paste0(args$output,'_smudgeplot_log10.pdf'))
+
+layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
+# cov_tab[, 'freq'] <- log10(cov_tab[, 'freq'])
+# 1 smudge plot
+# plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp_log)
+plot_alt(cov_tab, ylim, colour_ramp_log, log = T)
+if (!args$just_plot){
+    plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
+}
+if (args$plot_err_line){
+    plot_seq_error_line(cov_tab)
+}
+
+# # 2,3 hist
+# plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = histogram_bins) # I am testing here setting the number of bars to the same number as the number of squares
+# 4 legend
+plot_legend(max(cov_tab[, 'freq']), colour_ramp_log, F)
+
+# print smudge sizes
+plot.new()
+legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,1]), cex = 1.1)
+legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
+legend('bottomleft', bty = 'n', legend = paste0("1n = ", cov), cex = 1.1)
 
 dev.off()
