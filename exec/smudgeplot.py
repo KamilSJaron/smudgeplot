@@ -403,7 +403,7 @@ def main():
 
         system("centrality_plot.R " + args.o + "_centralities.txt")
         # Rscript playground/alternative_fitting/alternative_plotting_testing.R -i data/dicots/peak_agregation/$ToLID.cov_tab_peaks -o data/dicots/peak_agregation/$ToLID
-        system("smudgeplot_plot.R -i" + args.infile + " -o " + args.o + " -n " + str(cov) + " -ylim 300 --alt_plot") 
+        system("smudgeplot_plot.R -i" + args.infile + " -o " + args.o + " -n " + str(cov) + " -ylim 300") 
 
     sys.stderr.write("\nDone!\n")
     exit(0)

@@ -248,13 +248,13 @@ smudge_tab[, 'total_pair_cov'] <- smudge_tab[, 1] + smudge_tab[, 2]
 smudge_tab[, 'minor_variant_rel_cov'] <- smudge_tab[, 1] / smudge_tab[, 'total_pair_cov']
 cov = 31.1 # this is from GenomeScope this time
 
-plot_alt(smudge_tab[smudge_tab[, 'is_error'] != 0, ], c(0, 300), colour_ramp, T) 
-plot_alt(smudge_tab[smudge_tab[, 'is_error'] != 1, ], c(0, 300), colour_ramp, T)0
-plot_alt(smudge_tab, c(0, 500), colour_ramp, T)
-plot_iso_grid(31.1, 4, 300)
-plot_smudge_labels(18.1, 300)
+plot_alt(smudge_tab[smudge_tab[, 'is_error'] != 0, ], c(0, 100), colour_ramp, T) 
+plot_alt(smudge_tab[smudge_tab[, 'is_error'] != 1, ], c(0, 100), colour_ramp, T)
+plot_alt(smudge_tab, c(0, 100), colour_ramp, T)
+plot_iso_grid(31.1, 4, 100)
+plot_smudge_labels(18.1, 100)
 # .peak_points, .peak_sizes, .min_kmerpair_cov, .max_kmerpair_cov, col = "red"
-
+dev.off()
 
 plot_iso_grid()
 
@@ -268,6 +268,7 @@ Say we will test ploidy up to 16 (capturing up to octoploid paralogs). That make
 smudge_tab_with_err <- read.table('data/dicots/peak_agregation/daAchMill1.cov_tab_errors', col.names = c('covB', 'covA', 'freq', 'is_error'))
 
 smudge_filtering_threshold <- 0.01 # at least 1% of genomic kmers
+colour_ramp <- viridis(32)
 
 # # error band, done on non filtered data
 # smudge_tab[, 'edgepoint'] <- F
@@ -284,8 +285,9 @@ plot_alt(smudge_tab, c(0, 300), colour_ramp, T)
 smudge_tab[, 'total_pair_cov'] <- smudge_tab[, 1] + smudge_tab[, 2]
 smudge_tab[, 'minor_variant_rel_cov'] <- smudge_tab[, 1] / smudge_tab[, 'total_pair_cov']
 
-plot_alt(smudge_tab, c(0, 300), colour_ramp, T) 
-plot_smudge_labels(cov, 300)
+plot_alt(smudge_tab, c(0, 300), colour_ramp) 
+plot_all_smudge_labels(cov, 300)
+dev.off()
 
 #### isolating all smudges given cov
 
@@ -294,37 +296,25 @@ plot_smudge_labels(cov, 300)
 # plot_alt(smudge_container[[1]], c(0, 300), colour_ramp, T) 
 # looks good!
 
-run_replicate <- function(cov, smudge_tab, smudge_filtering_threshold){
-    smudge_container <- create_smudge_container(cov, smudge_tab, smudge_filtering_threshold)
-    get_centrality(cov, smudge_container)
-}
-
-get_centrality <- function(cov, smudge_container){
-    ### 1; % of kmer pairs in smudges
-    per_smudge_size <- sapply(smudge_container, function(x){ sum(x[, 'freq'])})
-    # prop_of_kmers <- sum(per_smudge_size) / total_genomic_kmer_pairs ##
-
-    ### 2. measure of centrality
-
-    As <- sapply(strsplit(names(smudge_container), 'A'), function(x){ as.numeric(x[1])})
-    Bs <- sapply(strsplit(names(smudge_container), 'A'), function(x){ as.numeric(substr(x[2], 1, 1))})
-
-    cutoffs_tab <- data.frame(name = names(smudge_container), As = As, Bs = Bs, size = per_smudge_size, centrality = NA)
-
-    for(i in 1:length(smudge_container)){
-        test_smudge <- smudge_container[[i]]
-        A_range <- c(cov * (As[i] - 0.5), cov * (As[i] + 0.5))
-        B_range <- c(cov * (Bs[i] - 0.5), cov * (Bs[i] + 0.5))
-        summit <- test_smudge[which.max(test_smudge[, 'freq']), ]
-        cutoffs_tab[i,'centrality'] <- sum(min(abs(summit[, 'covB'] - B_range)) + min(abs(summit[, 'covA'] - A_range))) ##
-    }
-
-    sum(cutoffs_tab[,'centrality'] * (cutoffs_tab[,'size'] / sum(cutoffs_tab[,'size'])))
-}
-
-covs_to_test <- seq(10.05, 40.05, by = 0.1)
+# two functions need to be sources from the smudgeplot package here
+covs_to_test <- seq(10.05, 60.05, by = 0.1)
 centrality_grid <- sapply(covs_to_test, run_replicate, smudge_tab, smudge_filtering_threshold)
+covs_to_test[which.max(centrality_grid)]
+
+sapply(c(21.71, 21.72, 21.73), run_replicate, smudge_tab, smudge_filtering_threshold)
+# 21.72 is our winner!
+
+tested_covs <- test_grid_of_coverages(smudge_tab, smudge_filtering_threshold, min_to_explore, max_to_explore)
+plot(tested_covs[, 'cov'], tested_covs[, 'centrality'])
+
 ```
+
+Fixing the main package
+
+```
+exec/smudgeplot.py plot -n 21.21 -i ~/test/
+```
+
 
 ## Homopolymer compressed testing
 

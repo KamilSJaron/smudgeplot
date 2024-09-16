@@ -6,7 +6,6 @@
 \usage{
 plot_histograms(
   .cov_tab,
-  .smudge_summary,
   .fig_title = NA,
   .cex = 1.4,
   .col = NA,
