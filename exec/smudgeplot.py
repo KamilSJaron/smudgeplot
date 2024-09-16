@@ -13,6 +13,8 @@ from math import log
 from math import ceil
 from statistics import fmean
 from collections import defaultdict
+# import matplotlib as mpl
+# import matplotlib.pyplot as plt
 # from matplotlib.pyplot import plot
 
 version = '0.3.0 oriel'
@@ -385,7 +387,7 @@ def main():
 
         smudge_size_cutoff = 0.01 # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
         centralities = test_coverage_range(cov_tab, 10, 60, smudge_size_cutoff)
-        np.savetxt(args.o + "_centralities.txt", np.around(centralities, decimals=6), fmt="%.4f")
+        np.savetxt(args.o + "_centralities.txt", np.around(centralities, decimals=6), fmt="%.4f", delimiter = '\t')
         # plot(centralities['coverage'], centralities['coverage'])
 
         cov = centralities['coverage'][argmin(centralities['centrality'])]
@@ -396,14 +398,14 @@ def main():
         smudge_sizes = [round(sum(final_smudges[smudge]['freq']) / total_kmers, 4) for smudge in annotated_smudges]
 
         # saving smudge sizes
-        # smudge_table = DataFrame({'smudge': annotated_smudges, 'size': smudge_sizes})
-        # np.savetxt(args.o + "_smudge_sizes.txt", smudge_table)
+        smudge_table = DataFrame({'smudge': annotated_smudges, 'size': smudge_sizes})
+        np.savetxt(args.o + "_smudge_sizes.txt", smudge_table, fmt='%s', delimiter = '\t')
 
         sys.stderr.write("\nPlotting\n")
 
         system("centrality_plot.R " + args.o + "_centralities.txt")
         # Rscript playground/alternative_fitting/alternative_plotting_testing.R -i data/dicots/peak_agregation/$ToLID.cov_tab_peaks -o data/dicots/peak_agregation/$ToLID
-        system("smudgeplot_plot.R -i" + args.infile + " -o " + args.o + " -n " + str(cov) + " -ylim 300") 
+        system("smudgeplot_plot.R -i" + args.infile + " -o " + args.o + " -n " + str(cov) + " -s " + args.o + "_smudge_sizes.txt -ylim 300 -t 'grid algorithm trial'") 
 
     sys.stderr.write("\nDone!\n")
     exit(0)

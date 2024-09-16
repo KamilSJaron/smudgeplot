@@ -7,6 +7,14 @@
 
 plot_expected_haplotype_structure <- function(.n, .peak_sizes,
                                               .adjust = F, .cex = 1.3, xmax = 0.49){
+    .peak_sizes <- .peak_sizes[.peak_sizes[, 'size'] > 0.05, ]
+    .peak_sizes[, 'ploidy'] <- nchar(.peak_sizes[, 'structure'])
+
+    decomposed_struct <- strsplit(.peak_sizes[, 'structure'], '')
+    .peak_sizes[, 'corrected_minor_variant_cov'] <- sapply(decomposed_struct, function(x){ sum(x == 'B') } ) / .peak_sizes[, 'ploidy']
+
+    .peak_sizes[, 'label'] <- reduce_structure_representation(.peak_sizes[, 'structure'])
+                                                
     borercases <- .peak_sizes$corrected_minor_variant_cov == 0.5
     structures <- reduce_structure_representation(.peak_sizes)
 
@@ -15,7 +23,7 @@ plot_expected_haplotype_structure <- function(.n, .peak_sizes,
         # which is too far from the edge, so I average it with 0.49
         # witch will pull the label bit to the edge
         text( ifelse( borercases[i] & .adjust, (xmax + 0.49) / 2, .peak_sizes$corrected_minor_variant_cov[i]),
-             .peak_sizes$ploidy[i] * .n, structures[i],
+             .peak_sizes$ploidy[i] * .n, .peak_sizes[i, 'label'],
              offset = 0, cex = .cex, xpd = T, pos = ifelse( borercases[i] & .adjust, 2, 1))
     }
 }

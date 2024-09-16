@@ -4,7 +4,7 @@
 \alias{plot_alt}
 \title{plot_alt}
 \usage{
-plot_alt(cov_tab, ylim, colour_ramp)
+plot_alt(cov_tab, ylim, colour_ramp, log = F)
 }
 \description{
 \code{plot_alt} is an alternative plotting introduced for 0.3.0 oriel. Instead of summing all the coverages falling within boundaries of squares, we make a tiling that will cover each individual point
