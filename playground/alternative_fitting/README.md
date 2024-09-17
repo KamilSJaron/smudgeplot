@@ -34,106 +34,7 @@ text(rep(0.05, number_of_coverages_to_plot), 8:19, 8:19)
 
 This is more serious attempt that does not really work.
 
-```R
-library(smudgeplot)
-source('playground/alternative_fitting/alternative_plotting_functions.R')
-
-args <- list()
-args$col_ramp <- 'viridis'
-args$invert_cols <- F
-args$ylim <- 30
-colour_ramp <- get_col_ramp(args)
-
-
-cov_tab <- read.table('playground/alternative_fitting/smudgeplot testing datasets/6_low_coverage_real/daArtCamp1.k31_ploidy.smu.txt', header = F)
-colnames(cov_tab) <- c('covB','covA', 'freq')
-
-cov_tab[, 'total_pair_cov'] <- cov_tab[, 'covA'] + cov_tab[, 'covB']
-cov_tab[, 'minor_variant_rel_cov'] <- cov_tab[, 'covB'] / cov_tab[, 'total_pair_cov']
-cols <- colour_ramp[1 + round(31 * cov_tab$freq / max(cov_tab$freq))]
-
-head(cov_tab)
-
-xlim = c(0, 0.5)
-ylim = c(0, 20)
-# ylim = c(0, max(cov_tab[, 'total_pair_cov']))
-
-# plot_dot_smudgeplot(cov_tab, colour_ramp, xlim, ylim)
-
-# plot_unsquared_smudgeplot(cov_tab, colour_ramp, xlim, ylim)
-
-cov_tab[cov_tab$covA == cov_tab$covB, 'freq'] <- cov_tab[cov_tab$covA == cov_tab$covB, 'freq'] * 2
-cov_tab$col = colour_ramp[1 + round(31 * cov_tab$freq / max(cov_tab$freq))]
-
-plot(NULL, xlim = xlim, ylim = c(0,1000),
-        xlab = 'Normalized minor kmer coverage: B / (A + B)',
-        ylab = 'Total coverage of the kmer pair: A + B', cex.lab = 1.4)
-
-L = floor(min(cov_tab[, 'total_pair_cov']) / 2)
-
-plot_one_coverage <- function(cov, L){
-    err <- (L - 1) / cov
-    cov_row_to_plot <- cov_tab[cov_tab[, 'total_pair_cov'] == cov, ]
-    width <- min(cov_row_to_plot[ , 'minor_variant_rel_cov']) - err
-    cov_row_to_plot$left <- cov_row_to_plot[, 'minor_variant_rel_cov'] - width
-    cov_row_to_plot$right <- sapply(cov_row_to_plot[, 'minor_variant_rel_cov'], function(x){ min(0.5, x + width)})
-    apply(cov_row_to_plot, 1, plot_one_box, cov)
-}
-
-plot_one_box <- function(one_box_row, cov){
-    left <- as.numeric(one_box_row['left'])
-    right <- as.numeric(one_box_row['right'])
-    rect(left, cov - 0.5, right, cov + 0.5, col = one_box_row['col'], border = NA)
-}
-
-cov_tab[cov_tab$covA == cov_tab$covB, 'freq'] <- cov_tab[cov_tab$covA == cov_tab$covB, 'freq'] * 2
-
-args$ylim <- 50
-plot(NULL, xlim = xlim, ylim = c(0,args$ylim),
-        xlab = 'Normalized minor kmer coverage: B / (A + B)',
-        ylab = 'Total coverage of the kmer pair: A + B', cex.lab = 1.4)
-sapply(min(cov_tab[, 'total_pair_cov']):args$ylim, plot_one_coverage, 4)
-
-for ( cov in min(cov_tab[, 'total_pair_cov']):args$ylim ){
-    err <- (L - 1) / cov
-    cov_row_to_plot <- cov_tab[cov_tab[, 'total_pair_cov'] == cov, ]
-    width <- min(cov_row_to_plot[ , 'minor_variant_rel_cov']) - err
-    cov_row_to_plot$left <- cov_row_to_plot[, 'minor_variant_rel_cov'] - width
-    cov_row_to_plot$right <- sapply(cov_row_to_plot[, 'minor_variant_rel_cov'], function(x){ min(0.5, x + width)})
-    apply(cov_row_to_plot, 1, plot_one_box, cov)
-}
-
-
-
-```
-
-
-
-
-
-
-OS X gives this funny error when one plots too many rectangles in an interactive session
-
-```
-> Fatal error: Duplicate keys of type 'DisplayList' were found in a Dictionary.
-This usually means either that the type violates Hashable's requirements, or
-that members of such a dictionary were mutated after insertion.
-Trace/BPT trap: 5
-```
-
-The problem is reported here: https://stackoverflow.com/q/78615561/2962344 and this is a reproducible example of the error
-
-```R
-pal <- c("coral", "dodgerblue", "darkseagreen2")
-table_with_data <- data.frame(left = 0:9, right = 1:10, bot = rep(0:999, each = 10), top = rep(1:1000, each = 10), col = sample(pal, replace = T, 10000))
-plot(NULL, xlim = c(0, 10), ylim = c(0,1000))
-for (i in 1:nrow(table_with_data)){
-    rect(table_with_data$left[i], table_with_data$bot[i], table_with_data$right[i], table_with_data$top[i], col = table_with_data$col[i], border = NA)
-}
-
-```
-
-alternative local aggregation
+Alternative local aggregation
 
 ```bash
 for ToLID in daAchMill1 daAchPtar1 daAdoMosc1 daAjuCham1 daAjuRept1 daArcMinu1 daArtCamp1 daArtMari1 daArtVulg1 daAtrBela1; do
@@ -311,14 +212,30 @@ plot(tested_covs[, 'cov'], tested_covs[, 'centrality'])
 
 Fixing the main package
 
-```
-exec/smudgeplot.py plot -n 21.21 -i ~/test/
+```bash
+for smu_file in  data/dicots/smu_files/*.k31_ploidy.smu.txt; do 
+    ToLID=$(basename $smu_file .k31_ploidy.smu.txt); 
+    smudgeplot.py all $smu_file -o data/dicots/grid_fits/$ToLID
+done
+
+
 ```
 
 
 ## Homopolymer compressed testing
 
-Datasets with lots of errors.
+Datasets with lots of errors. Sacharomyces will do.
+
+```
+FastK -v -c -t4 -k31 -M16 -T4 data/Scer/SRR3265401_[12].fastq.gz -Ndata/Scer/FastK_Table_hc
+PloidyPlot -e4 -k -v -T4 -odata/Scer/kmerpairs_hc data/Scer/FastK_Table_hc
+
+PloidyPlot -e4 -k -v -T4 -odata/Scer/kmerpairs_default_e data/Scer/FastK_Table
+
+smudgeplot.py all -o data/Scer/homopolymer_e4_wo data/Scer/kmerpairs_default_e_text.smu
+
+smudgeplot.py all -o data/Scer/homopolymer_e4_with data/Scer/kmerpairs_hc_text.smu
+```
 
 ## Other
 

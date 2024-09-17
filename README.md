@@ -10,10 +10,11 @@ The big changes are
  + the backend by Gene is paralelized and massively faster
  + the intermediate file will be a flat file with the 2d histogram with cov1, cov2, freq columns (as opposed to list of coverages of pairs cov1 cov2);
  + at least for now WE LOSE the ability to extract sequences of the kmers in the pair; this functionality will hopefully restore at some point together with functionality to assess the quality of assembly.
- + we will add "run everything" functionality for people that want "FastK database -> plot" type of solution.
- + the smudge detection algorithm is under revision at the moment
+ + we added "run all" functionality for people that want "FastK database -> plot" type of solution.
+ + completelly revamped plot showing how all individual kmer pairs insead of agregating them into squares
+ + new smudge detection algorithm based on grid projection on the smudge plane (working, but under revisions at the moment)
 
-The strategy on the merger is an ongoing discussion, but for now the plan is to keep the same pythonic interface, to keep a similar interface between the versions.
+We keep the same pythonic interface, the interface of older smudgeplot and this version are very similar and largely compatible.
 
 Current state: RUNNING; beta-testing;
 
@@ -79,10 +80,16 @@ PloidyPlot -e12 -k -v -T4 -odata/Scer/kmerpairs data/Scer/FastK_Table
 # it's a flat file with three columns; covB, covA and freq (the number of k-mer pairs with these respective coverages)
 
 # use the .smu file to infer ploidy and create smudgeplot
-smudgeplot.py plot -n 15 -t Sacharomyces -o data/Scer/trial_run data/Scer/kmerpairs_text.smu
+smudgeplot.py all -o data/Scer/trial_run data/Scer/kmerpairs_text.smu
 
-# check that 5 files are generated (2 pdfs; a summary tsv table, and two txt logs)
+# check that bunch files are generated (3 pdfs; some summary tables and logs)
 ls data/Scer/trial_run_*
+```
+
+The y-axis scaling is by default 100, one can spcify argument `ylim` to scale it differently
+
+```bash
+smudgeplot.py all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs_text.smu -ylim 70
 ```
 
 And that's it for now! I will be streamlining this over the next few days so hopefully it will all work with a single command;
