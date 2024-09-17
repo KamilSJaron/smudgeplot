@@ -120,6 +120,7 @@ tasks: cutoff           Calculate meaningful values for lower kmer histogram cut
         argparser = argparse.ArgumentParser()
         argparser.add_argument('infile', nargs='?', help='name of the input tsv file with covarages and frequencies.')
         argparser.add_argument('-o', help='The pattern used to name the output (smudgeplot).', default='smudgeplot')
+        argparser.add_argument('-ylim', help='The upper limit for the coverage sum (the y axis)', type = int, default=100)
         self.arguments = argparser.parse_args(sys.argv[2:])
 
 ###############
@@ -405,7 +406,7 @@ def main():
 
         system("centrality_plot.R " + args.o + "_centralities.txt")
         # Rscript playground/alternative_fitting/alternative_plotting_testing.R -i data/dicots/peak_agregation/$ToLID.cov_tab_peaks -o data/dicots/peak_agregation/$ToLID
-        system("smudgeplot_plot.R -i" + args.infile + " -o " + args.o + " -n " + str(cov) + " -s " + args.o + "_smudge_sizes.txt -ylim 300 -t 'grid algorithm trial'") 
+        system(f"smudgeplot_plot.R -i {args.infile} -o {args.o} -n {cov} -s {args.o}_smudge_sizes.txt -ylim {args.ylim} -t 'grid algorithm trial'") 
 
     sys.stderr.write("\nDone!\n")
     exit(0)
