@@ -3,6 +3,7 @@ figures
 playground
 docs
 exec/PloidyPlot
+exec/hetmers
 *.o
 .DS_Store
 smu2text_smu

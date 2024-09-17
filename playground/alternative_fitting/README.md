@@ -228,9 +228,9 @@ Datasets with lots of errors. Sacharomyces will do.
 
 ```
 FastK -v -c -t4 -k31 -M16 -T4 data/Scer/SRR3265401_[12].fastq.gz -Ndata/Scer/FastK_Table_hc
-PloidyPlot -e4 -k -v -T4 -odata/Scer/kmerpairs_hc data/Scer/FastK_Table_hc
+hetmers -e4 -k -v -T4 -odata/Scer/kmerpairs_hc data/Scer/FastK_Table_hc
 
-PloidyPlot -e4 -k -v -T4 -odata/Scer/kmerpairs_default_e data/Scer/FastK_Table
+smudgeplot.py hetmers -L 4 -t 4 -o data/Scer/kmerpairs_default_e --verbose data/Scer/FastK_Table
 
 smudgeplot.py all -o data/Scer/homopolymer_e4_wo data/Scer/kmerpairs_default_e_text.smu
 
