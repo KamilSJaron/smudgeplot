@@ -2,7 +2,158 @@
 
 suppressPackageStartupMessages(library("methods"))
 suppressPackageStartupMessages(library("argparse"))
-suppressPackageStartupMessages(library("smudgeplot"))
+suppressPackageStartupMessages(library("viridis"))
+
+# suppressPackageStartupMessages(library("smudgeplot"))
+
+#################
+### funcitons ###
+#################
+# retirying the smudgeplot R package
+get_col_ramp <- function(.args, delay = 0){
+    colour_ramp <- eval(parse(text = paste0(.args$col_ramp,"(", 32 - delay, ")")))
+    if (.args$invert_cols){
+        colour_ramp <- rev(colour_ramp)
+    }
+    colour_ramp <- c(rep(colour_ramp[1], delay), colour_ramp)
+    return(colour_ramp)
+}
+
+wtd.quantile <- function(x, q=0.25, weight=NULL) {
+  o <- order(x)
+  n <- sum(weight)
+  order <- 1 + (n - 1) * q
+  low  <- pmax(floor(order), 1)
+  high <- pmin(ceiling(order), n)
+  low_contribution <- high - order
+  allq <- approx(x=cumsum(weight[o])/sum(weight), y=x[o], xout = c(low, high)/n, method = "constant",
+      f = 1, rule = 2)$y
+  low_contribution * allq[1] + (1 - low_contribution) * allq[2]
+}
+
+wtd.iqr <- function(x, w=NULL) {
+  wtd.quantile(x, q=0.75, weight=w) - wtd.quantile(x, q=0.25, weight=w)
+}
+
+plot_alt <- function(cov_tab, ylim, colour_ramp, log = F){
+    A_equals_B <- cov_tab[, 'covA'] == cov_tab[, 'covB']
+    cov_tab[A_equals_B, 'freq'] <- cov_tab[A_equals_B, 'freq'] * 2
+    if (log){
+        cov_tab[, 'freq'] <- log10(cov_tab[, 'freq'])
+    }
+    cov_tab$col <- colour_ramp[1 + round(31 * cov_tab[, 'freq'] / max(cov_tab[, 'freq']))]
+
+    # c(bottom, left, top, right)
+    par(mar=c(4.8,4.8,1,1))
+    plot(NULL, xlim = c(0, 0.5), ylim = ylim,
+         xlab = 'Normalized minor kmer coverage: B / (A + B)',
+         ylab = 'Total coverage of the kmer pair: A + B', cex.lab = 1.4, bty = 'n')
+    min_cov_to_plot <- max(ylim[1],min(cov_tab[, 'total_pair_cov']))
+    nothing <- sapply(min_cov_to_plot:ylim[2], plot_one_coverage, cov_tab)
+    return(0)
+}
+
+plot_one_coverage <- function(cov, cov_tab){
+    cov_row_to_plot <- cov_tab[cov_tab[, 'total_pair_cov'] == cov, ]
+    width <- 1 / (2 * cov)
+    cov_row_to_plot$left <- cov_row_to_plot[, 'minor_variant_rel_cov'] - width
+    cov_row_to_plot$right <- sapply(cov_row_to_plot[, 'minor_variant_rel_cov'], function(x){ min(0.5, x + width)})
+    apply(cov_row_to_plot, 1, plot_one_box, cov)
+}
+
+plot_one_box <- function(one_box_row, cov){
+    left <- as.numeric(one_box_row['left'])
+    right <- as.numeric(one_box_row['right'])
+    rect(left, cov - 0.5, right, cov + 0.5, col = one_box_row['col'], border = NA)
+}
+
+plot_isoA_line <- function (.covA, .L, .col = "black", .ymax = 250, .lwd, .lty) {
+    min_covB <- .L # min(.cov_tab[, 'covB']) # should be L really
+    max_covB <- .covA
+    B_covs <- seq(min_covB, max_covB, length = 500)
+    isoline_x <- B_covs/ (B_covs + .covA)
+    isoline_y <- B_covs + .covA
+    lines(isoline_x[isoline_y < .ymax], isoline_y[isoline_y < .ymax], lwd = .lwd, lty = .lty, col = .col)
+}
+
+plot_isoB_line <- function (.covB, .ymax, .col = "black", .lwd, .lty) {
+    cov_range <- seq((2 * .covB) - 2, .ymax, length = 500)
+    lines((.covB)/cov_range, cov_range, lwd = .lwd, lty = .lty, col = .col)
+}
+
+plot_iso_grid <- function(.cov, .L, .ymax, .col = 'black', .lwd = 2, .lty = 2){
+    for (i in 0:15){
+        cov <- (i + 0.5) * .cov
+        plot_isoA_line(cov, .L = .L, .ymax = .ymax, .col, .lwd = .lwd, .lty = .lty)
+        if (i < 8){
+            plot_isoB_line(cov, .ymax, .col, .lwd = .lwd, .lty = .lty)
+        }
+    }
+}
+
+plot_expected_haplotype_structure <- function(.n, .peak_sizes,
+                                              .adjust = F, .cex = 1.3, xmax = 0.49){
+    .peak_sizes <- .peak_sizes[.peak_sizes[, 'size'] > 0.05, ]
+    .peak_sizes[, 'ploidy'] <- nchar(.peak_sizes[, 'structure'])
+
+    decomposed_struct <- strsplit(.peak_sizes[, 'structure'], '')
+    .peak_sizes[, 'corrected_minor_variant_cov'] <- sapply(decomposed_struct, function(x){ sum(x == 'B') } ) / .peak_sizes[, 'ploidy']
+
+    .peak_sizes[, 'label'] <- reduce_structure_representation(.peak_sizes[, 'structure'])
+                                                
+    borercases <- .peak_sizes$corrected_minor_variant_cov == 0.5
+    structures <- reduce_structure_representation(.peak_sizes)
+
+    for(i in 1:nrow(.peak_sizes)){
+        # xmax is in the middle of the last square in the 2d histogram,
+        # which is too far from the edge, so I average it with 0.49
+        # witch will pull the label bit to the edge
+        text( ifelse( borercases[i] & .adjust, (xmax + 0.49) / 2, .peak_sizes$corrected_minor_variant_cov[i]),
+             .peak_sizes$ploidy[i] * .n, .peak_sizes[i, 'label'],
+             offset = 0, cex = .cex, xpd = T, pos = ifelse( borercases[i] & .adjust, 2, 1))
+    }
+}
+
+reduce_structure_representation <- function(long_smudge_labels){
+    structures_to_adjust <- sapply(long_smudge_labels, nchar) > 4
+    if (any(structures_to_adjust)) {
+        decomposed_struct <- strsplit(long_smudge_labels[structures_to_adjust], '')
+        As <- sapply(decomposed_struct, function(x){ sum(x == 'A') } )
+        Bs <- sapply(decomposed_struct, length) - As
+        long_smudge_labels[structures_to_adjust] <- paste0(As, 'A', Bs, 'B')
+    }
+    long_smudge_labels
+}
+
+plot_legend <- function(kmer_max, .colour_ramp, .log_scale = T){
+    par(mar=c(0,0,2,1))
+    plot.new()
+    print_title <- ifelse(.log_scale, 'log kmers pairs', 'kmers pairs')
+    title(print_title)
+    for(i in 1:32){
+        rect(0,(i - 0.01) / 33, 0.5, (i + 0.99) / 33, col = .colour_ramp[i])
+    }
+    # kmer_max <- max(smudge_container$dens)
+    if( .log_scale == T ){
+        for(i in 0:6){
+            text(0.75, i / 6, rounding(10^(log10(kmer_max) * i / 6)), offset = 0)
+        }
+    } else {
+        for(i in 0:6){
+            text(0.75, i / 6, rounding(kmer_max * i / 6), offset = 0)
+        }
+    }
+}
+
+rounding <- function(number){
+    if(number > 1000){
+        round(number / 1000) * 1000
+    } else if (number > 100){
+        round(number / 100) * 100
+    } else {
+        round(number / 10) * 10
+    }
+}
 
 #############
 ## SETTING ##
@@ -35,8 +186,6 @@ parser$add_argument("-col_ramp", default = "viridis",
                     help="A colour ramp available in your R session [viridis]")
 parser$add_argument("--invert_cols", action="store_true", default = F,
                     help="Set this flag to invert colorus of Smudgeplot (dark for high, light for low densities)")
-parser$add_argument("--plot_err_line", action="store_true", default = F,
-                    help="Set this flag to add a line of theh higher expected occurance of errors paired with genomic k-mers")
 parser$add_argument("--just_plot", action="store_true", default = F,
                     help="Turns off the inference of coverage and annotation of smudges; simply generates smudgeplot. (default False)")
  
@@ -44,19 +193,6 @@ args <- parser$parse_args()
 
 colour_ramp_log <- get_col_ramp(args, 16) # create palette for the log plots
 colour_ramp <- get_col_ramp(args) # create palette for the linear plots
-
-iterative_nbins <- F
-if( is.null(args$nbins) ){
-    args$nbins <- 40
-    iterative_nbins <- T
-}
-
-# for easier manipulation I store estimated things in a list
-smudge_summary <- list()
-
-smudge_warn(args$output, "\n######################")
-smudge_warn(args$output, "## INPUT PROCESSING ##")
-smudge_warn(args$output, "######################")
 
 if ( !file.exists(args$input) ) {
     stop("The input file not found. Please use --help to get help", call.=FALSE)
@@ -75,11 +211,11 @@ cov_tab[, 'minor_variant_rel_cov'] <- cov_tab[, 'covB'] / cov_tab[, 'total_pair_
 if ( !is.null(args$c) ){
     threshold <- args$c
     low_cov_filt <- cov_tab[, 'covA'] < threshold | cov_tab[, 'covB'] < threshold 
-    smudge_warn(args$output, "Removing", sum(cov_tab[low_cov_filt, 'freq']), 
-                "kmer pairs for which one of the pair had coverage below",
-                threshold, paste0("(Specified by argument -c ", args$c, ")"))
+    # smudge_warn(args$output, "Removing", sum(cov_tab[low_cov_filt, 'freq']), 
+    #             "kmer pairs for which one of the pair had coverage below",
+    #             threshold, paste0("(Specified by argument -c ", args$c, ")"))
     cov_tab <- cov_tab[!low_cov_filt, ]
-    smudge_warn(args$output, "Processing", sum(cov_tab[, 'freq']), "kmer pairs")
+    # smudge_warn(args$output, "Processing", sum(cov_tab[, 'freq']), "kmer pairs")
     L <- min(cov_tab[, 'covB'])
 } else {
     L <- ifelse(length(args$L) == 0, min(cov_tab[, 'covB']), args$L)
@@ -90,9 +226,9 @@ if ( !is.null(args$q) ){
     # quantile filtering (remove top q%, it's not really informative)    
     threshold <- wtd.quantile(cov_tab[, 'total_pair_cov'], args$q, cov_tab[, 'freq'])
     high_cov_filt <- cov_tab[, 'total_pair_cov'] < threshold
-    smudge_warn(args$output, "Removing", sum(cov_tab[!high_cov_filt, 'freq']), 
-                "kmer pairs with coverage higher than",
-                threshold, paste0("(", args$q, " quantile)"))
+    # smudge_warn(args$output, "Removing", sum(cov_tab[!high_cov_filt, 'freq']), 
+    #             "kmer pairs with coverage higher than",
+    #             threshold, paste0("(", args$q, " quantile)"))
     cov_tab <- cov_tab[high_cov_filt, ]
 }
 
@@ -110,46 +246,8 @@ if (!is.null(args$ylim)){ # if ylim is specified, set the bounday by the argumen
     ylim[2] <- args$ylim
 }
 
-
-smudge_warn(args$output, "\n#############")
-smudge_warn(args$output, "## SUMMARY ##")
-smudge_warn(args$output, "#############")
-
-if (!args$just_plot){
-
-    # peak_sizes$corrected_minor_variant_cov <- sapply(peak_sizes$structure, function(x){round(mean(unlist(strsplit(x, split = '')) == 'B'), 2)})
-    # peak_sizes$ploidy <- sapply(peak_sizes$structure, nchar)
-    # peak_sizes$rel_size <- peak_sizes$rel_size / sum(peak_sizes$rel_size)
-    # peak_sizes <- peak_sizes[order(peak_sizes$rel_size, decreasing = T),]
-    # smudge_summary$peak_sizes <- peak_sizes
-
-    # genome ploidy is the ploidy with highest number of corresponding kmer pairs regardless of topology
-    # considered_ploidies <- unique(peak_sizes$ploidy)
-    # ploidy_with_most_smudges <- which.max(sapply(considered_ploidies, function(x){ sum(peak_sizes[peak_sizes$ploidy == x,'rel_size']) }) )
-    # smudge_summary$genome_ploidy <- considered_ploidies[ploidy_with_most_smudges]
-    # smudge_summary$genome_ploidy <- peak_sizes$ploidy[which.max(peak_sizes$rel_size)]
-
-    # this will be probably diploid,
-    # but theoretically one can imagine a species that si completely homozygous tetraploid
-    # if( args$homozygous ){
-    #     smudge_summary$genome_ploidy <- smudge_summary$genome_ploidy / 2
-    #     if(!smudge_summary$genome_ploidy %in% c(2,4,6,8)){
-    #         smudge_warn(args$output, "Guessing really strange ploidy", smudge_summary$genome_ploidy, "perhaps there is not enough coverage for a good inference.")
-    #         smudge_warn(args$output, "You can trust the plot, but guessed ploidy or peak detection might be completely off.")
-    #     }
-    # }
-    # generate_summary(args, smudge_summary)
-    smudge_summary$n <- cov
-} else {
-    smudge_summary$n <- 0 # this is interpreted as "no infered"
-}
-
-smudge_warn(args$output, "\n##########")
-smudge_warn(args$output, "## PLOT ##")
-smudge_warn(args$output, "##########")
-
 fig_title <- ifelse(length(args$title) == 0, NA, args$title[1])
-histogram_bins = max(30, args$nbins)
+# histogram_bins = max(30, args$nbins)
 
 pdf(paste0(args$output,'_smudgeplot.pdf'))
 
@@ -158,13 +256,7 @@ layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_alt(cov_tab, ylim, colour_ramp_log)
 if (!args$just_plot){
-    # plot_expected_haplotype_structure(smudge_summary$n, peak_sizes, T, xmax = max(smudge_container$x))
-    # plot_all_smudge_labels(smudge_summary$n, ylim[2], xmax = 0.49, .cex = 1.3, .L = L, err = F)
     plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
-}
-# plot error line L - 1 / cov ~ cov
-if (args$plot_err_line){
-    plot_seq_error_line(cov_tab)
 }
 
 # 2,3 hist
@@ -175,6 +267,12 @@ if (args$plot_err_line){
 plot_legend(max(cov_tab[, 'freq']), colour_ramp, F)
 
 ### add annotation
+# print smudge sizes
+plot.new()
+legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,1]), cex = 1.1)
+legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
+legend('bottomleft', bty = 'n', legend = paste0("1n = ", cov), cex = 1.1)
+
 
 dev.off()
 
@@ -184,19 +282,16 @@ pdf(paste0(args$output,'_smudgeplot_log10.pdf'))
 layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # cov_tab[, 'freq'] <- log10(cov_tab[, 'freq'])
 # 1 smudge plot
-# plot_smudgeplot(smudge_container, smudge_summary$n, colour_ramp_log)
 plot_alt(cov_tab, ylim, colour_ramp_log, log = T)
 if (!args$just_plot){
     plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
 }
-if (args$plot_err_line){
-    plot_seq_error_line(cov_tab)
-}
 
 # # 2,3 hist
 # plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = histogram_bins) # I am testing here setting the number of bars to the same number as the number of squares
+
 # 4 legend
-plot_legend(max(cov_tab[, 'freq']), colour_ramp_log, F)
+plot_legend(max(cov_tab[, 'freq']), colour_ramp_log, T)
 
 # print smudge sizes
 plot.new()
