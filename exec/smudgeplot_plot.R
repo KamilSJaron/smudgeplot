@@ -174,20 +174,14 @@ parser$add_argument("-q", "--quantile_filt", type = "double",
                     help="Remove kmer pairs with coverage over the specified quantile; [default none]")
 parser$add_argument("-n", "--n_cov", type = "double",
                     help="the haploid coverage of the sequencing data [default inference from data]")
-parser$add_argument("-L", "--low_cutoff", type = "integer",
-                    help="the lower boundary used when dumping kmers [default min(total_pair_cov) / 2]")
 parser$add_argument("-c", "-cov_filter", type = "integer",
-                    help="Filter pairs with one of them having coverage bellow specified threshold [default 0; disables parameter L]")
+                    help="Filter pairs with one of them having coverage bellow specified threshold [default 0]")
 parser$add_argument("-ylim", type = "integer", 
                     help="The upper limit for the coverage sum (the y axis)")
-parser$add_argument("-nbins", type = "integer",
-                    help="the number of nbins used for smudgeplot matrix (nbins x nbins) [default autodetection]")
 parser$add_argument("-col_ramp", default = "viridis",
                     help="A colour ramp available in your R session [viridis]")
 parser$add_argument("--invert_cols", action="store_true", default = F,
                     help="Set this flag to invert colorus of Smudgeplot (dark for high, light for low densities)")
-parser$add_argument("--just_plot", action="store_true", default = F,
-                    help="Turns off the inference of coverage and annotation of smudges; simply generates smudgeplot. (default False)")
  
 args <- parser$parse_args()
 
@@ -215,10 +209,7 @@ if ( !is.null(args$c) ){
     #             "kmer pairs for which one of the pair had coverage below",
     #             threshold, paste0("(Specified by argument -c ", args$c, ")"))
     cov_tab <- cov_tab[!low_cov_filt, ]
-    # smudge_warn(args$output, "Processing", sum(cov_tab[, 'freq']), "kmer pairs")
-    L <- min(cov_tab[, 'covB'])
-} else {
-    L <- ifelse(length(args$L) == 0, min(cov_tab[, 'covB']), args$L)
+    # smudge_warn(args$output, "Processing", sum(cov_tab[, 'freq']), "kmer pairs")    
 }
 
 ##### quantile filtering
@@ -232,13 +223,9 @@ if ( !is.null(args$q) ){
     cov_tab <- cov_tab[high_cov_filt, ]
 }
 
-if (!args$just_plot){
-    cov <- args$n_cov
-    ylim <- c(min(cov_tab[, 'total_pair_cov']) - 1, # or 0?
+cov <- args$n_cov
+ylim <- c(min(cov_tab[, 'total_pair_cov']) - 1, # or 0?
           min(10*cov, max(cov_tab[, 'total_pair_cov'])))
-} else {
-    ylim <- c(0,max(cov_tab[, 'total_pair_cov'])) # if there is no inference, the default coverage is max cov
-}
 
 xlim <- c(0, 0.5)
 
@@ -255,9 +242,8 @@ pdf(paste0(args$output,'_smudgeplot.pdf'))
 layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_alt(cov_tab, ylim, colour_ramp_log)
-if (!args$just_plot){
-    plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
-}
+
+plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
 
 # 2,3 hist
 # plot_histograms(cov_tab, fig_title,
@@ -283,9 +269,9 @@ layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # cov_tab[, 'freq'] <- log10(cov_tab[, 'freq'])
 # 1 smudge plot
 plot_alt(cov_tab, ylim, colour_ramp_log, log = T)
-if (!args$just_plot){
-    plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
-}
+
+plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
+
 
 # # 2,3 hist
 # plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = histogram_bins) # I am testing here setting the number of bars to the same number as the number of squares

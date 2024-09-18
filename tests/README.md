@@ -4,22 +4,30 @@ This is a place for manual tests that have not been automated (yet?).
 Don't forget to re-install the package/script before execution. Somehting like
 
 ```
-Rscript install.R
-install -C exec/smudgeplot /usr/local/bin
-install -C exec/smudgeplot_plot.R /usr/local/bin
+make install INSTALL_PREFIX=~
 ```
 
 should do the job.
 
 #### interface tests
 
+##### data prep
+
+Download `SRR3265401` - nice teteraploid Sacharomyces run I use often for testing.
+
 ##### smudgeplot plot
 
+Defaults:
+
 ```
-./exec/smudgeplot plot tests/data/toy_middle_coverages.tsv -o tests/data/toy_middle_R -n 100 -nbins 20
+smudgeplot.py all data/Scer/kmerpairs_default_e2_text.smu -o data/Scer/240918_trial
 ```
 
-generates a smudgeplot from the toy data.
+Testing parameters:
+
+```
+smudgeplot.py all data/Scer/kmerpairs_default_e2_text.smu -o data/Scer/240918_trial_params -t "Species 1" -c 20 -ylim 80 -col_ramp magma --invert_cols
+```
 
 ##### smudgeplot hetkmers
 
