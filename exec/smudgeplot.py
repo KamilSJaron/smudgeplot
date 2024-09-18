@@ -3,8 +3,8 @@
 import argparse
 import sys
 import numpy as np
-from pandas import read_csv
-from pandas import DataFrame
+from pandas import read_csv # type: ignore
+from pandas import DataFrame # type: ignore
 from numpy import arange
 from numpy import argmin
 from numpy import concatenate

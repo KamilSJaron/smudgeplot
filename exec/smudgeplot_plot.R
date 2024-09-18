@@ -259,10 +259,13 @@ legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,1]), ce
 legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
 legend('bottomleft', bty = 'n', legend = paste0("1n = ", cov), cex = 1.1)
 
+plot.new()
+mtext(bquote(italic(.(fig_title))), side=3, adj=0.1, line=-3, cex = 1.6)
+
 
 dev.off()
 
-
+################# log plot ###############
 pdf(paste0(args$output,'_smudgeplot_log10.pdf'))
 
 layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
@@ -271,7 +274,6 @@ layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 plot_alt(cov_tab, ylim, colour_ramp_log, log = T)
 
 plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
-
 
 # # 2,3 hist
 # plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = histogram_bins) # I am testing here setting the number of bars to the same number as the number of squares
@@ -284,5 +286,8 @@ plot.new()
 legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,1]), cex = 1.1)
 legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
 legend('bottomleft', bty = 'n', legend = paste0("1n = ", cov), cex = 1.1)
+
+plot.new()
+mtext(bquote(italic(.(fig_title))), side=3, adj=0.1, line=-3, cex = 1.6)
 
 dev.off()
