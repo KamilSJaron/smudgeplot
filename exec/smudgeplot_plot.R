@@ -98,11 +98,9 @@ plot_expected_haplotype_structure <- function(.n, .peak_sizes,
 
     decomposed_struct <- strsplit(.peak_sizes[, 'structure'], '')
     .peak_sizes[, 'corrected_minor_variant_cov'] <- sapply(decomposed_struct, function(x){ sum(x == 'B') } ) / .peak_sizes[, 'ploidy']
-
     .peak_sizes[, 'label'] <- reduce_structure_representation(.peak_sizes[, 'structure'])
-                                                
+
     borercases <- .peak_sizes$corrected_minor_variant_cov == 0.5
-    structures <- reduce_structure_representation(.peak_sizes)
 
     for(i in 1:nrow(.peak_sizes)){
         # xmax is in the middle of the last square in the 2d histogram,
@@ -114,15 +112,16 @@ plot_expected_haplotype_structure <- function(.n, .peak_sizes,
     }
 }
 
-reduce_structure_representation <- function(long_smudge_labels){
-    structures_to_adjust <- sapply(long_smudge_labels, nchar) > 4
-    if (any(structures_to_adjust)) {
-        decomposed_struct <- strsplit(long_smudge_labels[structures_to_adjust], '')
+reduce_structure_representation <- function(smudge_labels){
+    structures_to_adjust <- (sapply(smudge_labels, nchar) > 4)
+
+    if ( any(structures_to_adjust) ) {
+        decomposed_struct <- strsplit(smudge_labels[structures_to_adjust], '')
         As <- sapply(decomposed_struct, function(x){ sum(x == 'A') } )
         Bs <- sapply(decomposed_struct, length) - As
-        long_smudge_labels[structures_to_adjust] <- paste0(As, 'A', Bs, 'B')
+        smudge_labels[structures_to_adjust] <- paste0(As, 'A', Bs, 'B')
     }
-    long_smudge_labels
+    return(smudge_labels)
 }
 
 plot_legend <- function(kmer_max, .colour_ramp, .log_scale = T){
@@ -235,7 +234,6 @@ if (!is.null(args$ylim)){ # if ylim is specified, set the bounday by the argumen
 
 fig_title <- ifelse(length(args$title) == 0, NA, args$title[1])
 # histogram_bins = max(30, args$nbins)
-
 pdf(paste0(args$output,'_smudgeplot.pdf'))
 
 # layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
@@ -255,7 +253,7 @@ plot_legend(max(cov_tab[, 'freq']), colour_ramp, F)
 ### add annotation
 # print smudge sizes
 plot.new()
-legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,1]), cex = 1.1)
+legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,'structure']), cex = 1.1)
 legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
 legend('bottomleft', bty = 'n', legend = paste0("1n = ", cov), cex = 1.1)
 
@@ -283,7 +281,7 @@ plot_legend(max(cov_tab[, 'freq']), colour_ramp_log, T)
 
 # print smudge sizes
 plot.new()
-legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,1]), cex = 1.1)
+legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,'structure']), cex = 1.1)
 legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
 legend('bottomleft', bty = 'n', legend = paste0("1n = ", cov), cex = 1.1)
 

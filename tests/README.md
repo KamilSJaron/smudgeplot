@@ -33,28 +33,7 @@ smudgeplot.py all data/Scer/kmerpairs_default_e2_text.smu -o data/Scer/240918_tr
 
 two different methods to extract homologous kmers
 
-###### All
-
-```
-./exec/smudgeplot hetkmers -o tests/data/toy_all tests/data/toy_kmer_k21.dump
-```
-
-###### Middle
-
-```
-./exec/smudgeplot hetkmers -o tests/data/toy_middle tests/data/toy_kmer_k21.dump --middle
-```
-
-generates two files `tests/data/toy_middle_coverages.tsv` and `tests/data/toy_middle_sequences.tsv` with coverages and sequences of kmer pairs.
-
-
-##### smudgeplot kmer extraction
-
-```
-exec/smudgeplot.py extract -cov tests/data/toy_all_coverages.tsv -seq tests/data/toy_all_sequences.tsv   -minc 400 -maxc 410 -minr 0.49 -maxr 0.5 | head
-```
-
-would extract 80 lines made of 20 kmers pairs, but showing only the first ten.
+TODO
 
 ##### Dicots
 
@@ -75,5 +54,11 @@ for smu in data/dicots/smu_files/*.smu.txt; do
     species=$(basename $smu .smu.txt)
     echo $species $smu
     time ./exec/smudgeplot.py plot $smu -c 10 -o data/dicots/alt_plots_c10/$species --alt_plot -q 0.9
+done
+
+for smu in $(ls data/dicots/smu_files/*.smu.txt | head -20); do
+    species=$(basename $smu .smu.txt)
+    echo $species $smu
+    smudgeplot.py all $smu -t $species -o data/dicots/automated_smudgeplots/$species
 done
 ```
