@@ -294,11 +294,18 @@ def test_coverage_range(cov_tab, min_c, max_c, smudge_size_cutoff = 0.02):
     best_tenth = tenths_to_test[argmin(tenths_centralities)]
     sys.stderr.write(f"Best coverage to precsion of one tenth: {round(best_tenth, 2)}\n")  
 
-    hundredths_to_test = arange(best_tenth - 0.19, best_tenth + 0.19, 0.01)
+    hundredths_to_test = list(arange(best_tenth - 0.19, best_tenth + 0.19, 0.01))
     hundredths_centralities = list()
     for cov in hundredths_to_test:
         smudge_container = get_smudge_container(cov_tab, cov, smudge_size_cutoff)
         hundredths_centralities.append(get_centrality(smudge_container, cov))
+
+    final_cov = hundredths_to_test[argmin(hundredths_centralities)]
+    just_to_be_sure_cov = final_cov/2
+
+    hundredths_to_test.append(just_to_be_sure_cov)
+    smudge_container = get_smudge_container(cov_tab, just_to_be_sure_cov, smudge_size_cutoff)
+    hundredths_centralities.append(get_centrality(smudge_container, just_to_be_sure_cov))
 
     final_cov = hundredths_to_test[argmin(hundredths_centralities)]
     sys.stderr.write(f"Best coverage to precision of one hundreth: {round(final_cov, 3)}\n")  
@@ -336,8 +343,8 @@ def main():
             plot_args += " -P" + args.tmp
         plot_args += " " + args.infile
 
-        sys.stderr.write("Calling: hetmer (PloidyPlot kmer pair search) " + plot_args + "\n")
-        system("hetmer " + plot_args)
+        sys.stderr.write("Calling: hetmers (PloidyPlot kmer pair search) " + plot_args + "\n")
+        system("hetmers " + plot_args)
 
     if _parser.task == "plot":
         # the plotting script is expected ot be installed in the system as well as the R library supporting it
@@ -363,7 +370,10 @@ def main():
         cov_tab['peak'] = [cov2peak[(covA, covB)] for idx, covB, covA, freq in cov_tab.itertuples()]
 
         cov_tab = cov_tab.sort_values(['covA', 'covB'], ascending = True)
-        total_kmers = sum(cov_tab[cov_tab['peak'] == 0]['freq'])
+        total_kmers = sum(cov_tab['freq'])
+        genomic_kmers = sum(cov_tab[cov_tab['peak'] == 0]['freq'])
+        total_error_kmers = sum(cov_tab[cov_tab['peak'] == 1]['freq'])
+        sys.stderr.write(f"Total kmers: {total_kmers}\n\tGenomic kmers: {genomic_kmers}\n\tSequencing errors: {total_error_kmers}\n\tFraction or errors: {round(total_error_kmers/total_kmers, 3)}")
 
         with open(args.o + "_masked_errors_smu.txt", 'w') as error_annotated_smu:
             error_annotated_smu.write("covB\tcovA\tfreq\tis_error\n")
@@ -373,7 +383,7 @@ def main():
         sys.stderr.write("\nInfering 1n coverage using grid algorihm\n")
 
         smudge_size_cutoff = 0.01 # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
-        centralities = test_coverage_range(cov_tab, 10, 60, smudge_size_cutoff)
+        centralities = test_coverage_range(cov_tab, 6, 60, smudge_size_cutoff)
         np.savetxt(args.o + "_centralities.txt", np.around(centralities, decimals=6), fmt="%.4f", delimiter = '\t')
         # plot(centralities['coverage'], centralities['coverage'])
 
@@ -382,7 +392,7 @@ def main():
         final_smudges = get_smudge_container(cov_tab, cov, smudge_size_cutoff)
         
         annotated_smudges = list(final_smudges.keys())
-        smudge_sizes = [round(sum(final_smudges[smudge]['freq']) / total_kmers, 4) for smudge in annotated_smudges]
+        smudge_sizes = [round(sum(final_smudges[smudge]['freq']) / genomic_kmers, 4) for smudge in annotated_smudges]
 
         # saving smudge sizes
         smudge_table = DataFrame({'smudge': annotated_smudges, 'size': smudge_sizes})
@@ -394,7 +404,7 @@ def main():
         # Rscript playground/alternative_fitting/alternative_plotting_testing.R -i data/dicots/peak_agregation/$ToLID.cov_tab_peaks -o data/dicots/peak_agregation/$ToLID
         args = _parser.arguments
         
-        plot_args = f'-i "{args.infile}" -s {args.o}_smudge_sizes.txt -n {cov} -o "{args.o}" ' + _parser.format_aguments_for_R_plotting()
+        plot_args = f'-i "{args.infile}" -s {args.o}_smudge_sizes.txt -n {round(cov, 3)} -o "{args.o}" ' + _parser.format_aguments_for_R_plotting()
 
         sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
         system("smudgeplot_plot.R " + plot_args) 
