@@ -107,6 +107,8 @@ tasks: cutoff           Calculate meaningful values for lower kmer histogram cut
         argparser = argparse.ArgumentParser()
         argparser.add_argument('infile', nargs='?', help='name of the input tsv file with covarages and frequencies.')
         argparser.add_argument('-o', help='The pattern used to name the output (smudgeplot).', default='smudgeplot')
+        argparser.add_argument('-cov_min', help='Minimal coverage to explore (default 6)', default=6)
+        argparser.add_argument('-cov_max', help='Maximal coverage to explore (default 50)', default=60)
 
         argparser = self.add_plotting_arguments(argparser)
 
@@ -383,7 +385,7 @@ def main():
         sys.stderr.write("\nInfering 1n coverage using grid algorihm\n")
 
         smudge_size_cutoff = 0.01 # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
-        centralities = test_coverage_range(cov_tab, 6, 60, smudge_size_cutoff)
+        centralities = test_coverage_range(cov_tab, args.cov_min, args.cov_max, smudge_size_cutoff)
         np.savetxt(args.o + "_centralities.txt", np.around(centralities, decimals=6), fmt="%.4f", delimiter = '\t')
         # plot(centralities['coverage'], centralities['coverage'])
 
