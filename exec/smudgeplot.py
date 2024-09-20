@@ -275,6 +275,8 @@ def get_centrality(smudge_container, cov):
         centrality = distA + distB
         centralities.append(centrality)
 
+    if len(centralities) == 0:
+        return(1)
     return(fmean(centralities, weights=freqs))
 
 def test_coverage_range(cov_tab, min_c, max_c, smudge_size_cutoff = 0.02):
@@ -375,6 +377,7 @@ def main():
         total_kmers = sum(cov_tab['freq'])
         genomic_kmers = sum(cov_tab[cov_tab['peak'] == 0]['freq'])
         total_error_kmers = sum(cov_tab[cov_tab['peak'] == 1]['freq'])
+        error_fraction = total_error_kmers / total_kmers
         sys.stderr.write(f"Total kmers: {total_kmers}\n\tGenomic kmers: {genomic_kmers}\n\tSequencing errors: {total_error_kmers}\n\tFraction or errors: {round(total_error_kmers/total_kmers, 3)}")
 
         with open(args.o + "_masked_errors_smu.txt", 'w') as error_annotated_smu:
@@ -389,12 +392,21 @@ def main():
         np.savetxt(args.o + "_centralities.txt", np.around(centralities, decimals=6), fmt="%.4f", delimiter = '\t')
         # plot(centralities['coverage'], centralities['coverage'])
 
-        cov = centralities['coverage'][argmin(centralities['centrality'])]
-        # sys.stderr.write(f"\nInferred coverage: {cov}\n")
+        if error_fraction < 0.7:
+            cov = centralities['coverage'][argmin(centralities['centrality'])]
+        else:
+            cov = 0
+
+        sys.stderr.write(f"\nInferred coverage: {cov}\n")
         final_smudges = get_smudge_container(cov_tab, cov, smudge_size_cutoff)
-        
+        # sys.stderr.write(str(final_smudges) + '\n')
+
         annotated_smudges = list(final_smudges.keys())
         smudge_sizes = [round(sum(final_smudges[smudge]['freq']) / genomic_kmers, 4) for smudge in annotated_smudges]
+        
+        sys.stderr.write(f'Detected smudges / sizes ({args.o} + "_smudge_sizes.txt):"\n')
+        sys.stderr.write('\t' + str(annotated_smudges) + '\n')
+        sys.stderr.write('\t' + str(smudge_sizes) + '\n')
 
         # saving smudge sizes
         smudge_table = DataFrame({'smudge': annotated_smudges, 'size': smudge_sizes})
@@ -406,7 +418,7 @@ def main():
         # Rscript playground/alternative_fitting/alternative_plotting_testing.R -i data/dicots/peak_agregation/$ToLID.cov_tab_peaks -o data/dicots/peak_agregation/$ToLID
         args = _parser.arguments
         
-        plot_args = f'-i "{args.infile}" -s {args.o}_smudge_sizes.txt -n {round(cov, 3)} -o "{args.o}" ' + _parser.format_aguments_for_R_plotting()
+        plot_args = f'-i "{args.o}_masked_errors_smu.txt" -s "{args.o}_smudge_sizes.txt" -n {round(cov, 3)} -o "{args.o}" ' + _parser.format_aguments_for_R_plotting()
 
         sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
         system("smudgeplot_plot.R " + plot_args) 
