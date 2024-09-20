@@ -191,7 +191,7 @@ if ( !file.exists(args$input) ) {
     stop("The input file not found. Please use --help to get help", call.=FALSE)
 }
 
-cov_tab <- read.table(args$input, col.names = c('covB', 'covA', 'freq'))
+cov_tab <- read.table(args$input, header = T) # col.names = c('covB', 'covA', 'freq', 'is_error'), 
 smudge_tab <- read.table(args$smudges, col.names = c('structure', 'size'))
 
 # total covarate of the kmer pair
@@ -223,29 +223,38 @@ if ( !is.null(args$q) ){
 }
 
 cov <- args$n_cov
-ylim <- c(min(cov_tab[, 'total_pair_cov']) - 1, # or 0?
-          min(10*cov, max(cov_tab[, 'total_pair_cov'])))
+if (cov == wtd.quantile(cov_tab[, 'total_pair_cov'], 0.95, cov_tab[, 'freq'])){
+    ylim <- c(min(cov_tab[, 'total_pair_cov']), max(cov_tab[, 'total_pair_cov']))
+} else {
+    ylim <- c(min(cov_tab[, 'total_pair_cov']) - 1, # or 0?
+          min(max(100, 10*cov), max(cov_tab[, 'total_pair_cov'])))
+}
 
 xlim <- c(0, 0.5)
+error_fraction <- sum(cov_tab[, 'is_error'] * cov_tab[, 'freq']) / sum(cov_tab[, 'freq']) * 100
+error_string <- paste("err =", round(error_fraction, 1), "%")
+cov_string <- paste0("1n = ", cov)
 
-if (!is.null(args$ylim)){ # if ylim is specified, set the bounday by the argument instead
+if (!is.null(args$ylim)){ # if ylim is specified, set the boundary by the argument instead
     ylim[2] <- args$ylim
 }
 
 fig_title <- ifelse(length(args$title) == 0, NA, args$title[1])
 # histogram_bins = max(30, args$nbins)
+
+##########
+# LINEAR #
+##########
 pdf(paste0(args$output,'_smudgeplot.pdf'))
 
 # layout(matrix(c(2,4,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_alt(cov_tab, ylim, colour_ramp_log)
+if (cov > 0){
+    plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
+}
 
-plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
-
-# 2,3 hist
-# plot_histograms(cov_tab, fig_title,
-#                 .ylim = ylim, .bins = histogram_bins)
 
 # 4 legend
 plot_legend(max(cov_tab[, 'freq']), colour_ramp, F)
@@ -253,9 +262,13 @@ plot_legend(max(cov_tab[, 'freq']), colour_ramp, F)
 ### add annotation
 # print smudge sizes
 plot.new()
-legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,'structure']), cex = 1.1)
-legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
-legend('bottomleft', bty = 'n', legend = paste0("1n = ", cov), cex = 1.1)
+if (cov > 0){
+    legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,'structure']), cex = 1.1)
+    legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
+    legend('bottomleft', bty = 'n', legend = c(cov_string, error_string), cex = 1.1)
+} else {
+    legend('bottomleft', bty = 'n', legend = error_string, cex = 1.1)
+}
 
 plot.new()
 mtext(bquote(italic(.(fig_title))), side=3, adj=0.1, line=-3, cex = 1.6)
@@ -263,7 +276,10 @@ mtext(bquote(italic(.(fig_title))), side=3, adj=0.1, line=-3, cex = 1.6)
 
 dev.off()
 
-################# log plot ###############
+############
+# log plot #
+############
+
 pdf(paste0(args$output,'_smudgeplot_log10.pdf'))
 
 layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
@@ -271,19 +287,23 @@ layout(matrix(c(4,2,1,3), 2, 2, byrow=T), c(3,1), c(1,3))
 # 1 smudge plot
 plot_alt(cov_tab, ylim, colour_ramp_log, log = T)
 
-plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
-
-# # 2,3 hist
-# plot_histograms(cov_tab, smudge_summary, fig_title, .ylim = ylim, .bins = histogram_bins) # I am testing here setting the number of bars to the same number as the number of squares
+if (cov > 0){
+    plot_expected_haplotype_structure(cov, smudge_tab, T, xmax = 0.49)
+}
 
 # 4 legend
 plot_legend(max(cov_tab[, 'freq']), colour_ramp_log, T)
 
 # print smudge sizes
 plot.new()
-legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,'structure']), cex = 1.1)
-legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
-legend('bottomleft', bty = 'n', legend = paste0("1n = ", cov), cex = 1.1)
+if (cov > 0){
+    legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,'structure']), cex = 1.1)
+    legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
+    legend('bottomleft', bty = 'n', legend = c(cov_string, error_string), cex = 1.1)
+} else {
+    legend('bottomleft', bty = 'n', legend = error_string, cex = 1.1)
+}
+
 
 plot.new()
 mtext(bquote(italic(.(fig_title))), side=3, adj=0.1, line=-3, cex = 1.6)
