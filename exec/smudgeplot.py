@@ -9,7 +9,7 @@ from math import ceil
 from collections import defaultdict
 from itertools import combinations
 
-version = '0.3.0dev'
+version = '0.3.0 oriel'
 
 ############################
 # processing of user input #
