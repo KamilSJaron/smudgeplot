@@ -17,7 +17,7 @@ from collections import defaultdict
 # import matplotlib.pyplot as plt
 # from matplotlib.pyplot import plot
 
-version = '0.3.0 oriel'
+version = '0.4.0dev'
 
 ############################
 # processing of user input #
@@ -259,8 +259,15 @@ def get_centrality(smudge_container, cov):
         As = smudge.count('A')
         Bs = smudge.count('B')
         smudge_tab = smudge_container[smudge]
-        freqs.append(sum(smudge_tab['freq']))
+        kmer_in_the_smudge = sum(smudge_tab['freq'])
+        freqs.append(kmer_in_the_smudge)
+        # center as a a mean
+        # center_A = sum((smudge_tab['freq'] * smudge_tab['covA'])) / kmer_in_the_smudge
+        # center_B = sum((smudge_tab['freq'] * smudge_tab['covB'])) / kmer_in_the_smudge
+        # center as a mode 
         center = smudge_tab.loc[smudge_tab['freq'].idxmax()]
+        center_A = center['covA']
+        center_B = center['covB']
         ## emprical to edge
         # distA = min([abs(smudge_tab['covA'].max() - center['covA']), abs(center['covA'] - smudge_tab['covA'].min())])
         # distB = min([abs(smudge_tab['covB'].max() - center['covB']), abs(center['covB'] - smudge_tab['covB'].min())])
@@ -268,8 +275,8 @@ def get_centrality(smudge_container, cov):
         # distA = min(abs(center['covA'] - (cov * (As - 0.5))), abs((cov * (As + 0.5)) - center['covA']))
         # distB = min(abs(center['covB'] - (cov * (Bs - 0.5))), abs((cov * (Bs + 0.5)) - center['covB']))
         ## theoretical relative distance to the center
-        distA = abs((center['covA'] - (cov * As)) / cov)
-        distB = abs((center['covB'] - (cov * Bs)) / cov)
+        distA = abs((center_A - (cov * As)) / cov)
+        distB = abs((center_B - (cov * Bs)) / cov)
 
         # sys.stderr.write(f"Processing: {As}A{Bs}B; with center: {distA}, {distB}\n")
         centrality = distA + distB
@@ -387,7 +394,7 @@ def main():
 
         sys.stderr.write("\nInfering 1n coverage using grid algorihm\n")
 
-        smudge_size_cutoff = 0.01 # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
+        smudge_size_cutoff = 0.001 # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
         centralities = test_coverage_range(cov_tab, args.cov_min, args.cov_max, smudge_size_cutoff)
         np.savetxt(args.o + "_centralities.txt", np.around(centralities, decimals=6), fmt="%.4f", delimiter = '\t')
         # plot(centralities['coverage'], centralities['coverage'])
