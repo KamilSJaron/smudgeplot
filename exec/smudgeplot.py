@@ -206,7 +206,7 @@ class SmudgeDataObj(object):
 		centralities = list()
 		for cov in to_test:
 			smudge_container = self.get_smudge_container(cov, smudge_size_cutoff)
-			centralities.append(self.get_centrality(smudge_container, cov))
+			centralities.append(get_centrality(smudge_container, cov))
 		return to_test[argmin(centralities)], centralities
 
 	def test_coverage_range(self, min_c, max_c, smudge_size_cutoff = 0.02):
@@ -224,7 +224,7 @@ class SmudgeDataObj(object):
 		just_to_be_sure_cov = best_hundredth/2
 		hundredths_to_test.append(just_to_be_sure_cov)
 		smudge_container = self.get_smudge_container(just_to_be_sure_cov, smudge_size_cutoff)
-		hundredths_centralities.append(self.get_centrality(smudge_container, just_to_be_sure_cov))
+		hundredths_centralities.append(get_centrality(smudge_container, just_to_be_sure_cov))
 		final_cov = hundredths_to_test[argmin(hundredths_centralities)]
 
 		sys.stderr.write(f"Best coverage to precision of one hundreth: {round(final_cov, 3)}\n")  
@@ -233,40 +233,6 @@ class SmudgeDataObj(object):
 		all_centralities = concatenate((cov_centralities, tenths_centralities, hundredths_centralities))
 
 		self.centralities = DataFrame({'coverage': all_coverages, 'centrality': all_centralities})
-
-	def get_centrality(self, smudge_container, cov):
-		centralities = list()
-		freqs = list()
-		for smudge in smudge_container.keys():
-			As = smudge.count('A')
-			Bs = smudge.count('B')
-			smudge_tab = smudge_container[smudge]
-			kmer_in_the_smudge = sum(smudge_tab['freq'])
-			freqs.append(kmer_in_the_smudge)
-			# center as a a mean
-			# center_A = sum((smudge_tab['freq'] * smudge_tab['covA'])) / kmer_in_the_smudge
-			# center_B = sum((smudge_tab['freq'] * smudge_tab['covB'])) / kmer_in_the_smudge
-			# center as a mode 
-			center = smudge_tab.loc[smudge_tab['freq'].idxmax()]
-			center_A = center['covA']
-			center_B = center['covB']
-			## emprical to edge
-			# distA = min([abs(smudge_tab['covA'].max() - center['covA']), abs(center['covA'] - smudge_tab['covA'].min())])
-			# distB = min([abs(smudge_tab['covB'].max() - center['covB']), abs(center['covB'] - smudge_tab['covB'].min())])
-			## theoretical to edge
-			# distA = min(abs(center['covA'] - (cov * (As - 0.5))), abs((cov * (As + 0.5)) - center['covA']))
-			# distB = min(abs(center['covB'] - (cov * (Bs - 0.5))), abs((cov * (Bs + 0.5)) - center['covB']))
-			## theoretical relative distance to the center
-			distA = abs((center_A - (cov * As)) / cov)
-			distB = abs((center_B - (cov * Bs)) / cov)
-
-			# sys.stderr.write(f"Processing: {As}A{Bs}B; with center: {distA}, {distB}\n")
-			centrality = distA + distB
-			centralities.append(centrality)
-
-		if len(centralities) == 0:
-			return(1)
-		return(fmean(centralities, weights=freqs))
 
 	def infer_coverage(self, cutoff=0.7):
 		if self.error_fraction < cutoff:
@@ -332,6 +298,40 @@ def cutoff(kmer_hist, boundary):
 		U = round_up_nice(min([i for i, q in enumerate(hist_rel_cumsum) if q > 0.998]))
 		sys.stdout.write(str(U))
 	sys.stdout.flush()
+
+def get_centrality(smudge_container, cov):
+	centralities = list()
+	freqs = list()
+	for smudge in smudge_container.keys():
+		As = smudge.count('A')
+		Bs = smudge.count('B')
+		smudge_tab = smudge_container[smudge]
+		kmer_in_the_smudge = sum(smudge_tab['freq'])
+		freqs.append(kmer_in_the_smudge)
+		# center as a a mean
+		# center_A = sum((smudge_tab['freq'] * smudge_tab['covA'])) / kmer_in_the_smudge
+		# center_B = sum((smudge_tab['freq'] * smudge_tab['covB'])) / kmer_in_the_smudge
+		# center as a mode 
+		center = smudge_tab.loc[smudge_tab['freq'].idxmax()]
+		center_A = center['covA']
+		center_B = center['covB']
+		## emprical to edge
+		# distA = min([abs(smudge_tab['covA'].max() - center['covA']), abs(center['covA'] - smudge_tab['covA'].min())])
+		# distB = min([abs(smudge_tab['covB'].max() - center['covB']), abs(center['covB'] - smudge_tab['covB'].min())])
+		## theoretical to edge
+		# distA = min(abs(center['covA'] - (cov * (As - 0.5))), abs((cov * (As + 0.5)) - center['covA']))
+		# distB = min(abs(center['covB'] - (cov * (Bs - 0.5))), abs((cov * (Bs + 0.5)) - center['covB']))
+		## theoretical relative distance to the center
+		distA = abs((center_A - (cov * As)) / cov)
+		distB = abs((center_B - (cov * Bs)) / cov)
+
+		# sys.stderr.write(f"Processing: {As}A{Bs}B; with center: {distA}, {distB}\n")
+		centrality = distA + distB
+		centralities.append(centrality)
+
+	if len(centralities) == 0:
+		return(1)
+	return(fmean(centralities, weights=freqs))
 
 def fin():
 	sys.stderr.write("\nDone!\n")
