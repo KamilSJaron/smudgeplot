@@ -6,4 +6,5 @@ exec/PloidyPlot
 exec/hetmers
 *.o
 .DS_Store
+.R*
 smu2text_smu
