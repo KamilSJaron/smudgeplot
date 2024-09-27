@@ -427,17 +427,10 @@ class SmudgeDataObj(object):
 			else:
 				ax.text(0.75, i/6, str(rounding(kmer_max* i/6)), fontsize=20)
 
-	#last know workspace
 	def plot_smudge_sizes(self, ax):
 		ax.plot()
 		ax.set_title('')
 		if self.cov > 0:
-			#handles = [mpl.patches.Patch(handle=None, label=smudge+" "+str(size)) for smudge, size in 
-			#zip(
-			#	reduce_structure_representation(self.smudge_tab['structure']).to_list(), 
-			#	round(self.smudge_tab['size'], 2)
-			#	)
-			#]
 			labels = [smudge+"    "+str(size) for smudge, size in 
 				zip(
 					reduce_structure_representation(self.smudge_tab['structure']).to_list(), 
@@ -451,17 +444,6 @@ class SmudgeDataObj(object):
 		
 		else:
 			ax.legend(loc='lower left', handles=[self.error_string],labels=[None], prop={'size': 18}, frameon=False)
-# R
-
-#if (cov > 0){
-#    legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,'structure']), cex = 1.1)
-#    legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
-#    legend('bottomleft', bty = 'n', legend = c(cov_string, error_string), cex = 1.1)
-#} else {
-#    legend('bottomleft', bty = 'n', legend = error_string, cex = 1.1)
-#}
-
-#mtext(bquote(italic(.(fig_title))), side=3, adj=0.1, line=-3, cex = 1.6)
 
 ###############
 # task cutoff #
