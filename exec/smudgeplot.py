@@ -13,8 +13,8 @@ from math import log
 from math import ceil
 from statistics import fmean
 from collections import defaultdict
-# import matplotlib as mpl
-# import matplotlib.pyplot as plt
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 # from matplotlib.pyplot import plot
 
 version = '0.4.0dev'
@@ -264,9 +264,10 @@ class SmudgeDataObj(object):
 			self.cov = 0
 
 	def describe_smudges(self):
-		self.annotated_smudges = list(self.final_smudges.keys())
-		self.smudge_sizes = [round(sum(self.final_smudges[smudge]['freq']) / self.total_genomic_kmers, 4) for smudge in self.annotated_smudges]
- 
+		annotated_smudges = list(self.final_smudges.keys())
+		smudge_sizes = [round(sum(self.final_smudges[smudge]['freq']) / self.total_genomic_kmers, 4) for smudge in annotated_smudges]
+		self.smudge_tab = DataFrame({'structure': annotated_smudges, 'size': smudge_sizes})
+	
 	def get_smudge_container(self, cov, smudge_filter):
 		smudge_container = dict()
 
@@ -288,6 +289,179 @@ class SmudgeDataObj(object):
 					# sys.stderr.write(f"{As}A{Bs}B: {sum(cov_tab_iso_smudge['freq']) / total_kmer_pairs}\n")
 
 		return smudge_container
+
+	def calc_cov_columns(self):
+		self.cov_tab['total_pair_cov'] = self.cov_tab[['covA','covB']].sum(axis=1)
+		self.cov_tab['minor_variant_rel_cov'] = self.cov_tab['covB']/self.cov_tab['total_pair_cov']
+
+	def filter_cov_quant(self, cov_filter=None, quant_filter=None):
+		if cov_filter:
+			self.cov_tab = self.cov_tab.loc[(self.cov_tab['covA'] >= cov_filter) & (self.cov_tab['covB'] >= cov_filter)]
+		if quant_filter:
+			# 0 < int(quant_filter) < 100
+			upper_quantile = np.percentile(a=self.cov_tab['total_pair_cov'], q=quant_filter, weights = cov_tab['freq'], method='inverted_cdf')
+			self.cov_tab.loc[self.cov_tab['total_pair_cov'] < upper_quantile]
+
+	def get_ax_lims(self, upper_ylim=None):
+		if self.cov == np.percentile(a=self.cov_tab['total_pair_cov'], q=95, weights = self.cov_tab['freq'], method='inverted_cdf'):
+			self.ylim = [min(self.cov_tab['total_pair_cov']), max(self.cov_tab['total_pair_cov'])]
+		else: 
+			self.ylim = [min(self.cov_tab['total_pair_cov']) - 1, # or 0?
+				  min(max(100, 10*self.cov), max(self.cov_tab['total_pair_cov']))]
+		if upper_ylim:
+			ylim[1] = upper_ylim
+		self.xlim = [0, 0.5]
+
+	def def_strings(self, title=None, output='smudgeplot'):
+			error_fraction = np.sum(self.cov_tab[self.cov_tab['peak']==1]['freq']) / np.sum(self.cov_tab['freq']) * 100
+			self.error_string = f"err = {round(error_fraction, 1)} %"
+			self.cov_string = f"1n = {self.cov}"
+			if title:
+				self.fig_title = str(title)
+			else:
+				self.fig_title = '.'.join(self.input_file_path.split('/')[-1].split('.')[0:2])
+			self.linear_plot_file = output+'_smudgeplot_py.pdf'
+			self.log_plot_file = output+'_smudgeplot_log10_py.pdf'
+
+	def smudgeplot(self, log=False):
+	#probably needs to be a function not a method because of plot task, but is ok for now
+
+		fig, axs = plt.subplots(nrows=2, ncols=2, width_ratios = [3, 1], height_ratios = [1, 3], figsize=(20,20))
+		plt.subplots_adjust(wspace=0.05, hspace=0.05)
+		fontsize=32
+
+		main_ax = axs[1][0]
+		legend_ax = axs[0][1]
+		size_ax = axs[1][1]
+		top_ax = axs[0][0]
+
+		legend_ax.axis('off')
+		size_ax.axis('off')
+		top_ax.axis('off')
+
+		if log:
+			colour_ramp = get_col_ramp(delay=16)
+			outfile = self.log_plot_file
+		else:
+			colour_ramp = get_col_ramp()
+			outfile = self.linear_plot_file
+		
+		self.plot_alt(colour_ramp, log=log, fontsize=fontsize, ax=main_ax)
+
+		if self.cov>0:
+			self.plot_expected_haplotype_structure(main_ax, self.smudge_tab, adjust=True, xmax = 0.49)
+
+		self.plot_legend(ax=legend_ax, kmer_max=max(self.cov_tab['freq']), colour_ramp=colour_ramp, log=log)
+
+		self.plot_smudge_sizes(ax=size_ax)
+
+		top_ax.set_title(self.fig_title, fontsize=42, loc ='left', y=1.0, pad=-14, weight='bold')
+
+		fig.savefig(outfile, dpi = 200)
+
+	def plot_alt(self, colour_ramp, ax, log=False, fontsize=14):
+		mask = (self.cov_tab['covA'] == self.cov_tab['covB'])
+		self.cov_tab.loc[mask, 'freq'] = self.cov_tab[mask]['freq']*2
+
+		if log:
+			self.cov_tab['freq'] = np.log10(self.cov_tab['freq'])
+
+		# might be a quicker way to do this
+		self.cov_tab['col'] = [str(colour_ramp[int(i)]) for i in round(31 * self.cov_tab['freq'] / max(self.cov_tab['freq']))]
+
+		ax.plot()
+		ax.set_xlim(self.xlim)
+		ax.set_ylim(self.ylim)
+		ax.set_xlabel('Normalized minor kmer coverage: B / (A + B)', fontsize=fontsize)
+		ax.set_ylabel('Total coverage of the kmer pair: A + B', fontsize=fontsize)
+		ax.tick_params(axis='both', labelsize=20)
+		ax.spines[['right', 'top']].set_visible(False)
+
+		min_cov_to_plot = max(self.ylim[0],min(self.cov_tab['total_pair_cov']))
+
+		self.plot_one_coverage(100, ax)
+		for cov in np.arange(min_cov_to_plot, self.ylim[1]):
+			self.plot_one_coverage(cov, ax)
+
+	def plot_one_coverage(self, cov, ax):
+		cov_row_to_plot = self.cov_tab[self.cov_tab['total_pair_cov'] == cov]
+		width = 1/(2*cov)
+		lefts = (cov_row_to_plot['minor_variant_rel_cov'] - width).to_numpy()
+		rights = (cov_row_to_plot['minor_variant_rel_cov'].apply(lambda x: min(0.5, x+width))).to_numpy()
+		cols = cov_row_to_plot['col'].to_numpy()
+		for left, right, col in zip(lefts, rights, cols):
+			self.plot_one_box(left, right, cov, col, ax)
+
+	def plot_one_box(self, left, right, cov, colour, ax):
+		width = float(right)- float(left) 
+		rect = mpl.patches.Rectangle((float(left), cov-0.5), width, 1, linewidth=1, edgecolor=colour, facecolor=colour)
+		ax.add_patch(rect)
+
+	def plot_expected_haplotype_structure(self, ax, peak_sizes, adjust=False, xmax=0.49):
+		# find the slice warnings
+		peak_sizes['ploidy'] = peak_sizes['structure'].str.len() 
+		peak_sizes = peak_sizes.loc[peak_sizes['size'] > 0.05]
+		peak_sizes['corrected_minor_variant_cov'] = peak_sizes['structure'].str.count('B')/peak_sizes['ploidy']
+		peak_sizes['label'] = reduce_structure_representation(peak_sizes['structure'])
+		bordercases = (peak_sizes['corrected_minor_variant_cov']==0.5)
+		for index, row in peak_sizes.iterrows():
+			if bordercases[index] & adjust:
+				x = (xmax + 0.49) / 2
+			else:
+				x = row['corrected_minor_variant_cov']
+			y = row['ploidy']*self.cov
+			ax.text(x, y, row['label'], fontsize=28)
+
+	def plot_legend(self, ax, kmer_max, colour_ramp, log=False):
+		title = 'kmers pairs'
+		if log:
+			title = 'log ' + title
+		ax.set_title(title, fontsize=28, weight='bold')
+		for i in range(32):
+			rect = mpl.patches.Rectangle((0, ((i+1)-0.01)/33), 0.5, ((i+1) + 0.99)/33, linewidth=1, edgecolor=colour_ramp[i], facecolor=colour_ramp[i])
+			ax.add_patch(rect)
+		
+		for i in range(6):
+			if log:
+				ax.text(0.75, i/6, str(rounding(10**(np.log10(kmer_max)* i/6))), fontsize=20)
+			else:
+				ax.text(0.75, i/6, str(rounding(kmer_max* i/6)), fontsize=20)
+
+	#last know workspace
+	def plot_smudge_sizes(self, ax):
+		ax.plot()
+		ax.set_title('')
+		if self.cov > 0:
+			#handles = [mpl.patches.Patch(handle=None, label=smudge+" "+str(size)) for smudge, size in 
+			#zip(
+			#	reduce_structure_representation(self.smudge_tab['structure']).to_list(), 
+			#	round(self.smudge_tab['size'], 2)
+			#	)
+			#]
+			labels = [smudge+"    "+str(size) for smudge, size in 
+				zip(
+					reduce_structure_representation(self.smudge_tab['structure']).to_list(), 
+					round(self.smudge_tab['size'], 2)
+					)
+				]
+			handles = [mpl.patches.Rectangle((0,0), 1, 1, fill=False, edgecolor='none',
+                      visible=False) for label in labels]
+			ax.legend(loc='upper left', labels=labels, handles = handles, prop={'size': 18}, frameon=False)
+
+		
+		else:
+			ax.legend(loc='lower left', handles=[self.error_string],labels=[None], prop={'size': 18}, frameon=False)
+# R
+
+#if (cov > 0){
+#    legend('topleft', bty = 'n', reduce_structure_representation(smudge_tab[,'structure']), cex = 1.1)
+#    legend('top', bty = 'n', legend = round(smudge_tab[,2], 2), cex = 1.1)
+#    legend('bottomleft', bty = 'n', legend = c(cov_string, error_string), cex = 1.1)
+#} else {
+#    legend('bottomleft', bty = 'n', legend = error_string, cex = 1.1)
+#}
+
+#mtext(bquote(italic(.(fig_title))), side=3, adj=0.1, line=-3, cex = 1.6)
 
 ###############
 # task cutoff #
@@ -374,6 +548,41 @@ def get_cov_limits(Xs, cov):
 def smudgeplot_plot_R(plot_args):
 	sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
 	system("smudgeplot_plot.R " + plot_args)
+
+def smudgeplot_plot_py(dataObj, col_ramp='viridis', cov_filter=None, quant_filter=None, upper_ylim=None, output='smudgeplot'):
+	# preplottingprep
+	dataObj.calc_cov_columns()
+	dataObj.filter_cov_quant(cov_filter=cov_filter, quant_filter=quant_filter)
+
+	# plotting
+	dataObj.get_ax_lims(upper_ylim=upper_ylim)
+	dataObj.def_strings(output=output)
+	dataObj.smudgeplot(log=False)
+	#dataObj.smudgeplot(log=True)	
+
+def get_col_ramp(col_ramp='viridis', delay=0, invert_cols=False):
+	#is delay incorporated correctly?
+	if invert_cols:
+		col_ramp+='_r' 
+	cmap = plt.get_cmap(col_ramp, 32-int(delay))
+	return np.array([mpl.colors.rgb2hex(cmap(i)) for i in range(cmap.N)])
+
+def reduce_structure_representation(smudge_labels):
+	structures_to_adjust = (smudge_labels.str.len() > 4)
+	if any(structures_to_adjust):
+		As = smudge_labels[structures_to_adjust].str.count('A').map(str)
+		Bs = smudge_labels[structures_to_adjust].str.count('B').map(str)
+		new_labels = smudge_labels.copy(deep=True)
+		new_labels[structures_to_adjust] = As + 'A' + Bs + 'B'
+	return new_labels
+
+def rounding(number):
+	if number > 1000:
+		return round(number / 1000) * 1000
+	elif number > 100:
+		return round(number / 100) * 100
+	else:
+		return round(number / 10) * 10
 
 def fin():
 	sys.stderr.write("\nDone!\n")
@@ -475,10 +684,10 @@ def main():
 		
 		SmudgeData.describe_smudges()
 		sys.stderr.write(f'Detected smudges / sizes ({args.o} + "_smudge_sizes.txt):"\n')
-		sys.stderr.write('\t' + str(SmudgeData.annotated_smudges) + '\n')
-		sys.stderr.write('\t' + str(SmudgeData.smudge_sizes) + '\n')
+		sys.stderr.write('\t' + str(SmudgeData.smudge_tab['structure'].to_list()) + '\n')
+		sys.stderr.write('\t' + str(SmudgeData.smudge_tab['size'].to_list()) + '\n')
 		np.savetxt(args.o + "_smudge_sizes.txt", 
-			DataFrame({'smudge': SmudgeData.annotated_smudges, 'size': SmudgeData.smudge_sizes}), 
+			SmudgeData.smudge_tab, 
 			fmt='%s', 
 			delimiter = '\t'
 		)
@@ -495,9 +704,9 @@ def main():
 		-o "{args.o}" \
 		' + _parser.format_arguments_for_R_plotting()
 		
-		smudgeplot_plot_R(plot_args)
+		#smudgeplot_plot_R(plot_args)
 		
-		#smudgeplot_plot_py()
+		smudgeplot_plot_py(SmudgeData)
 
 	fin()
 
