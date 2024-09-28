@@ -379,7 +379,6 @@ class SmudgeDataObj(object):
 
 		min_cov_to_plot = max(self.ylim[0],min(self.cov_tab['total_pair_cov']))
 
-		self.plot_one_coverage(100, ax)
 		for cov in np.arange(min_cov_to_plot, self.ylim[1]):
 			self.plot_one_coverage(cov, ax)
 
