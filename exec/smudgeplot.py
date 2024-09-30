@@ -23,18 +23,19 @@ version = '0.4.0dev'
 # processing of user input #
 ############################
 
-class parser():
+class Parser:
 	def __init__(self):
+		self.arguments=None
 		argparser = argparse.ArgumentParser(
 			# description='Inference of ploidy and heterozygosity structure using whole genome sequencing data',
-			usage='''
+			usage="""
 			smudgeplot <task> [options] \n
 			tasks: cutoff           Calculate meaningful values for lower kmer histogram cutoff.
 				   hetmers          Calculate unique kmer pairs from a FastK k-mer database.
 				   peak_aggregation  Agregates smudges using local aggregation algorithm.
 				   plot             Generate 2d histogram; infere ploidy and plot a smudgeplot.
 				   all              Runs all the steps (with default options)\n\n
-				   '''
+				   """
 		)
 		# removing this for now;
 		#        extract   Extract kmer pairs within specified coverage sum and minor covrage ratio ranges
@@ -59,9 +60,9 @@ class parser():
 			exit(1)
 
 	def hetmers(self):
-		'''
+		"""
 		Calculate unique kmer pairs from a Jellyfish or KMC dump file.
-		'''
+		"""
 		argparser = argparse.ArgumentParser(prog = 'smudgeplot hetkmers',
 			description='Calculate unique kmer pairs from FastK k-mer database.')
 		argparser.add_argument('infile', nargs='?', help='Input FastK database (.ktab) file.')
@@ -73,9 +74,9 @@ class parser():
 		self.arguments = argparser.parse_args(sys.argv[2:])
 
 	def plot(self):
-		'''
+		"""
 		Generate 2d histogram; infer ploidy and plot a smudgeplot.
-		'''
+		"""
 		argparser = argparse.ArgumentParser(prog = 'smudgeplot plot', description='Generate 2d histogram for smudgeplot')
 		argparser.add_argument('infile', help='name of the input tsv file with covarages and frequencies')
 		argparser.add_argument('smudgefile', help='name of the input tsv file with sizes of individual smudges')
@@ -87,18 +88,18 @@ class parser():
 		self.arguments = argparser.parse_args(sys.argv[2:])
 
 	def cutoff(self):
-		'''
+		"""
 		Calculate meaningful values for lower/upper kmer histogram cutoff.
-		'''
+		"""
 		argparser = argparse.ArgumentParser(prog = 'smudgeplot cutoff', description='Calculate meaningful values for lower/upper kmer histogram cutoff.')
 		argparser.add_argument('infile', type=argparse.FileType('r'), help='Name of the input kmer histogram file (default \"kmer.hist\")."')
 		argparser.add_argument('boundary', help='Which bounary to compute L (lower) or U (upper)')
 		self.arguments = argparser.parse_args(sys.argv[2:])
 
 	def peak_aggregation(self):
-		'''
+		"""
 		Extract kmer pairs within specified coverage sum and minor covrage ratio ranges.
-		'''
+		"""
 		argparser = argparse.ArgumentParser()
 		argparser.add_argument('infile', nargs='?', help='name of the input tsv file with covarages and frequencies.')
 		argparser.add_argument('-nf', '-noise_filter', help='Do not agregate into smudge k-mer pairs with frequency lower than this parameter', type=int, default=50)
@@ -123,7 +124,7 @@ class parser():
 		argparser.add_argument('-ylim', help='The upper limit for the coverage sum (the y axis)', type = int, default=0)
 		argparser.add_argument('-col_ramp', help='An R palette used for the plot (default "viridis", other sensible options are "magma", "mako" or "grey.colors" - recommended in combination with --invert_cols).', default='viridis')
 		argparser.add_argument('--invert_cols', action="store_true", default = False, help="Revert the colour palette (default False).")
-		return(argparser)
+		return argparser
 	
 	def format_arguments_for_R_plotting(self):
 		plot_args = ""
@@ -137,14 +138,33 @@ class parser():
 			plot_args += " -col_ramp \"" + self.arguments.col_ramp + "\""
 		if self.arguments.invert_cols:
 			plot_args += " --invert_cols"
-		return(plot_args)
+		return plot_args
 
 class SmudgeDataObj(object):
 	def __init__(
 		self,
 		input_file_path
 	):
-		self.input_file_path=input_file_path
+		self.input_file_path = input_file_path
+		self.cov_tab=None
+		self.cov2peak=None
+		self.final_smudges=None
+		self.total_kmers=None
+		self.total_genomic_kmers=None
+		self.total_error_kmers=None
+		self.error_fraction=None
+		self.centralities=None
+		self.cov=None
+		self.smudge_tab=None
+		self.ylim=None
+		self.xlim=None
+		self.error_string=None
+		self.cov_string=None
+		self.fig_title=None
+		self.linear_plot_file=None
+		self.log_plot_file=None
+
+
 
 	def load_hetmers(self):
 		self.cov_tab = read_csv(self.input_file_path, names = ['covB', 'covA', 'freq'], sep='\t')
@@ -172,12 +192,12 @@ class SmudgeDataObj(object):
 				for xB in range(covB - distanceB,covB + distanceB + 1):
 					xB, xA = sorted([xA, xB]) # this is to make sure xB is smaller than xA
 					# iterating only though those that were assigned already
-					# and recroding only the one with highest frequency
+					# and recording only the one with highest frequency
 					if cov2peak[(xA, xB)] and cov2freq[(xA, xB)] > highest_neigbour_freq:
 						highest_neigbour_coords = (xA, xB)
 						highest_neigbour_freq = cov2freq[(xA, xB)]
 			if highest_neigbour_freq:# > 0:
-				cov2peak[(covA, covB)] = cov2peak[(highest_neigbour_coords)]
+				cov2peak[covA, covB] = cov2peak[highest_neigbour_coords]
 			else:
 				# print("new peak:", (covA, covB))
 				if mask_errors:
@@ -257,8 +277,8 @@ class SmudgeDataObj(object):
 			'centrality': concatenate([result['centralities'] for result in results])}
 		)
 
-	def infer_coverage(self, cutoff=0.7):
-		if self.error_fraction < cutoff:
+	def infer_coverage(self, limit=0.7):
+		if self.error_fraction < limit:
 			self.cov = self.centralities['coverage'][argmin(self.centralities['centrality'])]
 		else:
 			self.cov = 0
@@ -299,8 +319,8 @@ class SmudgeDataObj(object):
 			self.cov_tab = self.cov_tab.loc[(self.cov_tab['covA'] >= cov_filter) & (self.cov_tab['covB'] >= cov_filter)]
 		if quant_filter:
 			# 0 < int(quant_filter) < 100
-			upper_quantile = np.percentile(a=self.cov_tab['total_pair_cov'], q=quant_filter, weights = cov_tab['freq'], method='inverted_cdf')
-			self.cov_tab.loc[self.cov_tab['total_pair_cov'] < upper_quantile]
+			upper_quantile = np.percentile(a=self.cov_tab['total_pair_cov'], q=quant_filter, weights = self.cov_tab['freq'], method='inverted_cdf')
+			self.cov_tab = self.cov_tab.loc[self.cov_tab['total_pair_cov'] < upper_quantile]
 
 	def get_ax_lims(self, upper_ylim=None):
 		if self.cov == np.percentile(a=self.cov_tab['total_pair_cov'], q=95, weights = self.cov_tab['freq'], method='inverted_cdf'):
@@ -309,7 +329,7 @@ class SmudgeDataObj(object):
 			self.ylim = [min(self.cov_tab['total_pair_cov']) - 1, # or 0?
 				  min(max(100, 10*self.cov), max(self.cov_tab['total_pair_cov']))]
 		if upper_ylim:
-			ylim[1] = upper_ylim
+			self.ylim[1] = upper_ylim
 		self.xlim = [0, 0.5]
 
 	def def_strings(self, title=None, output='smudgeplot'):
@@ -351,7 +371,7 @@ class SmudgeDataObj(object):
 		if self.cov>0:
 			self.plot_expected_haplotype_structure(main_ax, self.smudge_tab, adjust=True, xmax = 0.49)
 
-		self.plot_legend(ax=legend_ax, kmer_max=max(self.cov_tab['freq']), colour_ramp=colour_ramp, log=log)
+		plot_legend(ax=legend_ax, kmer_max=max(self.cov_tab['freq']), colour_ramp=colour_ramp, log=log)
 
 		self.plot_smudge_sizes(ax=size_ax)
 
@@ -389,12 +409,7 @@ class SmudgeDataObj(object):
 		rights = (cov_row_to_plot['minor_variant_rel_cov'].apply(lambda x: min(0.5, x+width))).to_numpy()
 		cols = cov_row_to_plot['col'].to_numpy()
 		for left, right, col in zip(lefts, rights, cols):
-			self.plot_one_box(left, right, cov, col, ax)
-
-	def plot_one_box(self, left, right, cov, colour, ax):
-		width = float(right)- float(left) 
-		rect = mpl.patches.Rectangle((float(left), cov-0.5), width, 1, linewidth=1, edgecolor=colour, facecolor=colour)
-		ax.add_patch(rect)
+			plot_one_box(left, right, cov, col, ax)
 
 	def plot_expected_haplotype_structure(self, ax, peak_sizes, adjust=False, xmax=0.49):
 		# find the slice warnings
@@ -411,21 +426,6 @@ class SmudgeDataObj(object):
 			y = row['ploidy']*self.cov
 			ax.text(x, y, row['label'], fontsize=28)
 
-	def plot_legend(self, ax, kmer_max, colour_ramp, log=False):
-		title = 'kmers pairs'
-		if log:
-			title = 'log ' + title
-		ax.set_title(title, fontsize=28, weight='bold')
-		for i in range(32):
-			rect = mpl.patches.Rectangle((0, ((i+1)-0.01)/33), 0.5, ((i+1) + 0.99)/33, linewidth=1, edgecolor=colour_ramp[i], facecolor=colour_ramp[i])
-			ax.add_patch(rect)
-		
-		for i in range(6):
-			if log:
-				ax.text(0.75, i/6, str(rounding(10**(np.log10(kmer_max)* i/6))), fontsize=20)
-			else:
-				ax.text(0.75, i/6, str(rounding(kmer_max* i/6)), fontsize=20)
-
 	def plot_smudge_sizes(self, ax):
 		ax.plot()
 		ax.set_title('')
@@ -437,7 +437,7 @@ class SmudgeDataObj(object):
 					)
 				]
 			handles = [mpl.patches.Rectangle((0,0), 1, 1, fill=False, edgecolor='none',
-                      visible=False) for label in labels]
+                      visible=False) for _ in labels]
 			ax.legend(loc='upper left', labels=labels, handles = handles, prop={'size': 18}, frameon=False)
 
 		
@@ -460,7 +460,7 @@ def round_up_nice(x):
 		multiplier = 10 ** (digits - 1)
 	else:
 		multiplier = 10 ** (digits - 2)
-	return(ceil(x / multiplier) * multiplier)
+	return ceil(x / multiplier) * multiplier
 
 def cutoff(kmer_hist, boundary):
 	# kmer_hist = open("data/Scer/kmc_k31.hist","r")
@@ -497,7 +497,7 @@ def get_centrality(smudge_container, cov):
 		center_A = center['covA']
 		center_B = center['covB']
 		
-		# center as a a mean
+		# center as a mean
 		# center_A = sum((smudge_tab['freq'] * smudge_tab['covA'])) / kmer_in_the_smudge
 		# center_B = sum((smudge_tab['freq'] * smudge_tab['covB'])) / kmer_in_the_smudge
 
@@ -518,8 +518,8 @@ def get_centrality(smudge_container, cov):
 		centralities.append(centrality)
 
 	if len(centralities) == 0:
-		return(1)
-	return(fmean(centralities, weights=freqs))
+		return 1
+	return fmean(centralities, weights=freqs)
 
 def get_cov_limits(Xs, cov):
 	min_cov = 0 if Xs == 1 else cov * (Xs - 0.5)
@@ -530,7 +530,7 @@ def smudgeplot_plot_R(plot_args):
 	sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
 	system("smudgeplot_plot.R " + plot_args)
 
-def smudgeplot_plot_py(dataObj, col_ramp='viridis', cov_filter=None, quant_filter=None, upper_ylim=None, output='smudgeplot'):
+def smudgeplot_plot_py(dataObj, cov_filter=None, quant_filter=None, upper_ylim=None, output='smudgeplot'):
 	# preplottingprep
 	dataObj.calc_cov_columns()
 	dataObj.filter_cov_quant(cov_filter=cov_filter, quant_filter=quant_filter)
@@ -550,12 +550,35 @@ def get_col_ramp(col_ramp='viridis', delay=0, invert_cols=False):
 
 def reduce_structure_representation(smudge_labels):
 	structures_to_adjust = (smudge_labels.str.len() > 4)
-	if any(structures_to_adjust):
+	if not any(structures_to_adjust):
+		return structures_to_adjust
+	else:
 		As = smudge_labels[structures_to_adjust].str.count('A').map(str)
 		Bs = smudge_labels[structures_to_adjust].str.count('B').map(str)
 		new_labels = smudge_labels.copy(deep=True)
 		new_labels[structures_to_adjust] = As + 'A' + Bs + 'B'
-	return new_labels
+		return new_labels
+
+def plot_one_box(left, right, cov, colour, ax):
+	width = float(right)- float(left)
+	rect = mpl.patches.Rectangle((float(left), cov-0.5), width, 1, linewidth=1, edgecolor=colour, facecolor=colour)
+	ax.add_patch(rect)
+
+def plot_legend(ax, kmer_max, colour_ramp, log=False):
+	title = 'kmers pairs'
+	if log:
+		title = 'log ' + title
+	ax.set_title(title, fontsize=28, weight='bold')
+	for i in range(32):
+		rect = mpl.patches.Rectangle((0, ((i + 1) - 0.01) / 33), 0.5, ((i + 1) + 0.99) / 33, linewidth=1,
+									 edgecolor=colour_ramp[i], facecolor=colour_ramp[i])
+		ax.add_patch(rect)
+
+	for i in range(6):
+		if log:
+			ax.text(0.75, i / 6, str(rounding(10 ** (np.log10(kmer_max) * i / 6))), fontsize=20)
+		else:
+			ax.text(0.75, i / 6, str(rounding(kmer_max * i / 6)), fontsize=20)
 
 def rounding(number):
 	if number > 1000:
@@ -574,7 +597,7 @@ def fin():
 #####################
 
 def main():
-	_parser = parser()
+	_parser = Parser()
 
 	sys.stderr.write('Running smudgeplot v' + version + "\n")
 	if _parser.task == "version":
@@ -654,7 +677,7 @@ def main():
 			fmt="%.4f", 
 			delimiter = '\t'
 		)
-		SmudgeData.infer_coverage(cutoff=0.7)
+		SmudgeData.infer_coverage(limit=0.7)
 		sys.stderr.write(f"\nInferred coverage: {round(SmudgeData.cov, 3)}\n")
 		# plot(SmudgeData.centralities['coverage'], SmudgeData.centralities['coverage'])
 
