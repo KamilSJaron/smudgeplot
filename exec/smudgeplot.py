@@ -230,7 +230,7 @@ class SmudgeDataObj(object):
 
 	def get_best_coverage(self, cov_list, smudge_size_cutoff = 0.02, centralities=None, last_check=False):
 		if centralities is None:
-			centralities = list()
+			centralities = []
 
 		if last_check:
 			to_test = [cov_list[-1]]
@@ -244,7 +244,7 @@ class SmudgeDataObj(object):
 
 	def test_coverages(self, min_c, max_c, smudge_size_cutoff = 0.02):
 		grid_params = [(0.05, 0.05, 2), (-1.9, 1.9, 0.2), (-0.19, 0.19, 0.01)]
-		results = list()
+		results = []
 
 		for i, params in enumerate(grid_params):
 			cov_list = arange(min_c + params[0], max_c + params[1], params[2])
@@ -289,7 +289,7 @@ class SmudgeDataObj(object):
 		self.smudge_tab = DataFrame({'structure': annotated_smudges, 'size': smudge_sizes})
 	
 	def get_smudge_container(self, cov, smudge_filter):
-		smudge_container = dict()
+		smudge_container = {}
 
 		for Bs in range(1,9):
 			min_cov, max_cov = get_cov_limits(Bs, cov)
@@ -369,7 +369,7 @@ class SmudgeDataObj(object):
 		self.plot_alt(colour_ramp, log=log, fontsize=fontsize, ax=main_ax)
 
 		if self.cov>0:
-			self.plot_expected_haplotype_structure(main_ax, self.smudge_tab, adjust=True, xmax = 0.49)
+			self.plot_expected_haplotype_structure(main_ax, adjust=True, xmax = 0.49)
 
 		plot_legend(ax=legend_ax, kmer_max=max(self.cov_tab['freq']), colour_ramp=colour_ramp, log=log)
 
@@ -411,14 +411,15 @@ class SmudgeDataObj(object):
 		for left, right, col in zip(lefts, rights, cols):
 			plot_one_box(left, right, cov, col, ax)
 
-	def plot_expected_haplotype_structure(self, ax, peak_sizes, adjust=False, xmax=0.49):
+	def plot_expected_haplotype_structure(self, ax, adjust=False, xmax=0.49):
 		# find the slice warnings
-		peak_sizes['ploidy'] = peak_sizes['structure'].str.len() 
-		peak_sizes = peak_sizes.loc[peak_sizes['size'] > 0.05]
-		peak_sizes['corrected_minor_variant_cov'] = peak_sizes['structure'].str.count('B')/peak_sizes['ploidy']
-		peak_sizes['label'] = reduce_structure_representation(peak_sizes['structure'])
-		bordercases = (peak_sizes['corrected_minor_variant_cov']==0.5)
-		for index, row in peak_sizes.iterrows():
+		self.smudge_tab.loc[:,'ploidy'] = self.smudge_tab['structure'].str.len()
+		self.smudge_tab = self.smudge_tab.loc[self.smudge_tab['size'] > 0.05]
+		self.smudge_tab.loc[:,'corrected_minor_variant_cov'] = self.smudge_tab['structure'].str.count('B')/self.smudge_tab['ploidy']
+		self.smudge_tab.loc[:,'label'] = reduce_structure_representation(self.smudge_tab['structure'])
+		#bordercases not working as intended
+		bordercases = np.array(self.smudge_tab['corrected_minor_variant_cov']==0.5)
+		for index, row in self.smudge_tab.iterrows():
 			if bordercases[index] & adjust:
 				x = (xmax + 0.49) / 2
 			else:
@@ -484,8 +485,8 @@ def cutoff(kmer_hist, boundary):
 #################
 
 def get_centrality(smudge_container, cov):
-	centralities = list()
-	freqs = list()
+	centralities = []
+	freqs = []
 	for smudge, smudge_tab in smudge_container.items():
 		As = smudge.count('A')
 		Bs = smudge.count('B')
@@ -630,16 +631,10 @@ def main():
 	if _parser.task == "plot":
 		# the plotting script is expected ot be installed in the system as well as the R library supporting it
 		
-		plot_args = f'\
-		-i "{args.infile}" \
-		-s "{args.smudgefile}" \
-		-n {args.n} \
-		-o "{args.o}" \
-		' + _parser.format_arguments_for_R_plotting()
+		plot_args = (f'-i "{args.infile}" -s "{args.smudgefile}" -n {args.n} -o "{args.o}"'
+					 + _parser.format_arguments_for_R_plotting())
 		
 		smudgeplot_plot_R(plot_args)
-		
-		#smudgeplot_plot_py()
 
 		fin()
 
@@ -701,12 +696,8 @@ def main():
 		
 		# Rscript playground/alternative_fitting/alternative_plotting_testing.R -i data/dicots/peak_aggregation/$ToLID.cov_tab_peaks -o data/dicots/peak_aggregation/$ToLID
 		
-		plot_args = f'\
-		-i "{args.o}_masked_errors_smu.txt" \
-		-s "{args.o}_smudge_sizes.txt" \
-		-n {round(SmudgeData.cov, 3)} \
-		-o "{args.o}" \
-		' + _parser.format_arguments_for_R_plotting()
+		plot_args = (f' -i "{args.o}_masked_errors_smu.txt" -s "{args.o}_smudge_sizes.txt" -n {round(SmudgeData.cov, 3)} -o "{args.o}"'
+					 + _parser.format_arguments_for_R_plotting())
 		
 		#smudgeplot_plot_R(plot_args)
 		
