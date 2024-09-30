@@ -412,19 +412,26 @@ class SmudgeDataObj(object):
 			plot_one_box(left, right, cov, col, ax)
 
 	def plot_expected_haplotype_structure(self, ax, adjust=False, xmax=0.49):
-		# find the slice warnings
 		self.smudge_tab.loc[:,'ploidy'] = self.smudge_tab['structure'].str.len()
 		self.smudge_tab = self.smudge_tab.loc[self.smudge_tab['size'] > 0.05]
 		self.smudge_tab.loc[:,'corrected_minor_variant_cov'] = self.smudge_tab['structure'].str.count('B')/self.smudge_tab['ploidy']
 		self.smudge_tab.loc[:,'label'] = reduce_structure_representation(self.smudge_tab['structure'])
 		bordercases = np.array(self.smudge_tab['corrected_minor_variant_cov']==0.5)
 		for index, row in self.smudge_tab.iterrows():
+
 			if bordercases[index] & adjust:
-				x = (xmax + 0.49) / 2
+				ha="right"
 			else:
-				x = row['corrected_minor_variant_cov']
+				ha="center"
+				
+			x = row['corrected_minor_variant_cov']
 			y = row['ploidy']*self.cov
-			ax.text(x, y, row['label'], fontsize=28)
+			ax.text(x, y, row['label'], fontsize=28, va="center_baseline", ha=ha)
+
+			#sanity spot
+			#circle = plt.Circle((x, y), 0.001, color='r')
+			#ax.add_patch(circle)
+
 
 	def plot_smudge_sizes(self, ax):
 		ax.plot()
@@ -437,7 +444,7 @@ class SmudgeDataObj(object):
 					)
 				]
 			handles = [mpl.patches.Rectangle((0,0), 1, 1, fill=False, edgecolor='none',
-                      visible=False) for _ in labels]
+					  visible=False) for _ in labels]
 			ax.legend(loc='upper left', labels=labels, handles = handles, prop={'size': 18}, frameon=False)
 
 		
@@ -540,7 +547,7 @@ def smudgeplot_plot_py(dataObj, cov_filter=None, quant_filter=None, upper_ylim=N
 	dataObj.def_strings(output=output)
 	dataObj.smudgeplot(log=False)
 	#log plot and legend is currently incurrent
-	dataObj.smudgeplot(log=True)
+	#dataObj.smudgeplot(log=True)
 
 def get_col_ramp(col_ramp='viridis', delay=0, invert_cols=False):
 	#is delay incorporated correctly?
