@@ -387,7 +387,7 @@ class SmudgeDataObj(object):
 			self.cov_tab['freq'] = np.log10(self.cov_tab['freq'])
 
 		# might be a quicker way to do this
-		self.cov_tab['col'] = [str(colour_ramp[int(i)]) for i in round(31 * self.cov_tab['freq'] / max(self.cov_tab['freq']))]
+		self.cov_tab['col'] = [str(colour_ramp[int(i)]) for i in round((len(colour_ramp)-1) * self.cov_tab['freq'] / max(self.cov_tab['freq']))]
 
 		ax.plot()
 		ax.set_xlim(self.xlim)
@@ -539,7 +539,8 @@ def smudgeplot_plot_py(dataObj, cov_filter=None, quant_filter=None, upper_ylim=N
 	dataObj.get_ax_lims(upper_ylim=upper_ylim)
 	dataObj.def_strings(output=output)
 	dataObj.smudgeplot(log=False)
-	#dataObj.smudgeplot(log=True)	
+	#log plot and legend is currently incurrent
+	dataObj.smudgeplot(log=True)
 
 def get_col_ramp(col_ramp='viridis', delay=0, invert_cols=False):
 	#is delay incorporated correctly?
@@ -569,9 +570,9 @@ def plot_legend(ax, kmer_max, colour_ramp, log=False):
 	if log:
 		title = 'log ' + title
 	ax.set_title(title, fontsize=28, weight='bold')
-	for i in range(32):
+	for i, colour in enumerate(colour_ramp):
 		rect = mpl.patches.Rectangle((0, ((i + 1) - 0.01) / 33), 0.5, ((i + 1) + 0.99) / 33, linewidth=1,
-									 edgecolor=colour_ramp[i], facecolor=colour_ramp[i])
+									 edgecolor=colour, facecolor=colour)
 		ax.add_patch(rect)
 
 	for i in range(6):
