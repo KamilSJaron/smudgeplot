@@ -417,7 +417,6 @@ class SmudgeDataObj(object):
 		self.smudge_tab = self.smudge_tab.loc[self.smudge_tab['size'] > 0.05]
 		self.smudge_tab.loc[:,'corrected_minor_variant_cov'] = self.smudge_tab['structure'].str.count('B')/self.smudge_tab['ploidy']
 		self.smudge_tab.loc[:,'label'] = reduce_structure_representation(self.smudge_tab['structure'])
-		#bordercases not working as intended
 		bordercases = np.array(self.smudge_tab['corrected_minor_variant_cov']==0.5)
 		for index, row in self.smudge_tab.iterrows():
 			if bordercases[index] & adjust:
