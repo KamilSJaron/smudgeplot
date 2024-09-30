@@ -423,7 +423,7 @@ class SmudgeDataObj(object):
 				ha="right"
 			else:
 				ha="center"
-				
+
 			x = row['corrected_minor_variant_cov']
 			y = row['ploidy']*self.cov
 			ax.text(x, y, row['label'], fontsize=28, va="center_baseline", ha=ha)
@@ -450,6 +450,19 @@ class SmudgeDataObj(object):
 		
 		else:
 			ax.legend(loc='lower left', handles=[self.error_string],labels=[None], prop={'size': 18}, frameon=False)
+
+
+	def centrality_plot(self):
+		fig, axs = plt.subplots(figsize=(8,8))
+		fontsize=32
+		plt.plot(self.centralities['coverage'],
+				 self.centralities['centrality'],
+				 'o',
+				 color='black',
+				 markersize=4)
+		axs.set_xlabel('Coverage')
+		axs.set_ylabel('Centrality [(theoretical_center - actual_center) / coverage ]')
+		fig.savefig('smudgeplot_centralities_py.pdf')
 
 ###############
 # task cutoff #
@@ -699,7 +712,8 @@ def main():
 		)
 
 		sys.stderr.write("\nPlotting\n")
-		system("centrality_plot.R " + args.o + "_centralities.txt")
+		SmudgeData.centrality_plot()
+		#system("centrality_plot.R " + args.o + "_centralities.txt")
 		
 		# Rscript playground/alternative_fitting/alternative_plotting_testing.R -i data/dicots/peak_aggregation/$ToLID.cov_tab_peaks -o data/dicots/peak_aggregation/$ToLID
 		
