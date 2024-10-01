@@ -171,7 +171,9 @@ class SmudgeDataObj(object):
 		self.cov_tab.sort_values('freq', ascending = False, inplace=True)
 
 	def local_aggregation(self, distance, noise_filter, mask_errors):
-		# generate a dictionary that gives us for each combination of coverages a frequency
+		"""
+		Generate a dictionary that gives us for each combination of coverages a frequency
+		"""
 		cov2freq = defaultdict(int)
 		cov2peak = defaultdict(int)
 
@@ -199,7 +201,6 @@ class SmudgeDataObj(object):
 			if highest_neigbour_freq:# > 0:
 				cov2peak[covA, covB] = cov2peak[highest_neigbour_coords]
 			else:
-				# print("new peak:", (covA, covB))
 				if mask_errors:
 					if covB < L + distance:
 						cov2peak[(covA, covB)] = 1 # error line
@@ -306,7 +307,6 @@ class SmudgeDataObj(object):
 				cov_tab_iso_smudge = cov_tab_isoB.loc[(cov_tab_isoB["covA"] > min_cov) & (cov_tab_isoB["covA"] < max_cov)]
 				if sum(cov_tab_iso_smudge['freq']) / self.total_genomic_kmers > smudge_filter:
 					smudge_container["A" * As + "B" * Bs] = cov_tab_iso_smudge
-					# sys.stderr.write(f"{As}A{Bs}B: {sum(cov_tab_iso_smudge['freq']) / total_kmer_pairs}\n")
 
 		return smudge_container
 
@@ -344,7 +344,6 @@ class SmudgeDataObj(object):
 			self.log_plot_file = output+'_smudgeplot_log10_py.pdf'
 
 	def smudgeplot(self, log=False):
-	#probably needs to be a function not a method because of plot task, but is ok for now
 
 		fig, axs = plt.subplots(nrows=2, ncols=2, width_ratios = [3, 1], height_ratios = [1, 3], figsize=(20,20))
 		plt.subplots_adjust(wspace=0.05, hspace=0.05)
@@ -375,7 +374,8 @@ class SmudgeDataObj(object):
 
 		self.plot_smudge_sizes(ax=size_ax)
 
-		top_ax.set_title(self.fig_title, fontsize=42, loc ='left', y=1.0, pad=-14, weight='bold')
+		title_string = f'{self.fig_title}\n\n1n = {round(self.cov,3)}\nerr = {round(self.error_fraction,3)}%' 
+		top_ax.set_title(title_string, fontsize=42, loc ='left', y=1.0, pad=-14, weight='bold')
 
 		fig.savefig(outfile, dpi = 200)
 
@@ -386,7 +386,6 @@ class SmudgeDataObj(object):
 		if log:
 			self.cov_tab['freq'] = np.log10(self.cov_tab['freq'])
 
-		# might be a quicker way to do this
 		self.cov_tab['col'] = [str(colour_ramp[int(i)]) for i in round((len(colour_ramp)-1) * self.cov_tab['freq'] / max(self.cov_tab['freq']))]
 
 		ax.plot()
@@ -427,11 +426,6 @@ class SmudgeDataObj(object):
 			x = row['corrected_minor_variant_cov']
 			y = row['ploidy']*self.cov
 			ax.text(x, y, row['label'], fontsize=28, va="center_baseline", ha=ha)
-
-			#sanity spot
-			#circle = plt.Circle((x, y), 0.001, color='r')
-			#ax.add_patch(circle)
-
 
 	def plot_smudge_sizes(self, ax):
 		ax.plot()
@@ -483,7 +477,6 @@ def round_up_nice(x):
 	return ceil(x / multiplier) * multiplier
 
 def cutoff(kmer_hist, boundary):
-	# kmer_hist = open("data/Scer/kmc_k31.hist","r")
 	hist = [int(line.split()[1]) for line in kmer_hist]
 	if boundary == "L":
 		local_minima = local_min(hist)[0]
@@ -558,16 +551,16 @@ def smudgeplot_plot_py(dataObj, cov_filter=None, quant_filter=None, upper_ylim=N
 	# plotting
 	dataObj.get_ax_lims(upper_ylim=upper_ylim)
 	dataObj.def_strings(output=output)
+	dataObj.smudgeplot(log=True)
 	dataObj.smudgeplot(log=False)
-	#log plot and legend is currently incurrent
-	#dataObj.smudgeplot(log=True)
 
 def get_col_ramp(col_ramp='viridis', delay=0, invert_cols=False):
-	#is delay incorporated correctly?
 	if invert_cols:
 		col_ramp+='_r' 
 	cmap = plt.get_cmap(col_ramp, 32-int(delay))
-	return np.array([mpl.colors.rgb2hex(cmap(i)) for i in range(cmap.N)])
+	ramp = [mpl.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+	ramp = [ramp[0]]*delay + ramp
+	return ramp
 
 def reduce_structure_representation(smudge_labels):
 	structures_to_adjust = (smudge_labels.str.len() > 4)
@@ -597,6 +590,7 @@ def plot_legend(ax, kmer_max, colour_ramp, log=False):
 
 	for i in range(6):
 		if log:
+			#this is the bit not currently working for hte log plot
 			ax.text(0.75, i / 6, str(rounding(10 ** (np.log10(kmer_max) * i / 6))), fontsize=20)
 		else:
 			ax.text(0.75, i / 6, str(rounding(kmer_max * i / 6)), fontsize=20)
@@ -618,6 +612,7 @@ def fin():
 #####################
 
 def main():
+	#defining the parser object with an underscore prefix is confusing?
 	_parser = Parser()
 
 	sys.stderr.write('Running smudgeplot v' + version + "\n")
@@ -694,7 +689,6 @@ def main():
 		)
 		SmudgeData.infer_coverage(limit=0.7)
 		sys.stderr.write(f"\nInferred coverage: {round(SmudgeData.cov, 3)}\n")
-		# plot(SmudgeData.centralities['coverage'], SmudgeData.centralities['coverage'])
 
 		SmudgeData.final_smudges = SmudgeData.get_smudge_container(
 			SmudgeData.cov,
@@ -713,13 +707,10 @@ def main():
 
 		sys.stderr.write("\nPlotting\n")
 		SmudgeData.centrality_plot()
-		#system("centrality_plot.R " + args.o + "_centralities.txt")
-		
-		# Rscript playground/alternative_fitting/alternative_plotting_testing.R -i data/dicots/peak_aggregation/$ToLID.cov_tab_peaks -o data/dicots/peak_aggregation/$ToLID
-		
-		plot_args = (f' -i "{args.o}_masked_errors_smu.txt" -s "{args.o}_smudge_sizes.txt" -n {round(SmudgeData.cov, 3)} -o "{args.o}"'
-					 + _parser.format_arguments_for_R_plotting())
-		
+
+		#system("centrality_plot.R " + args.o + "_centralities.txt")		
+		#plot_args = (f' -i "{args.o}_masked_errors_smu.txt" -s "{args.o}_smudge_sizes.txt" -n {round(SmudgeData.cov, 3)} -o "{args.o}"'
+		#			 + _parser.format_arguments_for_R_plotting())
 		#smudgeplot_plot_R(plot_args)
 		
 		smudgeplot_plot_py(SmudgeData)
