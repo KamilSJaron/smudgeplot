@@ -370,7 +370,7 @@ class SmudgeDataObj(object):
 		if self.cov>0:
 			self.plot_expected_haplotype_structure(main_ax, adjust=True, xmax = 0.49)
 
-		plot_legend(ax=legend_ax, kmer_max=max(self.cov_tab['freq']), colour_ramp=colour_ramp, log=log)
+		plot_legend(ax=legend_ax, kmer_max=max(self.plot_cov_tab['freq']), colour_ramp=colour_ramp, log=log)
 
 		self.plot_smudge_sizes(ax=size_ax)
 
@@ -378,15 +378,17 @@ class SmudgeDataObj(object):
 		top_ax.set_title(title_string, fontsize=42, loc ='left', y=1.0, pad=-14, weight='bold')
 
 		fig.savefig(outfile, dpi = 200)
+		plt.close()
 
 	def plot_alt(self, colour_ramp, ax, log=False, fontsize=14):
-		mask = (self.cov_tab['covA'] == self.cov_tab['covB'])
-		self.cov_tab.loc[mask, 'freq'] = self.cov_tab[mask]['freq']*2
+		self.plot_cov_tab = self.cov_tab.copy(deep=True)
+		mask = (self.plot_cov_tab['covA'] == self.plot_cov_tab['covB'])
+		self.plot_cov_tab.loc[mask, 'freq'] = self.plot_cov_tab[mask]['freq']*2
 
 		if log:
-			self.cov_tab['freq'] = np.log10(self.cov_tab['freq'])
+			self.plot_cov_tab['freq'] = np.log10(self.plot_cov_tab['freq'])
 
-		self.cov_tab['col'] = [str(colour_ramp[int(i)]) for i in round((len(colour_ramp)-1) * self.cov_tab['freq'] / max(self.cov_tab['freq']))]
+		self.plot_cov_tab['col'] = [str(colour_ramp[int(i)]) for i in round((len(colour_ramp)-1) * self.plot_cov_tab['freq'] / max(self.plot_cov_tab['freq']))]
 
 		ax.plot()
 		ax.set_xlim(self.xlim)
@@ -402,7 +404,7 @@ class SmudgeDataObj(object):
 			self.plot_one_coverage(cov, ax)
 
 	def plot_one_coverage(self, cov, ax):
-		cov_row_to_plot = self.cov_tab[self.cov_tab['total_pair_cov'] == cov]
+		cov_row_to_plot = self.plot_cov_tab[self.plot_cov_tab['total_pair_cov'] == cov]
 		width = 1/(2*cov)
 		lefts = (cov_row_to_plot['minor_variant_rel_cov'] - width).to_numpy()
 		rights = (cov_row_to_plot['minor_variant_rel_cov'].apply(lambda x: min(0.5, x+width))).to_numpy()
@@ -550,8 +552,9 @@ def smudgeplot_plot_py(dataObj, cov_filter=None, quant_filter=None, upper_ylim=N
 	# plotting
 	dataObj.get_ax_lims(upper_ylim=upper_ylim)
 	dataObj.def_strings(output=output)
-	dataObj.smudgeplot(log=True)
 	dataObj.smudgeplot(log=False)
+	dataObj.smudgeplot(log=True)
+	
 
 def get_col_ramp(col_ramp='viridis', delay=0, invert_cols=False):
 	if invert_cols:
