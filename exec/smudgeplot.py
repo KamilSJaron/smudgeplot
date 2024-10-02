@@ -415,10 +415,9 @@ class SmudgeDataObj(object):
 		self.smudge_tab = self.smudge_tab.loc[self.smudge_tab['size'] > 0.05]
 		self.smudge_tab.loc[:,'corrected_minor_variant_cov'] = self.smudge_tab['structure'].str.count('B')/self.smudge_tab['ploidy']
 		self.smudge_tab.loc[:,'label'] = reduce_structure_representation(self.smudge_tab['structure'])
-		bordercases = np.array(self.smudge_tab['corrected_minor_variant_cov']==0.5)
 		for index, row in self.smudge_tab.iterrows():
 
-			if bordercases[index] & adjust:
+			if (self.smudge_tab['corrected_minor_variant_cov'][index] == 0.5) & adjust:
 				ha="right"
 			else:
 				ha="center"
@@ -446,7 +445,7 @@ class SmudgeDataObj(object):
 			ax.legend(loc='lower left', handles=[self.error_string],labels=[None], prop={'size': 18}, frameon=False)
 
 
-	def centrality_plot(self):
+	def centrality_plot(self, output):
 		fig, axs = plt.subplots(figsize=(8,8))
 		fontsize=32
 		plt.plot(self.centralities['coverage'],
@@ -456,7 +455,7 @@ class SmudgeDataObj(object):
 				 markersize=4)
 		axs.set_xlabel('Coverage')
 		axs.set_ylabel('Centrality [(theoretical_center - actual_center) / coverage ]')
-		fig.savefig('smudgeplot_centralities_py.pdf')
+		fig.savefig(output + '_centralities.pdf')
 
 ###############
 # task cutoff #
@@ -706,14 +705,9 @@ def main():
 		)
 
 		sys.stderr.write("\nPlotting\n")
-		SmudgeData.centrality_plot()
-
-		#system("centrality_plot.R " + args.o + "_centralities.txt")		
-		#plot_args = (f' -i "{args.o}_masked_errors_smu.txt" -s "{args.o}_smudge_sizes.txt" -n {round(SmudgeData.cov, 3)} -o "{args.o}"'
-		#			 + _parser.format_arguments_for_R_plotting())
-		#smudgeplot_plot_R(plot_args)
+		SmudgeData.centrality_plot(args.o)
 		
-		smudgeplot_plot_py(SmudgeData)
+		smudgeplot_plot_py(SmudgeData, output = args.o)
 
 	fin()
 
