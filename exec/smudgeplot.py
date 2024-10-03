@@ -15,6 +15,7 @@ from statistics import fmean
 from collections import defaultdict
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.collections import PatchCollection
 # from matplotlib.pyplot import plot
 
 version = '0.4.0dev'
@@ -206,9 +207,9 @@ class Coverages:
     def count_kmers(self):
         self.peak_aggregation()
         
-        self.total_kmers = sum(self.cov_tab['freq'])
-        self.total_genomic_kmers = sum(self.cov_tab.loc[self.cov_tab['peak'] == 0]['freq'])
-        self.total_error_kmers = sum(self.cov_tab.loc[self.cov_tab['peak'] == 1]['freq'])
+        self.total_kmers = self.cov_tab['freq'].sum()
+        self.total_genomic_kmers = self.cov_tab.loc[self.cov_tab['peak'] == 0]['freq'].sum()
+        self.total_error_kmers = self.cov_tab.loc[self.cov_tab['peak'] == 1]['freq'].sum()
         self.error_fraction = self.total_error_kmers / self.total_kmers
 
 class Smudges:
@@ -289,14 +290,14 @@ class Smudges:
                 min_cov, max_cov = get_cov_limits(As, cov)
 
                 cov_tab_iso_smudge = cov_tab_isoB.loc[(cov_tab_isoB["covA"] > min_cov) & (cov_tab_isoB["covA"] < max_cov)]
-                if sum(cov_tab_iso_smudge['freq']) / self.total_genomic_kmers > smudge_filter:
+                if cov_tab_iso_smudge['freq'].sum() / self.total_genomic_kmers > smudge_filter:
                     smudge_container["A" * As + "B" * Bs] = cov_tab_iso_smudge
 
         return smudge_container
 
     def describe_smudges(self):
         annotated_smudges = list(self.final_smudges.keys())
-        smudge_sizes = [round(sum(self.final_smudges[smudge]['freq']) / self.total_genomic_kmers, 4) for smudge in annotated_smudges]
+        smudge_sizes = [round(self.final_smudges[smudge]['freq'].sum() / self.total_genomic_kmers, 4) for smudge in annotated_smudges]
         self.smudge_tab = DataFrame({'structure': annotated_smudges, 'size': smudge_sizes})
 
     def centrality_plot(self, output):
@@ -351,7 +352,7 @@ class SmudgeplotData:
         self.lims['xlim'] = [0, 0.5]
 
     def def_strings(self, title=None, output='smudgeplot'):
-        error_fraction = np.sum(self.cov_tab[self.cov_tab['peak']==1]['freq']) / np.sum(self.cov_tab['freq']) * 100
+        error_fraction = self.cov_tab[self.cov_tab['peak']==1]['freq'].sum() / self.cov_tab['freq'].sum() * 100
         self.error_string = f"err = {round(error_fraction, 1)} %"
         self.cov_string = f"1n = {self.cov}"
         if title:
@@ -384,8 +385,8 @@ def cutoff(kmer_hist, boundary):
     else:
         sys.stderr.write('Warning: We discourage using the original hetmer algorithm.\n\tThe updated (recommended) version does not take the argument U\n')
         # take 99.8 quantile of kmers that are more than one in the read set
-        number_of_kmers = sum(hist[1:])
-        hist_rel_cumsum = [sum(hist[1:i+1]) / number_of_kmers for i in range(1, len(hist))]
+        number_of_kmers = np.sum(hist[1:])
+        hist_rel_cumsum = [np.sum(hist[1:i+1]) / number_of_kmers for i in range(1, len(hist))]
         min(range(len(hist_rel_cumsum))) 
         U = round_up_nice(min([i for i, q in enumerate(hist_rel_cumsum) if q > 0.998]))
         sys.stdout.write(str(U))
@@ -407,7 +408,7 @@ def get_centrality(smudge_container, cov):
     for smudge, smudge_tab in smudge_container.items():
         As = smudge.count('A')
         Bs = smudge.count('B')
-        kmer_in_the_smudge = sum(smudge_tab['freq'])
+        kmer_in_the_smudge = smudge_tab['freq'].sum()
         freqs.append(kmer_in_the_smudge)
 
         # center as a mode 
@@ -479,7 +480,7 @@ def smudgeplot(data, error_fraction, log=False):
         colour_ramp = get_col_ramp()
         outfile = data.linear_plot_file
     
-    plot_alt(cov_tab, colour_ramp, main_ax, lims, log=log, fontsize=fontsize)
+    plot_smudges(cov_tab, colour_ramp, main_ax, lims, log=log, fontsize=fontsize)
 
     if cov>0:
         plot_expected_haplotype_structure(smudge_tab, cov, main_ax, adjust=True, xmax = 0.49)
@@ -494,7 +495,7 @@ def smudgeplot(data, error_fraction, log=False):
     fig.savefig(outfile, dpi = 200)
     plt.close()
 
-def plot_alt(cov_tab, colour_ramp, ax, lims, log=False, fontsize=14):
+def plot_smudges(cov_tab, colour_ramp, ax, lims, log=False, fontsize=14):
     mask = (cov_tab['covA'] == cov_tab['covB'])
     cov_tab.loc[mask, 'freq'] = cov_tab[mask]['freq']*2
 
@@ -513,22 +514,21 @@ def plot_alt(cov_tab, colour_ramp, ax, lims, log=False, fontsize=14):
 
     min_cov_to_plot = max(lims['ylim'][0],min(cov_tab['total_pair_cov']))
 
-    for cov in np.arange(min_cov_to_plot, lims['ylim'][1]):
-        plot_one_coverage(cov_tab, cov, ax)
+    patches_nested = [get_one_coverage(cov_tab, cov, ax) for cov in np.arange(min_cov_to_plot, lims['ylim'][1])]
+    patches_flat = [x for xs in patches_nested for x in xs]
+    ax.add_collection(PatchCollection(patches_flat, match_original=True))
 
-def plot_one_coverage(cov_tab, cov, ax):
+def get_one_coverage(cov_tab, cov, ax):
     cov_row_to_plot = cov_tab[cov_tab['total_pair_cov'] == cov]
     width = 1/(2*cov)
     lefts = (cov_row_to_plot['minor_variant_rel_cov'] - width).to_numpy()
     rights = (cov_row_to_plot['minor_variant_rel_cov'].apply(lambda x: min(0.5, x+width))).to_numpy()
-    cols = cov_row_to_plot['col'].to_numpy()
-    for left, right, col in zip(lefts, rights, cols):
-        plot_one_box(left, right, cov, col, ax)
+    cols = cov_row_to_plot['col'].to_numpy()        
+    return [get_one_box(left, right, cov, col, ax) for left, right, col in zip(lefts, rights, cols)]
 
-def plot_one_box(left, right, cov, colour, ax):
+def get_one_box(left, right, cov, colour, ax):
     width = float(right)- float(left)
-    rect = mpl.patches.Rectangle((float(left), cov-0.5), width, 1, linewidth=1, edgecolor=colour, facecolor=colour)
-    ax.add_patch(rect)
+    return mpl.patches.Rectangle((float(left), cov-0.5), width, 1, linewidth=1, edgecolor=colour, facecolor=colour)
 
 def plot_expected_haplotype_structure(smudge_tab, cov, ax, adjust=False, xmax=0.49):
     smudge_tab = smudge_tab.copy(deep=True)
