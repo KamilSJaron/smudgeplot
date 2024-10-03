@@ -126,20 +126,6 @@ class Parser:
         argparser.add_argument('-col_ramp', help='An R palette used for the plot (default "viridis", other sensible options are "magma", "mako" or "grey.colors" - recommended in combination with --invert_cols).', default='viridis')
         argparser.add_argument('--invert_cols', action="store_true", default = False, help="Revert the colour palette (default False).")
         return argparser
-    
-    def format_arguments_for_R_plotting(self):
-        plot_args = ""
-        if self.arguments.c != 0:
-            plot_args += " -c " + str(self.arguments.c)
-        if self.arguments.title:
-            plot_args += " -t \"" + self.arguments.title + "\""
-        if self.arguments.ylim != 0:
-            plot_args += " -ylim " + str(self.arguments.ylim)
-        if self.arguments.col_ramp:
-            plot_args += " -col_ramp \"" + self.arguments.col_ramp + "\""
-        if self.arguments.invert_cols:
-            plot_args += " --invert_cols"
-        return plot_args
 
 class Coverages:
     def __init__(
@@ -318,10 +304,12 @@ class SmudgeplotData:
         cov_tab,
         smudge_tab,
         cov,
+        error_fraction=0
     ):
         self.cov_tab=cov_tab
         self.smudge_tab=smudge_tab
         self.cov=cov
+        self.error_fraction=error_fraction
         self.lims={}
         self.error_string=None
         self.cov_string=None
@@ -352,13 +340,13 @@ class SmudgeplotData:
         self.lims['xlim'] = [0, 0.5]
 
     def def_strings(self, title=None, output='smudgeplot'):
-        error_fraction = self.cov_tab[self.cov_tab['peak']==1]['freq'].sum() / self.cov_tab['freq'].sum() * 100
-        self.error_string = f"err = {round(error_fraction, 1)} %"
+        self.error_string = f"err = {round(self.error_fraction*100, 1)} %"
         self.cov_string = f"1n = {self.cov}"
         if title:
-            self.fig_title = str(title)
+            fig_title = str(title)
         else:
-            self.fig_title = 'NA'
+            fig_title = 'NA'
+        self.fig_title = f'{fig_title}\n\n1n = {round(self.cov,3)}\nerr = {round(self.error_fraction,3)}%' 
         self.linear_plot_file = output+'_smudgeplot_py.pdf'
         self.log_plot_file = output+'_smudgeplot_log10_py.pdf'
 
@@ -453,7 +441,7 @@ def get_col_ramp(col_ramp='viridis', delay=0, invert_cols=False):
     ramp = [ramp[0]]*delay + ramp
     return ramp
 
-def smudgeplot(data, error_fraction, log=False):
+def smudgeplot(data, log=False):
     cov_tab = data.cov_tab.copy(deep=True)
     smudge_tab = data.smudge_tab
     cov=data.cov
@@ -489,8 +477,7 @@ def smudgeplot(data, error_fraction, log=False):
 
     plot_smudge_sizes(smudge_tab, cov, data.error_string, size_ax)
 
-    title_string = f'{fig_title}\n\n1n = {round(cov,3)}\nerr = {round(error_fraction,3)}%' 
-    top_ax.set_title(title_string, fontsize=42, loc ='left', y=1.0, pad=-14, weight='bold')
+    top_ax.set_title(fig_title, fontsize=42, loc ='left', y=1.0, pad=-14, weight='bold')
 
     fig.savefig(outfile, dpi = 200)
     plt.close()
@@ -594,6 +581,21 @@ def plot_legend(ax, kmer_max, colour_ramp, log=False):
         else:
             ax.text(0.75, i / 6, str(rounding(kmer_max * i / 6)), fontsize=20)
 
+def prepare_smudgeplot_data_for_plotting(smudgeplot_data, output, title):
+
+        smudgeplot_data.calc_cov_columns()
+        smudgeplot_data.filter_cov_quant()
+        smudgeplot_data.get_ax_lims()
+        smudgeplot_data.def_strings(output=output, title=title)
+
+def generate_plots(smudgeplot_data):
+
+        smudgeplot(smudgeplot_data,
+                   log=False)
+
+        smudgeplot(smudgeplot_data,
+                   log=True)
+
 def rounding(number):
     if number > 1000:
         return round(number / 1000) * 1000
@@ -602,17 +604,9 @@ def rounding(number):
     else:
         return round(number / 10) * 10
 
-def smudgeplot_plot_R(plot_args):
-    sys.stderr.write("Calling: smudgeplot_plot.R " + plot_args + "\n")
-    system("smudgeplot_plot.R " + plot_args)
-
 def fin():
     sys.stderr.write("\nDone!\n")
     exit(0)
-
-#####################
-# the script itself #
-#####################
 
 def main():
     #defining the parser object with an underscore prefix is confusing?
@@ -625,6 +619,7 @@ def main():
     sys.stderr.write('Task: ' + _parser.task + "\n")
 
     args = _parser.arguments
+    title = '.'.join(args.infile.split('/')[-1].split('.')[0:2])
 
     if _parser.task == "cutoff":
         cutoff(args.infile, args.boundary)
@@ -647,12 +642,11 @@ def main():
         fin()
 
     if _parser.task == "plot":
-        # the plotting script is expected ot be installed in the system as well as the R library supporting it
-        
-        plot_args = (f'-i "{args.infile}" -s "{args.smudgefile}" -n {args.n} -o "{args.o}"'
-                     + _parser.format_arguments_for_R_plotting())
-        
-        smudgeplot_plot_R(plot_args)
+        smudge_tab = read_csv(args.smudgefile, sep='\t', names=['structure', 'size'])
+        cov_tab = load_hetmers(args.infile)
+        smudgeplot_data = SmudgeplotData(cov_tab, smudge_tab , args.n)
+        prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
+        generate_plots(smudgeplot_data)
 
         fin()
 
@@ -707,23 +701,9 @@ def main():
 
         sys.stderr.write("\nPlotting\n")
         smudges.centrality_plot(args.o)
-        
-        smudgeplot_data = SmudgeplotData(coverages.cov_tab, smudges.smudge_tab, cov)
-        smudgeplot_data.calc_cov_columns()
-        smudgeplot_data.filter_cov_quant()
-        smudgeplot_data.get_ax_lims()
-        title = '.'.join(args.infile.split('/')[-1].split('.')[0:2])
-        smudgeplot_data.def_strings(output=args.o, title=title)
-
-        # plotting
-
-        smudgeplot(smudgeplot_data,
-                   coverages.error_fraction,
-                   log=False)
-
-        smudgeplot(smudgeplot_data,
-                   coverages.error_fraction,
-                   log=True)
+        smudgeplot_data = SmudgeplotData(coverages.cov_tab, smudges.smudge_tab, cov, coverages.error_fraction)
+        prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
+        generate_plots(smudgeplot_data)
 
     fin()
 
