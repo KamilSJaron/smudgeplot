@@ -652,6 +652,7 @@ def main():
 
     sys.stderr.write("\nLoading data\n")
     coverages = Coverages(load_hetmers(args.infile))
+    sys.stderr.write("\nMasking errors using local aggregation algorithm\n")
 
     if _parser.task == "peak_aggregation":
 
@@ -659,7 +660,7 @@ def main():
         coverages.write_peaks()
 
     if _parser.task == "all":
-        sys.stderr.write("\nMasking errors using local aggregation algorithm\n")
+        
         coverages.local_aggregation(distance = 1, noise_filter = 1000, mask_errors = True)        
         coverages.count_kmers()
         sys.stderr.write(f"\t\
