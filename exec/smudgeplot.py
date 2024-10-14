@@ -950,6 +950,7 @@ def main():
 
         # issue #162
         test_array = True
+        print_header = True
         cov = 20
         if test_array:
                 smudges.final_smudges = smudges.get_smudge_container(cov, smudge_size_cutoff)
@@ -971,6 +972,13 @@ def main():
 
                 smudge_df = DataFrame.from_dict(smudge_dict).fillna(0)
                 out_df = concat([meta_df, smudge_df], axis=1)
+                out_str = '\t'.join([str(x) for x in out_df.iloc[0,:]])
+
+                if print_header:
+                    sys.stderr.write('\t'.join(out_df.columns))
+
+                sys.stderr.write(out_str)
+
                 fin()
 
 
