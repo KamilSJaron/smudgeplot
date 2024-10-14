@@ -851,7 +851,7 @@ def rounding(number):
 def create_smudge_dict(max_ploidy):
     nested_smudges = [
         set(["".join(sorted("".join(x))) for x in product(["A", "B"], repeat=i)])
-        for i in range(1, 2 * max_ploidy + 1)
+        for i in range(1, max_ploidy + 1)
     ]
     smudge_list = [
         smudge
@@ -880,7 +880,7 @@ def main():
 
     sys.stderr.write("Task: " + _parser.task + "\n")
 
-    smudge_dict, sorted_smudges = create_smudge_dict(8)
+    smudge_dict, sorted_smudges = create_smudge_dict(16)
 
     args = _parser.arguments
     title = ".".join(args.infile.split("/")[-1].split(".")[0:2])
