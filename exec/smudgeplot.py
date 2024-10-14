@@ -5,6 +5,8 @@ import sys
 import numpy as np
 from pandas import read_csv  # type: ignore
 from pandas import DataFrame  # type: ignore
+from pandas import Series  # type: ignore
+from pandas import concat  # type: ignore
 from numpy import arange
 from numpy import argmin
 from numpy import concatenate
@@ -16,6 +18,7 @@ from collections import defaultdict
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
+from itertools import product
 
 # from matplotlib.pyplot import plot
 
@@ -845,6 +848,23 @@ def rounding(number):
         return round(number / 10) * 10
 
 
+def create_smudge_dict(max_ploidy):
+    nested_smudges = [
+        set(["".join(sorted("".join(x))) for x in product(["A", "B"], repeat=i)])
+        for i in range(1, 2 * max_ploidy + 1)
+    ]
+    smudge_list = [
+        smudge
+        for ploidy in nested_smudges
+        for smudge in ploidy
+        if "A" in smudge and "B" in smudge
+    ]
+    smudge_list.sort()
+    sorted_smudges = sorted(smudge_list, key=len)
+    smudges_rr = reduce_structure_representation(Series(sorted_smudges))
+    smudge_dict = dict.fromkeys(smudges_rr, np.nan)
+    return smudge_dict, smudges_rr
+
 def fin():
     sys.stderr.write("\nDone!\n")
     exit(0)
@@ -859,6 +879,8 @@ def main():
         exit(0)
 
     sys.stderr.write("Task: " + _parser.task + "\n")
+
+    smudge_dict, sorted_smudges = create_smudge_dict(8)
 
     args = _parser.arguments
     title = ".".join(args.infile.split("/")[-1].split(".")[0:2])
@@ -925,6 +947,33 @@ def main():
         sys.stderr.write("\nInferring 1n coverage using grid algorithm\n")
         smudge_size_cutoff = 0.001  # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
         smudges = Smudges(coverages.cov_tab, coverages.total_genomic_kmers)
+
+        # issue #162
+        test_array = True
+        cov = 20
+        if test_array:
+                smudges.final_smudges = smudges.get_smudge_container(cov, smudge_size_cutoff)
+                smudges.describe_smudges()
+                smudges.smudge_tab["structure"] = reduce_structure_representation(
+                    smudges.smudge_tab["structure"]
+                )
+
+                meta_df = DataFrame.from_dict(
+                    {
+                        "dataset": [args.infile.split("/")[-1]],
+                        "total_kmers": [coverages.total_kmers],
+                        "total_error_kmers": [coverages.total_error_kmers],
+                    }
+                )
+
+                for idx, smudge, size in smudges.smudge_tab.itertuples():
+                    smudge_dict[smudge] = [size]
+
+                smudge_df = DataFrame.from_dict(smudge_dict).fillna(0)
+                out_df = concat([meta_df, smudge_df], axis=1)
+                fin()
+
+
         smudges.get_centrality_df(args.cov_min, args.cov_max, smudge_size_cutoff)
         np.savetxt(
             args.o + "_centralities.txt",
