@@ -421,14 +421,20 @@ class Smudges:
 
         return smudge_container
 
-    def describe_smudges(self):
+    def describe_smudges(self, absolute = False):
         annotated_smudges = list(self.final_smudges.keys())
-        smudge_sizes = [
-            round(
-                self.final_smudges[smudge]["freq"].sum() / self.total_genomic_kmers, 4
-            )
-            for smudge in annotated_smudges
-        ]
+        if absolute:
+            smudge_sizes = [
+                self.final_smudges[smudge]["freq"].sum()
+                for smudge in annotated_smudges
+            ]
+        else:
+            smudge_sizes = [
+                round(
+                    self.final_smudges[smudge]["freq"].sum() / self.total_genomic_kmers, 4
+                )
+                for smudge in annotated_smudges
+            ]
         self.smudge_tab = DataFrame(
             {"structure": annotated_smudges, "size": smudge_sizes}
         )
@@ -849,16 +855,11 @@ def rounding(number):
 
 
 def create_smudge_dict(max_ploidy):
-    nested_smudges = [
-        set(["".join(sorted("".join(x))) for x in product(["A", "B"], repeat=i)])
-        for i in range(1, max_ploidy + 1)
-    ]
-    smudge_list = [
-        smudge
-        for ploidy in nested_smudges
-        for smudge in ploidy
-        if "A" in smudge and "B" in smudge
-    ]
+    smudge_list = []
+    for Bs in range(1, max_ploidy + 1):
+        for As in range(Bs, ((2 * max_ploidy) + 1 - Bs)):
+            smudge_list.append("A" * As + "B" * Bs)
+
     smudge_list.sort()
     sorted_smudges = sorted(smudge_list, key=len)
     smudges_rr = reduce_structure_representation(Series(sorted_smudges))
@@ -869,6 +870,32 @@ def fin():
     sys.stderr.write("\nDone!\n")
     exit(0)
 
+def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header):
+    smudges.final_smudges = smudges.get_smudge_container(cov, 0)
+    smudges.describe_smudges()
+    smudges.smudge_tab["structure"] = reduce_structure_representation(
+        smudges.smudge_tab["structure"]
+    )
+
+    meta_df = DataFrame.from_dict(
+        {
+            "dataset": [args.infile.split("/")[-1]],
+            "total_kmers": [coverages.total_kmers],
+            "total_error_kmers": [coverages.total_error_kmers],
+        }
+    )
+
+    for idx, smudge, size in smudges.smudge_tab.itertuples():
+        smudge_dict[smudge] = [size]
+
+    smudge_df = DataFrame.from_dict(smudge_dict).fillna(0)
+    out_df = concat([meta_df, smudge_df], axis=1)
+    out_str = '\t'.join([str(x) for x in out_df.iloc[0,:]])
+
+    if print_header:
+        sys.stdout.write('\t'.join(out_df.columns) + '\n')
+
+    sys.stdout.write(out_str + '\n')
 
 def main():
     # defining the parser object with an underscore prefix is confusing?
@@ -949,38 +976,12 @@ def main():
         smudges = Smudges(coverages.cov_tab, coverages.total_genomic_kmers)
 
         # issue #162
-        test_array = True
-        print_header = True
-        cov = 20
-        if test_array:
-                smudges.final_smudges = smudges.get_smudge_container(cov, smudge_size_cutoff)
-                smudges.describe_smudges()
-                smudges.smudge_tab["structure"] = reduce_structure_representation(
-                    smudges.smudge_tab["structure"]
-                )
-
-                meta_df = DataFrame.from_dict(
-                    {
-                        "dataset": [args.infile.split("/")[-1]],
-                        "total_kmers": [coverages.total_kmers],
-                        "total_error_kmers": [coverages.total_error_kmers],
-                    }
-                )
-
-                for idx, smudge, size in smudges.smudge_tab.itertuples():
-                    smudge_dict[smudge] = [size]
-
-                smudge_df = DataFrame.from_dict(smudge_dict).fillna(0)
-                out_df = concat([meta_df, smudge_df], axis=1)
-                out_str = '\t'.join([str(x) for x in out_df.iloc[0,:]])
-
-                if print_header:
-                    sys.stderr.write('\t'.join(out_df.columns))
-
-                sys.stderr.write(out_str)
-
-                fin()
-
+        # test_array = True
+        # print_header = True
+        # cov = 20
+        # if test_array:
+        #     report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
+        #     fin()
 
         smudges.get_centrality_df(args.cov_min, args.cov_max, smudge_size_cutoff)
         np.savetxt(
@@ -1011,6 +1012,9 @@ def main():
         )
         prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
         generate_plots(smudgeplot_data)
+
+        print_header = True
+        report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
 
     fin()
 
