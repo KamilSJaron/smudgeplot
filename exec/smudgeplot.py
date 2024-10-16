@@ -341,7 +341,7 @@ class Smudges:
         results = []
 
         for i, params in enumerate(grid_params):
-            cov_list = arange(min_c + params[0], max_c + params[1], params[2])
+            cov_list = arange(int(min_c) + params[0], int(max_c) + params[1], params[2])
             best_cov, centralities = self.get_best_coverage(
                 cov_list, smudge_size_cutoff
             )
@@ -406,7 +406,7 @@ class Smudges:
                 min_cov, max_cov = get_cov_limits(Bs, cov)
 
                 cov_tab_isoB = self.cov_tab.loc[
-                    (self.cov_tab["smudge"] == 0) # this is removing the errors
+                    (self.cov_tab["smudge"] != -1) # this is removing the errors
                     & (self.cov_tab["covB"] > min_cov) # bot of the fishnet for A
                     & (self.cov_tab["covB"] < max_cov) # top of the fishnet for B
                 ]
@@ -421,21 +421,22 @@ class Smudges:
                         cov_tab_iso_smudge["freq"].sum() / self.total_genomic_kmers
                         > smudge_filter
                     ):
-                        smudge_container["A" * As + "B" * Bs] = cov_tab_iso_smudge
+                        smudge_container["A" * As + "B" * Bs] = cov_tab_iso_smudge #### SAM, here it overwrites, it should append if exists
 
         if method == 'local_agregation':
             peak = 1
             while peak < max(self.cov_tab["smudge"]):
                 cov_tab_smudge = self.cov_tab.loc[self.cov_tab["smudge"] == peak]
-                covA = fmean(cov_tab_smudge["covA"], cov_tab_smudge["freq"])
-                covB = fmean(cov_tab_smudge["covB"], cov_tab_smudge["freq"])
+                center = cov_tab_smudge.loc[cov_tab_smudge["freq"].idxmax()]
+                covA = center["covA"] # fmean(cov_tab_smudge["covA"], cov_tab_smudge["freq"])
+                covB = center["covB"] # fmean(cov_tab_smudge["covB"], cov_tab_smudge["freq"])
                 As = round(covA / cov)
                 Bs = round(covB / cov)
                 if (
                     cov_tab_smudge["freq"].sum() / self.total_genomic_kmers
                         > smudge_filter
                     ):
-                    # sys.stderr.write("Recording peak (" + str(covA) + ";" + str(covB) + ") " + str(peak) + " as " + "A" * As + "B" * Bs + " smudge\n")
+                    sys.stderr.write("Recording peak (" + str(covA) + ";" + str(covB) + ") " + str(peak) + " as " + "A" * As + "B" * Bs + " smudge\n")
                     smudge_container["A" * As + "B" * Bs] = cov_tab_smudge
                 peak += 1
 
@@ -591,6 +592,7 @@ def infer_coverage(error_fraction, centrality_df, limit=0.7):
 
 
 def get_centrality(smudge_container, cov):
+    sys.stderr.write(f"\tTesting coverage: {cov}\n\n")
     centralities = []
     freqs = []
     for smudge, smudge_tab in smudge_container.items():
@@ -600,13 +602,13 @@ def get_centrality(smudge_container, cov):
         freqs.append(kmer_in_the_smudge)
 
         # center as a mode
-        center = smudge_tab.loc[smudge_tab["freq"].idxmax()]
-        center_A = center["covA"]
-        center_B = center["covB"]
+        # center = smudge_tab.loc[smudge_tab["freq"].idxmax()]
+        # center_A = center["covA"]
+        # center_B = center["covB"]
 
         # center as a mean
-        # center_A = sum((smudge_tab['freq'] * smudge_tab['covA'])) / kmer_in_the_smudge
-        # center_B = sum((smudge_tab['freq'] * smudge_tab['covB'])) / kmer_in_the_smudge
+        center_A = sum((smudge_tab['freq'] * smudge_tab['covA'])) / kmer_in_the_smudge
+        center_B = sum((smudge_tab['freq'] * smudge_tab['covB'])) / kmer_in_the_smudge
 
         ## emprical to edge
         # distA = min([abs(smudge_tab['covA'].max() - center['covA']), abs(center['covA'] - smudge_tab['covA'].min())])
@@ -620,7 +622,7 @@ def get_centrality(smudge_container, cov):
         distA = abs((center_A - (cov * As)) / cov)
         distB = abs((center_B - (cov * Bs)) / cov)
 
-        # sys.stderr.write(f"Processing: {As}A{Bs}B; with center: {distA}, {distB}\n")
+        sys.stderr.write(f"Processing: {As}A{Bs}B; with center: {distA}, {distB} and joint freq {kmer_in_the_smudge}\n")
         centrality = distA + distB
         centralities.append(centrality)
 
@@ -974,6 +976,7 @@ def main():
             f"\t\
             Total kmers: {coverages.total_kmers}\n\t \
             Genomic kmers: {coverages.total_genomic_kmers}\n\t \
+            Genomic kmers in smudges: {coverages.total_genomic_kmers_in_smudges}\n\t \
             Sequencing errors: {coverages.total_error_kmers}\n\t \
             Fraction or errors: {round(coverages.total_error_kmers/coverages.total_kmers, 3)}"
         )
