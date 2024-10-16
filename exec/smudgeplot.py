@@ -758,6 +758,7 @@ def plot_expected_haplotype_structure(smudge_tab, cov, ax, adjust=False, xmax=0.
     smudge_tab.loc[:, "label"] = reduce_structure_representation(
         smudge_tab["structure"]
     )
+
     for index, row in smudge_tab.iterrows():
 
         if (smudge_tab["corrected_minor_variant_cov"][index] == 0.5) & adjust:
@@ -808,7 +809,7 @@ def plot_smudge_sizes(smudge_tab, cov, error_string, ax, min_size=0.03):
 def reduce_structure_representation(smudge_labels):
     structures_to_adjust = smudge_labels.str.len() > 4
     if not any(structures_to_adjust):
-        return structures_to_adjust
+        return smudge_labels
     else:
         As = smudge_labels[structures_to_adjust].str.count("A").map(str)
         Bs = smudge_labels[structures_to_adjust].str.count("B").map(str)
