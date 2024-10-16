@@ -406,7 +406,7 @@ class Smudges:
                 min_cov, max_cov = get_cov_limits(Bs, cov)
 
                 cov_tab_isoB = self.cov_tab.loc[
-                    (self.cov_tab["smudge"] != -1) # this is removing the errors
+                    (self.cov_tab["smudge"] != -1) #this is removing the errors
                     & (self.cov_tab["covB"] > min_cov) # bot of the fishnet for A
                     & (self.cov_tab["covB"] < max_cov) # top of the fishnet for B
                 ]
@@ -421,7 +421,7 @@ class Smudges:
                         cov_tab_iso_smudge["freq"].sum() / self.total_genomic_kmers
                         > smudge_filter
                     ):
-                        smudge_container["A" * As + "B" * Bs] += cov_tab_iso_smudge #### Changed container to defaultdict and += cov_tab_iso_smudge
+                        smudge_container["A" * As + "B" * Bs] += cov_tab_iso_smudge
 
         if method == 'local_aggregation':
             peak = 1
@@ -836,13 +836,13 @@ def plot_legend(ax, kmer_max, colour_ramp, log=False):
         )
         ax.add_patch(rect)
 
-    for i in range(6):
+    for i in range(7):
         if log:
             # this is the bit not currently working for hte log plot
             ax.text(
                 0.75,
                 i / 6,
-                str(rounding(10 ** (np.log10(kmer_max) * i / 6))),
+                str(rounding(10 ** (kmer_max * i / 6))),
                 fontsize=20,
             )
         else:
@@ -993,14 +993,6 @@ def main():
         if args.cov == 0:
             sys.stderr.write("\nInferring 1n coverage using grid algorithm\n")
 
-            # issue #162
-            # test_array = True
-            # print_header = True
-            # cov = 20
-            # if test_array:
-            #     report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
-            #     fin()
-
             smudges.get_centrality_df(args.cov_min, args.cov_max, smudge_size_cutoff)
             np.savetxt(
                 args.o + "_centralities.txt",
@@ -1018,6 +1010,7 @@ def main():
             sys.stderr.write(f"\nUser defined coverage: {round(cov, 3)}\n")
 
         smudges.final_smudges = smudges.get_smudge_container(cov, smudge_size_cutoff, 'local_aggregation')
+        #smudges.final_smudges = smudges.get_smudge_container(cov, smudge_size_cutoff)
         smudges.describe_smudges()
 
         sys.stderr.write(
