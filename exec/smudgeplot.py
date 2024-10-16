@@ -441,22 +441,18 @@ class Smudges:
 
         return smudge_container
 
-    def describe_smudges(self, absolute = False):
+    def describe_smudges(self):
         annotated_smudges = list(self.final_smudges.keys())
-        if absolute:
-            smudge_sizes = [
-                self.final_smudges[smudge]["freq"].sum()
-                for smudge in annotated_smudges
-            ]
-        else:
-            smudge_sizes = [
-                round(
-                    self.final_smudges[smudge]["freq"].sum() / self.total_genomic_kmers, 4
-                )
-                for smudge in annotated_smudges
-            ]
+        smudge_sizes = [
+            self.final_smudges[smudge]["freq"].sum()
+            for smudge in annotated_smudges
+        ]
+        smudge_sizes_rel = [
+            round(smudge_size / self.total_genomic_kmers, 4)
+            for smudge_size in smudge_sizes
+        ]
         self.smudge_tab = DataFrame(
-            {"structure": annotated_smudges, "size": smudge_sizes}
+            {"structure": annotated_smudges, "size": smudge_sizes, "rel_size": smudge_sizes_rel}
         )
 
     def centrality_plot(self, output):
@@ -755,7 +751,7 @@ def get_one_box(left, right, cov, colour, ax):
 def plot_expected_haplotype_structure(smudge_tab, cov, ax, adjust=False, xmax=0.49):
     smudge_tab = smudge_tab.copy(deep=True)
     smudge_tab.loc[:, "ploidy"] = smudge_tab["structure"].str.len()
-    smudge_tab = smudge_tab.loc[smudge_tab["size"] > 0.05]
+    smudge_tab = smudge_tab.loc[smudge_tab["rel_size"] > 0.05]
     smudge_tab.loc[:, "corrected_minor_variant_cov"] = (
         smudge_tab["structure"].str.count("B") / smudge_tab["ploidy"]
     )
@@ -784,7 +780,7 @@ def plot_smudge_sizes(smudge_tab, cov, error_string, ax, min_size=0.03):
                 (smudge, size)
                 for smudge, size in zip(
                     reduce_structure_representation(smudge_tab["structure"]).to_list(),
-                    round(smudge_tab["size"], 2),
+                    round(smudge_tab["rel_size"], 2),
                 )
             ],
             key=lambda x: x[1],
@@ -900,7 +896,7 @@ def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
         }
     )
 
-    for idx, smudge, size in smudges.smudge_tab.itertuples():
+    for idx, smudge, size, rel_size in smudges.smudge_tab.itertuples():
         smudge_dict[smudge] = [size]
 
     smudge_df = DataFrame.from_dict(smudge_dict).fillna(0)
@@ -950,7 +946,7 @@ def main():
         fin()
 
     if _parser.task == "plot":
-        smudge_tab = read_csv(args.smudgefile, sep="\t", names=["structure", "size"])
+        smudge_tab = read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
         cov_tab = load_hetmers(args.infile)
         smudgeplot_data = SmudgeplotData(cov_tab, smudge_tab, args.n)
         prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
@@ -1018,8 +1014,8 @@ def main():
             sys.stderr.write(f"\nUser defined coverage: {round(cov, 3)}\n")
 
         smudges.final_smudges = smudges.get_smudge_container(cov, smudge_size_cutoff, 'local_agregation')
-
         smudges.describe_smudges()
+
         sys.stderr.write(
             f'Detected smudges / sizes ({args.o} + "_smudge_sizes.txt):"\n'
         )
