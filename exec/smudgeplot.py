@@ -399,7 +399,7 @@ class Smudges:
         return cov_list[argmin(centralities)], centralities
 
     def get_smudge_container(self, cov, smudge_filter, method = 'fishnet'): # this should be possible using fishnet or local agegation
-        smudge_container = {}
+        smudge_container = defaultdict(int)
 
         if method == 'fishnet':
             for Bs in range(1, 9):
@@ -421,9 +421,9 @@ class Smudges:
                         cov_tab_iso_smudge["freq"].sum() / self.total_genomic_kmers
                         > smudge_filter
                     ):
-                        smudge_container["A" * As + "B" * Bs] = cov_tab_iso_smudge #### SAM, here it overwrites, it should append if exists
+                        smudge_container["A" * As + "B" * Bs] += cov_tab_iso_smudge #### Changed container to defaultdict and += cov_tab_iso_smudge
 
-        if method == 'local_agregation':
+        if method == 'local_aggregation':
             peak = 1
             while peak < max(self.cov_tab["smudge"]):
                 cov_tab_smudge = self.cov_tab.loc[self.cov_tab["smudge"] == peak]
@@ -437,7 +437,7 @@ class Smudges:
                         > smudge_filter
                     ):
                     sys.stderr.write("Recording peak (" + str(covA) + ";" + str(covB) + ") " + str(peak) + " as " + "A" * As + "B" * Bs + " smudge\n")
-                    smudge_container["A" * As + "B" * Bs] = cov_tab_smudge
+                    smudge_container["A" * As + "B" * Bs] += cov_tab_smudge
                 peak += 1
 
         return smudge_container
@@ -592,7 +592,7 @@ def infer_coverage(error_fraction, centrality_df, limit=0.7):
 
 
 def get_centrality(smudge_container, cov):
-    sys.stderr.write(f"\tTesting coverage: {cov}\n\n")
+    #sys.stderr.write(f"\tTesting coverage: {cov}\n\n")
     centralities = []
     freqs = []
     for smudge, smudge_tab in smudge_container.items():
@@ -622,7 +622,7 @@ def get_centrality(smudge_container, cov):
         distA = abs((center_A - (cov * As)) / cov)
         distB = abs((center_B - (cov * Bs)) / cov)
 
-        sys.stderr.write(f"Processing: {As}A{Bs}B; with center: {distA}, {distB} and joint freq {kmer_in_the_smudge}\n")
+        #sys.stderr.write(f"Processing: {As}A{Bs}B; with center: {distA}, {distB} and joint freq {kmer_in_the_smudge}\n")
         centrality = distA + distB
         centralities.append(centrality)
 
@@ -1017,7 +1017,7 @@ def main():
             cov = args.cov
             sys.stderr.write(f"\nUser defined coverage: {round(cov, 3)}\n")
 
-        smudges.final_smudges = smudges.get_smudge_container(cov, smudge_size_cutoff, 'local_agregation')
+        smudges.final_smudges = smudges.get_smudge_container(cov, smudge_size_cutoff, 'local_aggregation')
         smudges.describe_smudges()
 
         sys.stderr.write(
