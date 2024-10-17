@@ -467,7 +467,6 @@ class Smudges:
                         + "B" * Bs
                         + " smudge\n"
                     )
-                    print(cov_tab_smudge)
                     if not smudge_container["A" * As + "B" * Bs].empty:
                         smudge_container["A" * As + "B" * Bs] = concat(
                             [smudge_container["A" * As + "B" * Bs], cov_tab_smudge],
@@ -476,7 +475,6 @@ class Smudges:
                         )
                     else:
                         smudge_container["A" * As + "B" * Bs] = cov_tab_smudge
-                    print(smudge_container)
 
                 peak += 1
         return smudge_container
