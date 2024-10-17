@@ -82,17 +82,13 @@ class Parser:
             prog="smudgeplot hetkmers",
             description="Calculate unique kmer pairs from FastK k-mer database.",
         )
-        argparser.add_argument(
-            "infile", nargs="?", help="Input FastK database (.ktab) file."
-        )
+        argparser.add_argument("infile", nargs="?", help="Input FastK database (.ktab) file.")
         argparser.add_argument(
             "-L",
             help="Count threshold below which k-mers are considered erroneous",
             type=int,
         )
-        argparser.add_argument(
-            "-t", help="Number of threads (default 4)", type=int, default=4
-        )
+        argparser.add_argument("-t", help="Number of threads (default 4)", type=int, default=4)
         argparser.add_argument(
             "-o",
             help="The pattern used to name the output (kmerpairs).",
@@ -103,9 +99,7 @@ class Parser:
             help="Directory where all temporary files will be stored (default /tmp).",
             default=".",
         )
-        argparser.add_argument(
-            "--verbose", action="store_true", default=False, help="verbose mode"
-        )
+        argparser.add_argument("--verbose", action="store_true", default=False, help="verbose mode")
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def plot(self):
@@ -146,9 +140,7 @@ class Parser:
             type=argparse.FileType("r"),
             help='Name of the input kmer histogram file (default "kmer.hist")."',
         )
-        argparser.add_argument(
-            "boundary", help="Which bounary to compute L (lower) or U (upper)"
-        )
+        argparser.add_argument("boundary", help="Which bounary to compute L (lower) or U (upper)")
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def peak_aggregation(self):
@@ -278,15 +270,10 @@ class Coverages:
                 # for explored A coverage in neiborhood, we explore all possible B coordinates
                 distanceB = distance - abs(covA - xA)
                 for xB in range(covB - distanceB, covB + distanceB + 1):
-                    xB, xA = sorted(
-                        [xA, xB]
-                    )  # this is to make sure xB is smaller than xA
+                    xB, xA = sorted([xA, xB])  # this is to make sure xB is smaller than xA
                     # iterating only though those that were assigned already
                     # and recording only the one with highest frequency
-                    if (
-                        cov2peak[(xA, xB)]
-                        and cov2freq[(xA, xB)] > highest_neigbour_freq
-                    ):
+                    if cov2peak[(xA, xB)] and cov2freq[(xA, xB)] > highest_neigbour_freq:
                         highest_neigbour_coords = (xA, xB)
                         highest_neigbour_freq = cov2freq[(xA, xB)]
             if highest_neigbour_freq:  # > 0:
@@ -303,8 +290,7 @@ class Coverages:
 
     def peak_aggregation(self):
         self.cov_tab["smudge"] = [
-            self.cov2peak[(covA, covB)]
-            for idx, covB, covA, freq in self.cov_tab.itertuples()
+            self.cov2peak[(covA, covB)] for idx, covB, covA, freq in self.cov_tab.itertuples()
         ]
         self.cov_tab.sort_values(["covA", "covB"], ascending=True, inplace=True)
 
@@ -318,15 +304,11 @@ class Coverages:
         self.peak_aggregation()
 
         self.total_kmers = self.cov_tab["freq"].sum()
-        self.total_genomic_kmers = self.cov_tab.loc[self.cov_tab["smudge"] >= 0][
+        self.total_genomic_kmers = self.cov_tab.loc[self.cov_tab["smudge"] >= 0]["freq"].sum()
+        self.total_genomic_kmers_in_smudges = self.cov_tab.loc[self.cov_tab["smudge"] > 0][
             "freq"
         ].sum()
-        self.total_genomic_kmers_in_smudges = self.cov_tab.loc[
-            self.cov_tab["smudge"] > 0
-        ]["freq"].sum()
-        self.total_error_kmers = self.cov_tab.loc[self.cov_tab["smudge"] == -1][
-            "freq"
-        ].sum()
+        self.total_error_kmers = self.cov_tab.loc[self.cov_tab["smudge"] == -1]["freq"].sum()
         self.error_fraction = self.total_error_kmers / self.total_kmers
 
 
@@ -344,25 +326,17 @@ class Smudges:
 
         for i, params in enumerate(grid_params):
             cov_list = arange(int(min_c) + params[0], int(max_c) + params[1], params[2])
-            best_cov, centralities = self.get_best_coverage(
-                cov_list, smudge_size_cutoff
-            )
+            best_cov, centralities = self.get_best_coverage(cov_list, smudge_size_cutoff)
 
-            results.append(
-                {"covs": cov_list, "centralities": centralities, "best_cov": best_cov}
-            )
+            results.append({"covs": cov_list, "centralities": centralities, "best_cov": best_cov})
 
             min_c, max_c = best_cov, best_cov
 
             if i > 0:
-                sys.stderr.write(
-                    f"Best coverage to precision of 1/{10**i}: {round(best_cov, 2)}\n"
-                )
+                sys.stderr.write(f"Best coverage to precision of 1/{10**i}: {round(best_cov, 2)}\n")
 
         # just to be sure
-        results[-1]["covs"] = np.append(
-            results[-1]["covs"], results[-1]["best_cov"] / 2
-        )
+        results[-1]["covs"] = np.append(results[-1]["covs"], results[-1]["best_cov"] / 2)
         best_cov, centralities = self.get_best_coverage(
             cov_list=results[-1]["covs"],
             smudge_size_cutoff=smudge_size_cutoff,
@@ -378,9 +352,7 @@ class Smudges:
         self.centrality_df = DataFrame(
             {
                 "coverage": concatenate([result["covs"] for result in results]),
-                "centrality": concatenate(
-                    [result["centralities"] for result in results]
-                ),
+                "centrality": concatenate([result["centralities"] for result in results]),
             }
         )
 
@@ -419,13 +391,9 @@ class Smudges:
                     min_cov, max_cov = get_cov_limits(As, cov)
 
                     cov_tab_iso_smudge = cov_tab_isoB.loc[
-                        (cov_tab_isoB["covA"] > min_cov)
-                        & (cov_tab_isoB["covA"] < max_cov)
+                        (cov_tab_isoB["covA"] > min_cov) & (cov_tab_isoB["covA"] < max_cov)
                     ]
-                    if (
-                        cov_tab_iso_smudge["freq"].sum() / self.total_genomic_kmers
-                        > smudge_filter
-                    ):
+                    if cov_tab_iso_smudge["freq"].sum() / self.total_genomic_kmers > smudge_filter:
                         if not smudge_container["A" * As + "B" * Bs].empty:
                             smudge_container["A" * As + "B" * Bs] = concat(
                                 [
@@ -440,21 +408,15 @@ class Smudges:
 
         if method == "local_aggregation":
             peak = 1
-            while peak < max(self.cov_tab["smudge"]):
+
+            while peak <= max(self.cov_tab["smudge"]):
                 cov_tab_smudge = self.cov_tab.loc[self.cov_tab["smudge"] == peak]
                 center = cov_tab_smudge.loc[cov_tab_smudge["freq"].idxmax()]
-                covA = center[
-                    "covA"
-                ]  # fmean(cov_tab_smudge["covA"], cov_tab_smudge["freq"])
-                covB = center[
-                    "covB"
-                ]  # fmean(cov_tab_smudge["covB"], cov_tab_smudge["freq"])
+                covA = center["covA"]  # fmean(cov_tab_smudge["covA"], cov_tab_smudge["freq"])
+                covB = center["covB"]  # fmean(cov_tab_smudge["covB"], cov_tab_smudge["freq"])
                 As = round(covA / cov)
                 Bs = round(covB / cov)
-                if (
-                    cov_tab_smudge["freq"].sum() / self.total_genomic_kmers
-                    > smudge_filter
-                ):
+                if (cov_tab_smudge["freq"].sum() / self.total_genomic_kmers) > smudge_filter:
                     sys.stderr.write(
                         "Recording peak ("
                         + str(covA)
@@ -477,16 +439,16 @@ class Smudges:
                         smudge_container["A" * As + "B" * Bs] = cov_tab_smudge
 
                 peak += 1
+
+            # smudge_container = {smudge:cov_tab for smudge, cov_tab in smudge_container.items() if (cov_tab["freq"].sum() / self.total_genomic_kmers) > smudge_filter}
+
         return smudge_container
 
     def generate_smudge_table(self, smudge_container):
         annotated_smudges = list(smudge_container.keys())
-        smudge_sizes = [
-            smudge_container[smudge]["freq"].sum() for smudge in annotated_smudges
-        ]
+        smudge_sizes = [smudge_container[smudge]["freq"].sum() for smudge in annotated_smudges]
         smudge_sizes_rel = [
-            round(smudge_size / self.total_genomic_kmers, 4)
-            for smudge_size in smudge_sizes
+            round(smudge_size / self.total_genomic_kmers, 4) for smudge_size in smudge_sizes
         ]
         self.smudge_tab = DataFrame(
             {
@@ -533,8 +495,7 @@ class SmudgeplotData:
     def filter_cov_quant(self, cov_filter=None, quant_filter=None):
         if cov_filter:
             self.cov_tab = self.cov_tab.loc[
-                (self.cov_tab["covA"] >= cov_filter)
-                & (self.cov_tab["covB"] >= cov_filter)
+                (self.cov_tab["covA"] >= cov_filter) & (self.cov_tab["covB"] >= cov_filter)
             ]
         if quant_filter:
             # 0 < int(quant_filter) < 100
@@ -544,9 +505,7 @@ class SmudgeplotData:
                 weights=self.cov_tab["freq"],
                 method="inverted_cdf",
             )
-            self.cov_tab = self.cov_tab.loc[
-                self.cov_tab["total_pair_cov"] < upper_quantile
-            ]
+            self.cov_tab = self.cov_tab.loc[self.cov_tab["total_pair_cov"] < upper_quantile]
 
     def get_ax_lims(self, upper_ylim=None):
         if self.cov == np.percentile(
@@ -575,7 +534,9 @@ class SmudgeplotData:
             fig_title = str(title)
         else:
             fig_title = "NA"
-        self.fig_title = f"{fig_title}\n\n1n = {round(self.cov,3)}\nerr = {round(self.error_fraction,3)}%"
+        self.fig_title = (
+            f"{fig_title}\n\n1n = {round(self.cov,3)}\nerr = {round(self.error_fraction,3)}%"
+        )
         self.linear_plot_file = output + "_smudgeplot_py.pdf"
         self.log_plot_file = output + "_smudgeplot_log10_py.pdf"
 
@@ -610,9 +571,7 @@ def cutoff(kmer_hist, boundary):
         )
         # take 99.8 quantile of kmers that are more than one in the read set
         number_of_kmers = np.sum(hist[1:])
-        hist_rel_cumsum = [
-            np.sum(hist[1 : i + 1]) / number_of_kmers for i in range(1, len(hist))
-        ]
+        hist_rel_cumsum = [np.sum(hist[1 : i + 1]) / number_of_kmers for i in range(1, len(hist))]
         min(range(len(hist_rel_cumsum)))
         U = round_up_nice(min([i for i, q in enumerate(hist_rel_cumsum) if q > 0.998]))
         sys.stdout.write(str(U))
@@ -718,13 +677,9 @@ def smudgeplot(data, log=False):
     plot_smudges(cov_tab, colour_ramp, main_ax, lims, log=log, fontsize=fontsize)
 
     if cov > 0:
-        plot_expected_haplotype_structure(
-            smudge_tab, cov, main_ax, adjust=True, xmax=0.49
-        )
+        plot_expected_haplotype_structure(smudge_tab, cov, main_ax, adjust=True, xmax=0.49)
 
-    plot_legend(
-        ax=legend_ax, kmer_max=max(cov_tab["freq"]), colour_ramp=colour_ramp, log=log
-    )
+    plot_legend(ax=legend_ax, kmer_max=max(cov_tab["freq"]), colour_ramp=colour_ramp, log=log)
 
     plot_smudge_sizes(smudge_tab, cov, data.error_string, size_ax)
 
@@ -757,8 +712,7 @@ def plot_smudges(cov_tab, colour_ramp, ax, lims, log=False, fontsize=14):
     min_cov_to_plot = max(lims["ylim"][0], min(cov_tab["total_pair_cov"]))
 
     patches_nested = [
-        get_one_coverage(cov_tab, cov, ax)
-        for cov in np.arange(min_cov_to_plot, lims["ylim"][1])
+        get_one_coverage(cov_tab, cov, ax) for cov in np.arange(min_cov_to_plot, lims["ylim"][1])
     ]
     patches_flat = [x for xs in patches_nested for x in xs]
     ax.add_collection(PatchCollection(patches_flat, match_original=True))
@@ -772,10 +726,7 @@ def get_one_coverage(cov_tab, cov, ax):
         cov_row_to_plot["minor_variant_rel_cov"].apply(lambda x: min(0.5, x + width))
     ).to_numpy()
     cols = cov_row_to_plot["col"].to_numpy()
-    return [
-        get_one_box(left, right, cov, col, ax)
-        for left, right, col in zip(lefts, rights, cols)
-    ]
+    return [get_one_box(left, right, cov, col, ax) for left, right, col in zip(lefts, rights, cols)]
 
 
 def get_one_box(left, right, cov, colour, ax):
@@ -797,9 +748,7 @@ def plot_expected_haplotype_structure(smudge_tab, cov, ax, adjust=False, xmax=0.
     smudge_tab.loc[:, "corrected_minor_variant_cov"] = (
         smudge_tab["structure"].str.count("B") / smudge_tab["ploidy"]
     )
-    smudge_tab.loc[:, "label"] = reduce_structure_representation(
-        smudge_tab["structure"]
-    )
+    smudge_tab.loc[:, "label"] = reduce_structure_representation(smudge_tab["structure"])
 
     for index, row in smudge_tab.iterrows():
 
@@ -831,21 +780,15 @@ def plot_smudge_sizes(smudge_tab, cov, error_string, ax, min_size=0.03):
         )
 
         labels = [
-            f"{size:>3,.2f}   {smudge:<6s}"
-            for smudge, size in size_tuples
-            if size >= min_size
+            f"{size:>3,.2f}   {smudge:<6s}" for smudge, size in size_tuples if size >= min_size
         ]
 
         label_string = "\n".join(labels)
 
-        ax.text(
-            0, 1, label_string, ha="left", va="top", fontsize=28, transform=ax.transAxes
-        )
+        ax.text(0, 1, label_string, ha="left", va="top", fontsize=28, transform=ax.transAxes)
 
     else:
-        ax.text(
-            0, 1, error_string, ha="left", va="top", fontsize=28, transform=ax.transAxes
-        )
+        ax.text(0, 1, error_string, ha="left", va="top", fontsize=28, transform=ax.transAxes)
 
 
 def reduce_structure_representation(smudge_labels):
@@ -984,17 +927,13 @@ def main():
             plot_args += " -P" + args.tmp
         plot_args += " " + args.infile
 
-        sys.stderr.write(
-            "Calling: hetmers (PloidyPlot kmer pair search) " + plot_args + "\n"
-        )
+        sys.stderr.write("Calling: hetmers (PloidyPlot kmer pair search) " + plot_args + "\n")
         system("hetmers " + plot_args)
 
         fin()
 
     if _parser.task == "plot":
-        smudge_tab = read_csv(
-            args.smudgefile, sep="\t", names=["structure", "size", "rel_size"]
-        )
+        smudge_tab = read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
         cov_tab = load_hetmers(args.infile)
         smudgeplot_data = SmudgeplotData(cov_tab, smudge_tab, args.n)
         prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
@@ -1045,9 +984,7 @@ def main():
                 fmt="%.4f",
                 delimiter="\t",
             )
-            cov = infer_coverage(
-                coverages.error_fraction, smudges.centrality_df, limit=0.7
-            )
+            cov = infer_coverage(coverages.error_fraction, smudges.centrality_df, limit=0.7)
             sys.stderr.write("\nPlotting centrality plot\n")
             smudges.centrality_plot(args.o)
             sys.stderr.write(f"\nInferred coverage: {round(cov, 3)}\n")
@@ -1062,14 +999,10 @@ def main():
         # smudges.final_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, 'fishnet')
         smudges.generate_smudge_table(smudges.final_smudge_container)
 
-        sys.stderr.write(
-            f'Detected smudges / sizes ({args.o} + "_smudge_sizes.txt):"\n'
-        )
+        sys.stderr.write(f'Detected smudges / sizes ({args.o} + "_smudge_sizes.txt):"\n')
         sys.stderr.write("\t" + str(smudges.smudge_tab["structure"].to_list()) + "\n")
         sys.stderr.write("\t" + str(smudges.smudge_tab["size"].to_list()) + "\n")
-        np.savetxt(
-            args.o + "_smudge_sizes.txt", smudges.smudge_tab, fmt="%s", delimiter="\t"
-        )
+        np.savetxt(args.o + "_smudge_sizes.txt", smudges.smudge_tab, fmt="%s", delimiter="\t")
 
         sys.stderr.write("\nPlotting smudgeplot\n")
 
