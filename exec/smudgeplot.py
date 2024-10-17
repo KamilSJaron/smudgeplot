@@ -424,10 +424,10 @@ class Smudges:
                 As = round(covA / cov)
                 Bs = round(covB / cov)
 
-                if (As == 0) or (Bs == 0):
-                    sys.stderr.write(f'Skipped {As}A{Bs}B\n')
-                    peak += 1
-                    continue
+                #if (As == 0) or (Bs == 0):
+                #    sys.stderr.write(f'Skipped {As}A{Bs}B\n')
+                #    peak += 1
+                #    continue
 
                 if (cov_tab_smudge["freq"].sum() / self.total_genomic_kmers) > smudge_filter:
                     # sys.stderr.write(
@@ -866,7 +866,7 @@ def create_smudge_dict(max_ploidy):
             smudge_list.append("A" * As + "B" * Bs)
 
     smudge_list.sort()
-    sorted_smudges = ['A', 'B'] + sorted(smudge_list, key=len)
+    sorted_smudges = sorted(smudge_list, key=len)
     smudges_rr = reduce_structure_representation(Series(sorted_smudges))
     smudge_dict = dict.fromkeys(smudges_rr, np.nan)
     return smudge_dict, smudges_rr
@@ -878,7 +878,6 @@ def fin():
 
 
 def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header):
-
     dataset = args.infile.split("/")[-1]
     meta_df = DataFrame.from_dict(
         {
@@ -890,7 +889,10 @@ def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
 
     smudges.smudge_tab.loc[:, "label"] = reduce_structure_representation(smudges.smudge_tab["structure"])
     for idx, smudge, size, rel_size, label in smudges.smudge_tab.itertuples():
-        smudge_dict[label] = [size]
+        if smudge_dict.get(label, 'Missing') != 'Missing':
+            smudge_dict[label] = [size]
+        else:
+            sys.stdout.write(f"Unexpected smudge label {label} skipped\n")
 
     smudge_df = DataFrame.from_dict(smudge_dict).fillna(0)
     out_df = concat([meta_df, smudge_df], axis=1)
