@@ -197,7 +197,7 @@ class Parser:
             "-cov",
             help="The assumed coverage (no inference of 1n coverage is made)",
             type=float,
-            default=0,
+            default=0.0,
         )
         argparser.add_argument(
             "-d",
@@ -215,7 +215,7 @@ class Parser:
             "-c",
             "-cov_filter",
             help="Filter pairs with one of them having coverage bellow specified threshold (default 0; disables parameter L)",
-            type=int,
+            type=float,
             default=0,
         )
         argparser.add_argument(
@@ -423,6 +423,12 @@ class Smudges:
                 covB = center["covB"]  # fmean(cov_tab_smudge["covB"], cov_tab_smudge["freq"])
                 As = round(covA / cov)
                 Bs = round(covB / cov)
+
+                if (As == 0) or (Bs == 0):
+                    sys.stderr.write(f'Skipped {As}A{Bs}B\n')
+                    peak += 1
+                    continue
+
                 if (cov_tab_smudge["freq"].sum() / self.total_genomic_kmers) > smudge_filter:
                     # sys.stderr.write(
                     #     f'Recording peak ({covA};{covB}) {peak} as {"A" * As}{"B" * Bs} smudge\n'
@@ -860,7 +866,7 @@ def create_smudge_dict(max_ploidy):
             smudge_list.append("A" * As + "B" * Bs)
 
     smudge_list.sort()
-    sorted_smudges = sorted(smudge_list, key=len)
+    sorted_smudges = ['A', 'B'] + sorted(smudge_list, key=len)
     smudges_rr = reduce_structure_representation(Series(sorted_smudges))
     smudge_dict = dict.fromkeys(smudges_rr, np.nan)
     return smudge_dict, smudges_rr
@@ -873,25 +879,32 @@ def fin():
 
 def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header):
 
+    dataset = args.infile.split("/")[-1]
     meta_df = DataFrame.from_dict(
         {
-            "dataset": [args.infile.split("/")[-1]],
+            "dataset": [dataset],
             "total_kmers": [coverages.total_kmers],
             "total_error_kmers": [coverages.total_error_kmers],
         }
     )
 
-    for idx, smudge, size, rel_size in smudges.smudge_tab.itertuples():
-        smudge_dict[smudge] = [size]
+    smudges.smudge_tab.loc[:, "label"] = reduce_structure_representation(smudges.smudge_tab["structure"])
+    for idx, smudge, size, rel_size, label in smudges.smudge_tab.itertuples():
+        smudge_dict[label] = [size]
 
     smudge_df = DataFrame.from_dict(smudge_dict).fillna(0)
     out_df = concat([meta_df, smudge_df], axis=1)
-    out_str = "\t".join([str(x) for x in out_df.iloc[0, :]])
+    
+    #out_str = "\t".join([str(x) for x in out_df.iloc[0, :]])
 
     if print_header:
-        sys.stdout.write("\t".join(out_df.columns) + "\n")
+        out_df.to_csv(f'{dataset.split('.')[0]}.smudge_report.tsv', sep='\t', index=False)
+        #sys.stdout.write("\t".join(out_df.columns) + "\n")
+    else:
+        out_df.to_csv(f'{dataset.split('.')[0]}.smudge_report.tsv', sep='\t', index=False, header=False)
+    #sys.stdout.write(out_str + "\n")
 
-    sys.stdout.write(out_str + "\n")
+    sys.stderr.write(f"Written smudge report to: {dataset.split('.')[0]}.smudge_report.tsv\n")
 
 
 def main():
@@ -970,7 +983,7 @@ def main():
         smudge_size_cutoff = 0#0.01  # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
         smudges = Smudges(coverages.cov_tab, coverages.total_genomic_kmers)
 
-        if args.cov == 0:
+        if args.cov == 0.0:
             sys.stderr.write("\nInferring 1n coverage using grid algorithm\n")
 
             smudges.get_centrality_df(args.cov_min, args.cov_max, smudge_size_cutoff)
@@ -1008,7 +1021,7 @@ def main():
         prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
         generate_plots(smudgeplot_data)
 
-        print_header = False
+        print_header = True
         report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
 
     fin()
