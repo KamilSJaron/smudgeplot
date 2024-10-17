@@ -418,16 +418,7 @@ class Smudges:
                 Bs = round(covB / cov)
                 if (cov_tab_smudge["freq"].sum() / self.total_genomic_kmers) > smudge_filter:
                     sys.stderr.write(
-                        "Recording peak ("
-                        + str(covA)
-                        + ";"
-                        + str(covB)
-                        + ") "
-                        + str(peak)
-                        + " as "
-                        + "A" * As
-                        + "B" * Bs
-                        + " smudge\n"
+                        f'Recording peak ({covA};{covB}) {peak} as {"A" * As}{"B" * Bs} smudge\n'
                     )
                     if not smudge_container["A" * As + "B" * Bs].empty:
                         smudge_container["A" * As + "B" * Bs] = concat(
@@ -821,7 +812,6 @@ def plot_legend(ax, kmer_max, colour_ramp, log=False):
 
     for i in range(7):
         if log:
-            # this is the bit not currently working for hte log plot
             ax.text(
                 0.75,
                 i / 6,
@@ -898,7 +888,6 @@ def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
 
 
 def main():
-    # defining the parser object with an underscore prefix is confusing?
     _parser = Parser()
 
     sys.stderr.write("Running smudgeplot v" + version + "\n")
