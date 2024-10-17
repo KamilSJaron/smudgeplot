@@ -199,6 +199,13 @@ class Parser:
             type=float,
             default=0,
         )
+        argparser.add_argument(
+            "-d",
+            "-distance",
+            help="Manthattan distance of k-mer pairs that are considered neioboring for the local aggregation purposes.",
+            type=int,
+            default=2,
+        )
         argparser = self.add_plotting_arguments(argparser)
 
         self.arguments = argparser.parse_args(sys.argv[2:])
@@ -417,9 +424,9 @@ class Smudges:
                 As = round(covA / cov)
                 Bs = round(covB / cov)
                 if (cov_tab_smudge["freq"].sum() / self.total_genomic_kmers) > smudge_filter:
-                    sys.stderr.write(
-                        f'Recording peak ({covA};{covB}) {peak} as {"A" * As}{"B" * Bs} smudge\n'
-                    )
+                    # sys.stderr.write(
+                    #     f'Recording peak ({covA};{covB}) {peak} as {"A" * As}{"B" * Bs} smudge\n'
+                    # )
                     if not smudge_container["A" * As + "B" * Bs].empty:
                         smudge_container["A" * As + "B" * Bs] = concat(
                             [smudge_container["A" * As + "B" * Bs], cov_tab_smudge],
@@ -943,7 +950,7 @@ def main():
 
     if _parser.task == "all":
 
-        coverages.local_aggregation(distance=2, noise_filter=1000, mask_errors=True)
+        coverages.local_aggregation(distance=args.d, noise_filter=1000, mask_errors=True)
         coverages.count_kmers()
         sys.stderr.write(
             f"\t\
@@ -960,7 +967,7 @@ def main():
                     f"{covB}\t{covA}\t{freq}\t{is_error}\n"
                 )  # might not be needed
 
-        smudge_size_cutoff = 0.01  # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
+        smudge_size_cutoff = 0#0.01  # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
         smudges = Smudges(coverages.cov_tab, coverages.total_genomic_kmers)
 
         if args.cov == 0:
@@ -1001,7 +1008,7 @@ def main():
         prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
         generate_plots(smudgeplot_data)
 
-        print_header = True
+        print_header = False
         report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
 
     fin()
