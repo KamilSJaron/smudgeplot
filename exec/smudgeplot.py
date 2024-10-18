@@ -107,8 +107,9 @@ tasks: cutoff           Calculate meaningful values for lower kmer histogram cut
         argparser = argparse.ArgumentParser()
         argparser.add_argument('infile', nargs='?', help='name of the input tsv file with covarages and frequencies.')
         argparser.add_argument('-o', help='The pattern used to name the output (smudgeplot).', default='smudgeplot')
-        argparser.add_argument('-cov_min', help='Minimal coverage to explore (default 6)', default=6)
-        argparser.add_argument('-cov_max', help='Maximal coverage to explore (default 50)', default=60)
+        argparser.add_argument('-cov_min', help='Minimal coverage to explore (default 6)', default=6, type = int)
+        argparser.add_argument('-cov_max', help='Maximal coverage to explore (default 50)', default=60, type = int)
+        argparser.add_argument('-cov', help='Define coverage instead of infering it. Disables cov_min and cov_max.', default=0, type=int)
 
         argparser = self.add_plotting_arguments(argparser)
 
@@ -395,17 +396,23 @@ def main():
         sys.stderr.write("\nInfering 1n coverage using grid algorihm\n")
 
         smudge_size_cutoff = 0.001 # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
-        centralities = test_coverage_range(cov_tab, args.cov_min, args.cov_max, smudge_size_cutoff)
-        np.savetxt(args.o + "_centralities.txt", np.around(centralities, decimals=6), fmt="%.4f", delimiter = '\t')
-        # plot(centralities['coverage'], centralities['coverage'])
 
-        if error_fraction < 0.7:
-            cov = centralities['coverage'][argmin(centralities['centrality'])]
+        if args.cov == 0: # not specified user coverage
+            centralities = test_coverage_range(cov_tab, args.cov_min, args.cov_max, smudge_size_cutoff)
+            np.savetxt(args.o + "_centralities.txt", np.around(centralities, decimals=6), fmt="%.4f", delimiter = '\t')
+            # plot(centralities['coverage'], centralities['coverage'])
+
+            if error_fraction < 0.75:
+                cov = centralities['coverage'][argmin(centralities['centrality'])]
+            else:
+                sys.stderr.write(f"Too many errors observed: {error_fraction}, not trusting coverage inference\n")
+                cov = 0
+
+            sys.stderr.write(f"\nInferred coverage: {cov}\n")
         else:
-            cov = 0
+            cov = args.cov
 
-        sys.stderr.write(f"\nInferred coverage: {cov}\n")
-        final_smudges = get_smudge_container(cov_tab, cov, smudge_size_cutoff)
+        final_smudges = get_smudge_container(cov_tab, cov, 0.03)
         # sys.stderr.write(str(final_smudges) + '\n')
 
         annotated_smudges = list(final_smudges.keys())
