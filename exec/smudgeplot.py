@@ -649,11 +649,11 @@ def get_col_ramp(col_ramp="viridis", delay=0, invert_cols=False):
     return ramp
 
 
-def smudgeplot(data, log=False):
+def smudgeplot(data, log=False): # I think user arguments need to be passed here
     cov_tab = data.cov_tab.copy(deep=True)
     smudge_tab = data.smudge_tab
     cov = data.cov
-    lims = data.lims
+    lims = data.lims # so things like lims can be set using user defined plotting parameters (I imagine palette will be the same although I did not try that one yet)
     fig_title = data.fig_title
 
     fig, axs = plt.subplots(
@@ -900,10 +900,10 @@ def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
     #out_str = "\t".join([str(x) for x in out_df.iloc[0, :]])
 
     if print_header:
-        out_df.to_csv(f'{dataset.split('.')[0]}.smudge_report.tsv', sep='\t', index=False)
+        out_df.to_csv(args.o + '.smudge_report.tsv', sep='\t', index=False)
         #sys.stdout.write("\t".join(out_df.columns) + "\n")
     else:
-        out_df.to_csv(f'{dataset.split('.')[0]}.smudge_report.tsv', sep='\t', index=False, header=False)
+        out_df.to_csv(args.o + '.smudge_report.tsv', sep='\t', index=False, header=False)
     #sys.stdout.write(out_str + "\n")
 
     sys.stderr.write(f"Written smudge report to: {dataset.split('.')[0]}.smudge_report.tsv\n")
