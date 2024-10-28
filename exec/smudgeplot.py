@@ -535,54 +535,6 @@ class SmudgeplotData:
         self.linear_plot_file = output + "_smudgeplot_py.pdf"
         self.log_plot_file = output + "_smudgeplot_log10_py.pdf"
 
-
-# taken from https://stackoverflow.com/a/29614335
-def local_min(ys):
-    return [
-        i
-        for i, y in enumerate(ys)
-        if ((i == 0) or (ys[i - 1] >= y)) and ((i == len(ys) - 1) or (y < ys[i + 1]))
-    ]
-
-
-def round_up_nice(x):
-    digits = ceil(log(x, 10))
-    if digits <= 1:
-        multiplier = 10 ** (digits - 1)
-    else:
-        multiplier = 10 ** (digits - 2)
-    return ceil(x / multiplier) * multiplier
-
-
-def cutoff(kmer_hist, boundary):
-    hist = [int(line.split()[1]) for line in kmer_hist]
-    if boundary == "L":
-        local_minima = local_min(hist)[0]
-        L = max(10, int(round(local_minima * 1.25)))
-        sys.stdout.write(str(L))
-    else:
-        sys.stderr.write(
-            "Warning: We discourage using the original hetmer algorithm.\n\tThe updated (recommended) version does not take the argument U\n"
-        )
-        # take 99.8 quantile of kmers that are more than one in the read set
-        number_of_kmers = np.sum(hist[1:])
-        hist_rel_cumsum = [np.sum(hist[1 : i + 1]) / number_of_kmers for i in range(1, len(hist))]
-        min(range(len(hist_rel_cumsum)))
-        U = round_up_nice(min([i for i, q in enumerate(hist_rel_cumsum) if q > 0.998]))
-        sys.stdout.write(str(U))
-    sys.stdout.flush()
-
-
-def load_hetmers(file_h):
-    cov_tab = read_csv(file_h, names=["covB", "covA", "freq"], sep="\t")
-    return cov_tab.sort_values("freq", ascending=False)
-
-
-def get_centre_cov_by_mode(smudge_tab):
-    centre = smudge_tab.loc[smudge_tab["freq"].idxmax()]
-    return centre["covA"], centre["covB"]
-
-
 def get_centrality(smudge_container, cov, centre="mode", dist="theoretical_center"):
     # sys.stderr.write(f"\tTesting coverage: {cov}\n\n")
     centralities = []
@@ -634,21 +586,26 @@ def get_centrality(smudge_container, cov, centre="mode", dist="theoretical_cente
         return 1
     return fmean(centralities, weights=freqs)
 
+def generate_plots(smudges, coverages, cov, smudge_size_cutoff, outfile, title):
+    smudges.fishnet_smudge_container = smudges.get_smudge_container(
+        cov, smudge_size_cutoff, "fishnet"
+    )
+    smudges.generate_smudge_table(smudges.fishnet_smudge_container)
 
-def get_cov_limits(Xs, cov):
-    min_cov = 0 if Xs == 1 else cov * (Xs - 0.5)
-    max_cov = cov * (Xs + 0.5)
-    return min_cov, max_cov
+    smudgeplot_data = SmudgeplotData(
+        coverages.cov_tab, smudges.smudge_tab, cov, coverages.error_fraction
+    )
+    prepare_smudgeplot_data_for_plotting(smudgeplot_data, outfile, title)
 
+    smudgeplot(smudgeplot_data, log=False)
+    smudgeplot(smudgeplot_data, log=True)
 
-def get_col_ramp(col_ramp="viridis", delay=0, invert_cols=False):
-    if invert_cols:
-        col_ramp += "_r"
-    cmap = plt.get_cmap(col_ramp, 32 - int(delay))
-    ramp = [mpl.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
-    ramp = [ramp[0]] * delay + ramp
-    return ramp
+def prepare_smudgeplot_data_for_plotting(smudgeplot_data, output, title):
 
+    smudgeplot_data.calc_cov_columns()
+    smudgeplot_data.filter_cov_quant()
+    smudgeplot_data.get_ax_lims()
+    smudgeplot_data.def_strings(output=output, title=title)
 
 def smudgeplot(data, log=False):  # I think user arguments need to be passed here
     cov_tab = data.cov_tab.copy(deep=True)
@@ -837,50 +794,21 @@ def plot_legend(ax, kmer_max, colour_ramp, log=False):
         else:
             ax.text(0.75, i / 6, str(rounding(kmer_max * i / 6)), fontsize=20)
 
+def generate_smudge_report(smudges, coverages, cov, args, print_header):
+    smudges.local_agg_smudge_container = smudges.get_smudge_container(
+        cov, smudge_size_cutoff, "local_aggregation"
+    )
+    smudges.generate_smudge_table(smudges.local_agg_smudge_container)
 
-def prepare_smudgeplot_data_for_plotting(smudgeplot_data, output, title):
+    sys.stderr.write(f'Detected smudges / sizes : \n\
+        \t {smudges.smudge_tab["structure"].to_list()} \n\
+        \t {smudges.smudge_tab["size"].to_list()} \n')
 
-    smudgeplot_data.calc_cov_columns()
-    smudgeplot_data.filter_cov_quant()
-    smudgeplot_data.get_ax_lims()
-    smudgeplot_data.def_strings(output=output, title=title)
+    write_smudge_report(smudges, coverages, cov, args, print_header=print_header)
 
+def write_smudge_report(smudges, coverages, smudge_dict, cov, args, print_header):
+    smudge_dict, sorted_smudges = create_smudge_dict(16)
 
-def generate_plots(smudgeplot_data):
-
-    smudgeplot(smudgeplot_data, log=False)
-
-    smudgeplot(smudgeplot_data, log=True)
-
-
-def rounding(number):
-    if number > 1000:
-        return round(number / 1000) * 1000
-    elif number > 100:
-        return round(number / 100) * 100
-    else:
-        return round(number / 10) * 10
-
-
-def create_smudge_dict(max_ploidy):
-    smudge_list = []
-    for Bs in range(1, max_ploidy + 1):
-        for As in range(Bs, ((2 * max_ploidy) + 1 - Bs)):
-            smudge_list.append("A" * As + "B" * Bs)
-
-    smudge_list.sort()
-    sorted_smudges = sorted(smudge_list, key=len)
-    smudges_rr = reduce_structure_representation(Series(sorted_smudges))
-    smudge_dict = dict.fromkeys(smudges_rr, np.nan)
-    return smudge_dict, smudges_rr
-
-
-def fin():
-    sys.stderr.write("\nDone!\n")
-    exit(0)
-
-
-def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header):
     dataset = args.infile.split("/")[-1]
     meta_df = DataFrame.from_dict(
         {
@@ -902,17 +830,87 @@ def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
     smudge_df = DataFrame.from_dict(smudge_dict).fillna(0)
     out_df = concat([meta_df, smudge_df], axis=1)
 
-    # out_str = "\t".join([str(x) for x in out_df.iloc[0, :]])
-
-    if print_header:
-        out_df.to_csv(args.o + ".smudge_report.tsv", sep="\t", index=False)
-        # sys.stdout.write("\t".join(out_df.columns) + "\n")
-    else:
-        out_df.to_csv(args.o + ".smudge_report.tsv", sep="\t", index=False, header=False)
-    # sys.stdout.write(out_str + "\n")
-
+    out_df.to_csv(args.o + ".smudge_report.tsv", sep="\t", index=False, header=print_header)
     sys.stderr.write(f"Written smudge report to: {dataset.split('.')[0]}.smudge_report.tsv\n")
 
+def create_smudge_dict(max_ploidy):
+    smudge_list = []
+    for Bs in range(1, max_ploidy + 1):
+        for As in range(Bs, ((2 * max_ploidy) + 1 - Bs)):
+            smudge_list.append("A" * As + "B" * Bs)
+
+    smudge_list.sort()
+    sorted_smudges = sorted(smudge_list, key=len)
+    smudges_rr = reduce_structure_representation(Series(sorted_smudges))
+    smudge_dict = dict.fromkeys(smudges_rr, np.nan)
+    return smudge_dict, smudges_rr
+
+# taken from https://stackoverflow.com/a/29614335
+def local_min(ys):
+    return [
+        i
+        for i, y in enumerate(ys)
+        if ((i == 0) or (ys[i - 1] >= y)) and ((i == len(ys) - 1) or (y < ys[i + 1]))
+    ]
+
+def round_up_nice(x):
+    digits = ceil(log(x, 10))
+    if digits <= 1:
+        multiplier = 10 ** (digits - 1)
+    else:
+        multiplier = 10 ** (digits - 2)
+    return ceil(x / multiplier) * multiplier
+
+def cutoff(kmer_hist, boundary):
+    hist = [int(line.split()[1]) for line in kmer_hist]
+    if boundary == "L":
+        local_minima = local_min(hist)[0]
+        L = max(10, int(round(local_minima * 1.25)))
+        sys.stdout.write(str(L))
+    else:
+        sys.stderr.write(
+            "Warning: We discourage using the original hetmer algorithm.\n\tThe updated (recommended) version does not take the argument U\n"
+        )
+        # take 99.8 quantile of kmers that are more than one in the read set
+        number_of_kmers = np.sum(hist[1:])
+        hist_rel_cumsum = [np.sum(hist[1 : i + 1]) / number_of_kmers for i in range(1, len(hist))]
+        min(range(len(hist_rel_cumsum)))
+        U = round_up_nice(min([i for i, q in enumerate(hist_rel_cumsum) if q > 0.998]))
+        sys.stdout.write(str(U))
+    sys.stdout.flush()
+
+def load_hetmers(file_h):
+    cov_tab = read_csv(file_h, names=["covB", "covA", "freq"], sep="\t")
+    return cov_tab.sort_values("freq", ascending=False)
+
+def get_centre_cov_by_mode(smudge_tab):
+    centre = smudge_tab.loc[smudge_tab["freq"].idxmax()]
+    return centre["covA"], centre["covB"]
+
+def get_cov_limits(Xs, cov):
+    min_cov = 0 if Xs == 1 else cov * (Xs - 0.5)
+    max_cov = cov * (Xs + 0.5)
+    return min_cov, max_cov
+
+def get_col_ramp(col_ramp="viridis", delay=0, invert_cols=False):
+    if invert_cols:
+        col_ramp += "_r"
+    cmap = plt.get_cmap(col_ramp, 32 - int(delay))
+    ramp = [mpl.colors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+    ramp = [ramp[0]] * delay + ramp
+    return ramp
+
+def rounding(number):
+    if number > 1000:
+        return round(number / 1000) * 1000
+    elif number > 100:
+        return round(number / 100) * 100
+    else:
+        return round(number / 10) * 10
+
+def fin():
+    sys.stderr.write("\nDone!\n")
+    exit(0)
 
 def main():
     _parser = Parser()
@@ -922,8 +920,6 @@ def main():
         exit(0)
 
     sys.stderr.write("Task: " + _parser.task + "\n")
-
-    smudge_dict, sorted_smudges = create_smudge_dict(16)
 
     args = _parser.arguments
     title = ".".join(args.infile.split("/")[-1].split(".")[0:2])
@@ -953,7 +949,8 @@ def main():
         cov_tab = load_hetmers(args.infile)
         smudgeplot_data = SmudgeplotData(cov_tab, smudge_tab, args.n)
         prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
-        generate_plots(smudgeplot_data)
+        smudgeplot(smudgeplot_data, log=False)
+        smudgeplot(smudgeplot_data, log=True)
 
         fin()
 
@@ -1007,7 +1004,7 @@ def main():
             else:
                 cov = 0
 
-            sys.stderr.write("\nPlotting centrality plot\n")
+            sys.stderr.write("\nCreating centrality plot\n")
             smudges.centrality_plot(args.o)
             sys.stderr.write(f"\nInferred coverage: {cov:.3f}\n")
 
@@ -1016,28 +1013,9 @@ def main():
             sys.stderr.write(f"\nUser defined coverage: {cov:.3f}\n")
 
         sys.stderr.write("\nCreating smudge report\n")
-        smudges.local_agg_smudge_container = smudges.get_smudge_container(
-            cov, smudge_size_cutoff, "local_aggregation"
-        )
-        smudges.generate_smudge_table(smudges.local_agg_smudge_container)
-        sys.stderr.write(f'Detected smudges / sizes ({args.o} + "_smudge_sizes.txt):"\n')
-        sys.stderr.write("\t" + str(smudges.smudge_tab["structure"].to_list()) + "\n")
-        sys.stderr.write("\t" + str(smudges.smudge_tab["size"].to_list()) + "\n")
-        np.savetxt(args.o + "_smudge_sizes.txt", smudges.smudge_tab, fmt="%s", delimiter="\t")
-        print_header = True
-        report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
-
-        sys.stderr.write("\nPlotting smudgeplot\n")
-        smudges.fishnet_smudge_container = smudges.get_smudge_container(
-            cov, smudge_size_cutoff, "fishnet"
-        )
-        smudges.generate_smudge_table(smudges.fishnet_smudge_container)
-        print(smudges.smudge_tab)
-        smudgeplot_data = SmudgeplotData(
-            coverages.cov_tab, smudges.smudge_tab, cov, coverages.error_fraction
-        )
-        prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
-        generate_plots(smudgeplot_data)
+        generate_smudge_report(smudges, coverages, cov, args, print_header=True)
+        sys.stderr.write("\nCreating smudgeplots\n")
+        generate_plots(smudges, coverages, cov, smudge_size_cutoff, args.o, title)
 
     fin()
 
