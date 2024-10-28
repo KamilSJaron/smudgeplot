@@ -525,31 +525,42 @@ def reduce_structure_representation(smudge_labels):
 
 
 def plot_legend(ax, kmer_max, colour_ramp, log=False):
-    title = "kmers pairs\n"
-    if log:
-        title = "log " + title
-    ax.set_title(title, ha="center", fontsize=28, weight="bold")
-    for i, colour in enumerate(colour_ramp):
-        rect = mpl.patches.Rectangle(
-            (0, ((i + 1) - 0.01) / 33),
-            0.5,
-            ((i + 1) + 0.99) / 33,
-            linewidth=1,
-            edgecolor=colour,
-            facecolor=colour,
-        )
-        ax.add_patch(rect)
-
-    for i in range(7):
-        if log:
+    if log:    
+        ax.set_title("log kmer pairs\n", ha="center", fontsize=28, weight="bold")
+        colour_ramp = colour_ramp[16:]
+        for i, colour in enumerate(colour_ramp):
+            rect = mpl.patches.Rectangle(
+                (0, ((i + 2) - 0.01) / 18),
+                0.5,
+                ((i + 2) + 0.99) / 18,
+                linewidth=1,
+                edgecolor=colour,
+                facecolor=colour,
+            )
+            ax.add_patch(rect)
+    
+        for i, n in enumerate([0, 3.5, 4, 4.5, 5, 5.5, 6]):
             ax.text(
-                0.75,
+                0.66,
                 i / 6,
-                str(rounding(10 ** (kmer_max * i / 6))),
+                str(rounding(10 ** (kmer_max * n / 6))),
                 fontsize=20,
             )
-        else:
-            ax.text(0.75, i / 6, str(rounding(kmer_max * i / 6)), fontsize=20)
+    else:
+        ax.set_title("kmer pairs\n", ha="center", fontsize=28, weight="bold")
+        for i, colour in enumerate(colour_ramp):
+            rect = mpl.patches.Rectangle(
+                (0, ((i + 1) - 0.01) / 33),
+                0.5,
+                ((i + 1) + 0.99) / 33,
+                linewidth=1,
+                edgecolor=colour,
+                facecolor=colour,
+            )
+            ax.add_patch(rect)
+
+        for i in range(7):
+            ax.text(0.66, i / 6, str(rounding(kmer_max * i / 6)), fontsize=20)
 
 
 def generate_smudge_report(smudges, coverages, cov, args, smudge_size_cutoff, print_header):
