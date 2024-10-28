@@ -20,8 +20,6 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from itertools import product
 
-# from matplotlib.pyplot import plot
-
 version = "0.4.0dev"
 
 ############################
@@ -311,7 +309,7 @@ class Coverages:
         self.peak_aggregation()
 
         self.total_kmers = self.cov_tab["freq"].sum()
-        self.total_genomic_kmers = self.cov_tab.loc[self.cov_tab["smudge"] >= 0]["freq"].sum()
+        self.total_genomic_kmers = self.cov_tab.loc[self.cov_tab["smudge"] != -1]["freq"].sum()
         self.total_genomic_kmers_in_smudges = self.cov_tab.loc[self.cov_tab["smudge"] > 0][
             "freq"
         ].sum()
@@ -323,6 +321,7 @@ class Smudges:
     def __init__(self, cov_tab, total_genomic_kmers):
         self.cov_tab = cov_tab
         self.total_genomic_kmers = total_genomic_kmers
+        self.cov = None
         self.centrality_df = None
         self.final_smudge_container = None
         self.smudge_tab = None
@@ -340,7 +339,7 @@ class Smudges:
             min_c, max_c = best_cov, best_cov
 
             if i > 0:
-                sys.stderr.write(f"Best coverage to precision of 1/{10**i}: {round(best_cov, 2)}\n")
+                sys.stderr.write(f"Best coverage to precision of 1/{10**i}: {best_cov:.2f}\n")
 
         # just to be sure
         results[-1]["covs"] = np.append(results[-1]["covs"], results[-1]["best_cov"] / 2)
@@ -352,10 +351,10 @@ class Smudges:
         )
 
         sys.stderr.write(
-            f"Best coverage to precision of 1/{10**i} (just to be sure): {round(best_cov, 3)}\n"
+            f"Best coverage to precision of 1/{10**i} (just to be sure): {best_cov:.2f}\n"
         )
 
-        # centralities
+        self.cov = best_cov
         self.centrality_df = DataFrame(
             {
                 "coverage": concatenate([result["covs"] for result in results]),
@@ -379,26 +378,24 @@ class Smudges:
             centralities.append(get_centrality(smudge_container, cov))
         return cov_list[argmin(centralities)], centralities
 
-    def get_smudge_container(
-        self, cov, smudge_filter, method="fishnet"
-    ):  # this should be possible using fishnet or local aggregation
+    def get_smudge_container(self, cov, smudge_filter, method="fishnet"):
         smudge_container = defaultdict(DataFrame)
 
         if method == "fishnet":
             for Bs in range(1, 9):
-                min_cov, max_cov = get_cov_limits(Bs, cov)
+                min_cov_Bs, max_cov_Bs = get_cov_limits(Bs, cov)
 
                 cov_tab_isoB = self.cov_tab.loc[
                     (self.cov_tab["smudge"] != -1)  # this is removing the errors
-                    & (self.cov_tab["covB"] > min_cov)  # bot of the fishnet for A
-                    & (self.cov_tab["covB"] < max_cov)  # top of the fishnet for B
+                    & (self.cov_tab["covB"] > min_cov_Bs)  # bot of the fishnet for A
+                    & (self.cov_tab["covB"] < max_cov_Bs)  # top of the fishnet for B
                 ]
 
                 for As in range(Bs, (17 - Bs)):
-                    min_cov, max_cov = get_cov_limits(As, cov)
+                    min_cov_As, max_cov_As = get_cov_limits(As, cov)
 
                     cov_tab_iso_smudge = cov_tab_isoB.loc[
-                        (cov_tab_isoB["covA"] > min_cov) & (cov_tab_isoB["covA"] < max_cov)
+                        (cov_tab_isoB["covA"] > min_cov_As) & (cov_tab_isoB["covA"] < max_cov_As)
                     ]
                     if cov_tab_iso_smudge["freq"].sum() / self.total_genomic_kmers > smudge_filter:
                         if not smudge_container["A" * As + "B" * Bs].empty:
@@ -415,17 +412,15 @@ class Smudges:
 
         if method == "local_aggregation":
             peak = 1
-
             while peak <= max(self.cov_tab["smudge"]):
                 cov_tab_smudge = self.cov_tab.loc[self.cov_tab["smudge"] == peak]
-                center = cov_tab_smudge.loc[cov_tab_smudge["freq"].idxmax()]
-                covA = center["covA"]  # fmean(cov_tab_smudge["covA"], cov_tab_smudge["freq"])
-                covB = center["covB"]  # fmean(cov_tab_smudge["covB"], cov_tab_smudge["freq"])
-                As = round(covA / cov)
-                Bs = round(covB / cov)
+                covA, covB = get_centre_cov_by_mode(
+                    cov_tab_smudge
+                )  ## fmean(cov_tab_smudge["covA"], cov_tab_smudge["freq"])
+                As, Bs = round(covA / cov), round(covB / cov)
 
-                #if (As == 0) or (Bs == 0):
-                #    sys.stderr.write(f'Skipped {As}A{Bs}B\n')
+                # if As==0 or Bs==0: # skip < 1ns
+                #    print(f'Peak {peak}, As={As};Bs={Bs}')
                 #    peak += 1
                 #    continue
 
@@ -441,11 +436,9 @@ class Smudges:
                         )
                     else:
                         smudge_container["A" * As + "B" * Bs] = cov_tab_smudge
-
                 peak += 1
 
             # smudge_container = {smudge:cov_tab for smudge, cov_tab in smudge_container.items() if (cov_tab["freq"].sum() / self.total_genomic_kmers) > smudge_filter}
-
         return smudge_container
 
     def generate_smudge_table(self, smudge_container):
@@ -532,15 +525,13 @@ class SmudgeplotData:
         self.lims["xlim"] = [0, 0.5]
 
     def def_strings(self, title=None, output="smudgeplot"):
-        self.error_string = f"err = {round(self.error_fraction*100, 1)} %"
-        self.cov_string = f"1n = {self.cov}"
+        # self.error_string = f"err = {round(self.error_fraction*100, 1)} %"
+        # self.cov_string = f"1n = {self.cov}"
         if title:
             fig_title = str(title)
         else:
             fig_title = "NA"
-        self.fig_title = (
-            f"{fig_title}\n\n1n = {round(self.cov,3)}\nerr = {round(self.error_fraction,3)}%"
-        )
+        self.fig_title = f"{fig_title}\n\n1n = {self.cov:.0f}\nerr = {self.error_fraction*100:.2f}%"
         self.linear_plot_file = output + "_smudgeplot_py.pdf"
         self.log_plot_file = output + "_smudgeplot_log10_py.pdf"
 
@@ -587,14 +578,12 @@ def load_hetmers(file_h):
     return cov_tab.sort_values("freq", ascending=False)
 
 
-def infer_coverage(error_fraction, centrality_df, limit=0.7):
-    if error_fraction < limit:
-        return centrality_df["coverage"][argmin(centrality_df["centrality"])]
-    else:
-        return 0
+def get_centre_cov_by_mode(smudge_tab):
+    centre = smudge_tab.loc[smudge_tab["freq"].idxmax()]
+    return centre["covA"], centre["covB"]
 
 
-def get_centrality(smudge_container, cov):
+def get_centrality(smudge_container, cov, centre="mode", dist="theoretical_center"):
     # sys.stderr.write(f"\tTesting coverage: {cov}\n\n")
     centralities = []
     freqs = []
@@ -604,26 +593,38 @@ def get_centrality(smudge_container, cov):
         kmer_in_the_smudge = smudge_tab["freq"].sum()
         freqs.append(kmer_in_the_smudge)
 
-        # center as a mode
-        # center = smudge_tab.loc[smudge_tab["freq"].idxmax()]
-        # center_A = center["covA"]
-        # center_B = center["covB"]
+        if centre == "mode":
+            center_A, center_B = get_centre_cov_by_mode(smudge_tab)
 
-        # center as a mean
-        center_A = sum((smudge_tab["freq"] * smudge_tab["covA"])) / kmer_in_the_smudge
-        center_B = sum((smudge_tab["freq"] * smudge_tab["covB"])) / kmer_in_the_smudge
+        if centre == "mean":
+            center_A = sum((smudge_tab["freq"] * smudge_tab["covA"])) / kmer_in_the_smudge
+            center_B = sum((smudge_tab["freq"] * smudge_tab["covB"])) / kmer_in_the_smudge
 
-        ## emprical to edge
-        # distA = min([abs(smudge_tab['covA'].max() - center['covA']), abs(center['covA'] - smudge_tab['covA'].min())])
-        # distB = min([abs(smudge_tab['covB'].max() - center['covB']), abs(center['covB'] - smudge_tab['covB'].min())])
+        if dist == "empirical_edge":
+            distA = min(
+                [
+                    abs(smudge_tab["covA"].max() - center["covA"]),
+                    abs(center["covA"] - smudge_tab["covA"].min()),
+                ]
+            )
+            distB = min(
+                [
+                    abs(smudge_tab["covB"].max() - center["covB"]),
+                    abs(center["covB"] - smudge_tab["covB"].min()),
+                ]
+            )
 
-        ## theoretical to edge
-        # distA = min(abs(center['covA'] - (cov * (As - 0.5))), abs((cov * (As + 0.5)) - center['covA']))
-        # distB = min(abs(center['covB'] - (cov * (Bs - 0.5))), abs((cov * (Bs + 0.5)) - center['covB']))
+        if dist == "theoretical_edge":
+            distA = min(
+                abs(center["covA"] - (cov * (As - 0.5))), abs((cov * (As + 0.5)) - center["covA"])
+            )
+            distB = min(
+                abs(center["covB"] - (cov * (Bs - 0.5))), abs((cov * (Bs + 0.5)) - center["covB"])
+            )
 
-        ## theoretical relative distance to the center
-        distA = abs((center_A - (cov * As)) / cov)
-        distB = abs((center_B - (cov * Bs)) / cov)
+        if dist == "theoretical_center":
+            distA = abs((center_A - (cov * As)) / cov)
+            distB = abs((center_B - (cov * Bs)) / cov)
 
         # sys.stderr.write(f"Processing: {As}A{Bs}B; with center: {distA}, {distB} and joint freq {kmer_in_the_smudge}\n")
         centrality = distA + distB
@@ -649,11 +650,13 @@ def get_col_ramp(col_ramp="viridis", delay=0, invert_cols=False):
     return ramp
 
 
-def smudgeplot(data, log=False): # I think user arguments need to be passed here
+def smudgeplot(data, log=False):  # I think user arguments need to be passed here
     cov_tab = data.cov_tab.copy(deep=True)
     smudge_tab = data.smudge_tab
     cov = data.cov
-    lims = data.lims # so things like lims can be set using user defined plotting parameters (I imagine palette will be the same although I did not try that one yet)
+    lims = (
+        data.lims
+    )  # so things like lims can be set using user defined plotting parameters (I imagine palette will be the same although I did not try that one yet)
     fig_title = data.fig_title
 
     fig, axs = plt.subplots(
@@ -887,24 +890,26 @@ def report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
         }
     )
 
-    smudges.smudge_tab.loc[:, "label"] = reduce_structure_representation(smudges.smudge_tab["structure"])
+    smudges.smudge_tab.loc[:, "label"] = reduce_structure_representation(
+        smudges.smudge_tab["structure"]
+    )
     for idx, smudge, size, rel_size, label in smudges.smudge_tab.itertuples():
-        if smudge_dict.get(label, 'Missing') != 'Missing':
+        if smudge_dict.get(label, "Missing") != "Missing":
             smudge_dict[label] = [size]
         else:
-            sys.stdout.write(f"Unexpected smudge label {label} skipped\n")
+            sys.stdout.write(f"Unexpected smudge label {label} excluded from smudge report\n")
 
     smudge_df = DataFrame.from_dict(smudge_dict).fillna(0)
     out_df = concat([meta_df, smudge_df], axis=1)
-    
-    #out_str = "\t".join([str(x) for x in out_df.iloc[0, :]])
+
+    # out_str = "\t".join([str(x) for x in out_df.iloc[0, :]])
 
     if print_header:
-        out_df.to_csv(args.o + '.smudge_report.tsv', sep='\t', index=False)
-        #sys.stdout.write("\t".join(out_df.columns) + "\n")
+        out_df.to_csv(args.o + ".smudge_report.tsv", sep="\t", index=False)
+        # sys.stdout.write("\t".join(out_df.columns) + "\n")
     else:
-        out_df.to_csv(args.o + '.smudge_report.tsv', sep='\t', index=False, header=False)
-    #sys.stdout.write(out_str + "\n")
+        out_df.to_csv(args.o + ".smudge_report.tsv", sep="\t", index=False, header=False)
+    # sys.stdout.write(out_str + "\n")
 
     sys.stderr.write(f"Written smudge report to: {dataset.split('.')[0]}.smudge_report.tsv\n")
 
@@ -982,7 +987,7 @@ def main():
                     f"{covB}\t{covA}\t{freq}\t{is_error}\n"
                 )  # might not be needed
 
-        smudge_size_cutoff = 0#0.01  # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
+        smudge_size_cutoff = 0  # 0.01  # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
         smudges = Smudges(coverages.cov_tab, coverages.total_genomic_kmers)
 
         if args.cov == 0.0:
@@ -995,36 +1000,44 @@ def main():
                 fmt="%.4f",
                 delimiter="\t",
             )
-            cov = infer_coverage(coverages.error_fraction, smudges.centrality_df, limit=0.7)
+
+            limit = 0.7
+            if coverages.error_fraction < limit:
+                cov = smudges.cov
+            else:
+                cov = 0
+
             sys.stderr.write("\nPlotting centrality plot\n")
             smudges.centrality_plot(args.o)
-            sys.stderr.write(f"\nInferred coverage: {round(cov, 3)}\n")
+            sys.stderr.write(f"\nInferred coverage: {cov:.3f}\n")
 
         else:
             cov = args.cov
-            sys.stderr.write(f"\nUser defined coverage: {round(cov, 3)}\n")
+            sys.stderr.write(f"\nUser defined coverage: {cov:.3f}\n")
 
-        smudges.final_smudge_container = smudges.get_smudge_container(
+        sys.stderr.write("\nCreating smudge report\n")
+        smudges.local_agg_smudge_container = smudges.get_smudge_container(
             cov, smudge_size_cutoff, "local_aggregation"
         )
-        # smudges.final_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, 'fishnet')
-        smudges.generate_smudge_table(smudges.final_smudge_container)
-
+        smudges.generate_smudge_table(smudges.local_agg_smudge_container)
         sys.stderr.write(f'Detected smudges / sizes ({args.o} + "_smudge_sizes.txt):"\n')
         sys.stderr.write("\t" + str(smudges.smudge_tab["structure"].to_list()) + "\n")
         sys.stderr.write("\t" + str(smudges.smudge_tab["size"].to_list()) + "\n")
         np.savetxt(args.o + "_smudge_sizes.txt", smudges.smudge_tab, fmt="%s", delimiter="\t")
+        print_header = True
+        report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
 
         sys.stderr.write("\nPlotting smudgeplot\n")
-
+        smudges.fishnet_smudge_container = smudges.get_smudge_container(
+            cov, smudge_size_cutoff, "fishnet"
+        )
+        smudges.generate_smudge_table(smudges.fishnet_smudge_container)
+        print(smudges.smudge_tab)
         smudgeplot_data = SmudgeplotData(
             coverages.cov_tab, smudges.smudge_tab, cov, coverages.error_fraction
         )
         prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
         generate_plots(smudgeplot_data)
-
-        print_header = True
-        report_all_smudges(smudges, coverages, smudge_dict, cov, args, print_header)
 
     fin()
 
