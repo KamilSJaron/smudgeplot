@@ -12,7 +12,14 @@ The big changes are
  + the backend by Gene is paralelized and massively faster
  + the intermediate file will be a flat file with the 2d histogram with cov1, cov2, freq columns (as opposed to list of coverages of pairs cov1 cov2);
  + at least for now WE LOSE the ability to extract sequences of the kmers in the pair; this functionality will hopefully restore at some point together with functionality to assess the quality of assembly.
- + the smudge detection algorithm is under revision and a **new version will be released on 18th of October 2024**
+ + we added "run all" functionality for people that want "FastK database -> plot" type of solution.
+ + completelly revamped plot showing how all individual kmer pairs insead of agregating them into squares
+ + new smudge detection algorithm based on grid projection on the smudge plane (working, but under revisions at the moment)
+ + R package smudgeplot was retired and is no longer used
+
+We keep the same pythonic interface, the interface of older smudgeplot and this version are very similar and largely compatible.
+
+Current state: RUNNING; beta-testing;
 
 ### Install the whole thing
  
@@ -39,20 +46,20 @@ will install smudgeplot to `~/bin/`.
 
 #### Manual installation
 
-Installing the `R` package:
-
-```bash
-# cd smudgeplot
-Rscript -e 'install.packages(".", repos = NULL, type="source")' # this will install smudgeplot R package;
-```
-
 Compiling the `C` executable
 
 ```
-make exec/PloidyPlot # this will compile PloidyPlot backend
+make exec/hetmers # this will compile hetmers (kmer pair searching engine of PloidyPlot) backend
 ```
 
 Now you can move all three files from the `exec` directory somewhere your system will see it (or alternativelly, you can add that directory to `$PATH` variable).
+
+```
+install -C exec/smudgeplot.py /usr/local/bin
+install -C exec/hetmers /usr/local/bin
+install -C exec/smudgeplot_plot.R /usr/local/bin
+install -C exec/centrality_plot.R /usr/local/bin
+```
 
 ### Runing this version on Sacharomyces data
 Requires ~2.1GB of space and `FastK` and `smudgeplot` installed.
@@ -69,16 +76,22 @@ mv *fastq.gz data/Scer/
 # run FastK to create a k-mer database
 FastK -v -t4 -k31 -M16 -T4 data/Scer/SRR3265401_[12].fastq.gz -Ndata/Scer/FastK_Table
 
-# Run PloidyPlot to find all k-mer pairs in the dataset
-PloidyPlot -e12 -k -v -T4 -odata/Scer/kmerpairs data/Scer/FastK_Table
+# Find all k-mer pairs in the dataset using hetmer module
+smudgeplot.py hetmers -L 12 -t 4 -o data/Scer/kmerpairs --verbose data/Scer/FastK_Table
 # this now generated `data/Scer/kmerpairs_text.smu` file;
 # it's a flat file with three columns; covB, covA and freq (the number of k-mer pairs with these respective coverages)
 
 # use the .smu file to infer ploidy and create smudgeplot
-smudgeplot.py plot -n 15 -t Sacharomyces -o data/Scer/trial_run data/Scer/kmerpairs_text.smu
+smudgeplot.py all -o data/Scer/trial_run data/Scer/kmerpairs_text.smu
 
-# check that 5 files are generated (2 pdfs; a summary tsv table, and two txt logs)
+# check that bunch files are generated (3 pdfs; some summary tables and logs)
 ls data/Scer/trial_run_*
+```
+
+The y-axis scaling is by default 100, one can spcify argument `ylim` to scale it differently
+
+```bash
+smudgeplot.py all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs_text.smu -ylim 70
 ```
 
 And that's it for now! I will be streamlining this over the next few days so hopefully it will all work with a single command;
