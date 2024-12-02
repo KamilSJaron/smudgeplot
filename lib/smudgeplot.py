@@ -406,6 +406,14 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
 
     plot_legend(ax=legend_ax, kmer_max=max(cov_tab["freq"]), colour_ramp=colour_ramp, log=log)
 
+    plot_hists = False
+    if plot_hists:
+        ## Not properly aligned with smudgeplot axes
+        #right hist - total coverage of kmer pair
+        plot_hist(data = cov_tab['total_pair_cov'], ax = size_ax, weights = np.nan(),orientation = 'horizontal')
+        #upper hist - normalised minor kmer coverage
+        plot_hist(data = cov_tab["minor_variant_rel_cov"], ax = top_ax, weights = np.nan())
+
     plot_smudge_sizes(smudge_tab, cov, data.error_string, size_ax)
 
     top_ax.set_title(fig_title, fontsize=42, loc="left", y=1.0, pad=-14, weight="bold")
@@ -413,6 +421,14 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
     fig.savefig(outfile, dpi=200)
     plt.close()
 
+def plot_hist(data, ax, weights, orientation='vertical'):
+    ax.hist(data,
+        weights = weights,
+        bins = 100,
+        color = 'firebrick',
+        edgecolor='firebrick',
+        orientation = orientation
+    )
 
 def plot_smudges(cov_tab, colour_ramp, ax, lims, log=False, fontsize=14):
     mask = cov_tab["covA"] == cov_tab["covB"]
