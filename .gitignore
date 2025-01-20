@@ -8,3 +8,4 @@ exec/hetmers
 .DS_Store
 .R*
 smu2text_smu
+__pycache__
