@@ -150,6 +150,7 @@ class Smudges:
         return cov_list[argmin(centralities)], centralities
 
     def get_smudge_container(self, cov, smudge_filter, method="fishnet"):
+        # returns smudge_container object which 
         smudge_container = defaultdict(DataFrame)
 
         if method == "fishnet":
@@ -184,18 +185,18 @@ class Smudges:
         if method == "local_aggregation":
             peak = 1
             while peak <= max(self.cov_tab["smudge"]):
-                cov_tab_smudge = self.cov_tab.loc[self.cov_tab["smudge"] == peak]
+                cov_tab_smudge = self.cov_tab.loc[self.cov_tab["smudge"] == peak] # I imagine ["smudge"] is
                 covA, covB = get_centre_cov_by_mode(
                     cov_tab_smudge
                 )  ## fmean(cov_tab_smudge["covA"], cov_tab_smudge["freq"])
-                As, Bs = round(covA / cov), round(covB / cov)
+                As, Bs = round(covA / cov), round(covB / cov) # this is approximate labeling (modus of coverage / 1n coverage)
 
                 # if As==0 or Bs==0: # skip < 1ns
                 #    print(f'Peak {peak}, As={As};Bs={Bs}')
                 #    peak += 1
                 #    continue
 
-                if (cov_tab_smudge["freq"].sum() / self.total_genomic_kmers) > smudge_filter:
+                if (cov_tab_smudge["freq"].sum() / self.total_genomic_kmers) > smudge_filter: # smudge will be added only if passes the filter
                     # sys.stderr.write(
                     #     f'Recording peak ({covA};{covB}) {peak} as {"A" * As}{"B" * Bs} smudge\n'
                     # )
@@ -580,9 +581,9 @@ def plot_legend(ax, kmer_max, colour_ramp, log=False):
 
 
 def generate_smudge_report(smudges, coverages, cov, args, smudge_size_cutoff, print_header):
-    smudges.local_agg_smudge_container = smudges.get_smudge_container(
-        cov, smudge_size_cutoff, "local_aggregation"
-    )
+    # smudges.local_agg_smudge_container = smudges.get_smudge_container(
+    #     cov, smudge_size_cutoff, "local_aggregation"
+    # )
     smudges.generate_smudge_table(smudges.local_agg_smudge_container)
 
     sys.stderr.write(
@@ -702,3 +703,6 @@ def rounding(number):
         return round(number / 100) * 100
     else:
         return round(number / 10) * 10
+        
+def smudge2short(smudge_long):
+    return(str(smudge_long.count('A')) + 'A' + str(smudge_long.count('B')) + 'B')

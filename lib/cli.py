@@ -165,7 +165,7 @@ class Parser:
         argparser.add_argument(
             "-cov",
             help="The assumed coverage (no inference of 1n coverage is made)",
-            type=float,
+            type=float, # this is funny, it seems like the interface rejects floats although here it all looks correct
             default=0.0,
         )
         argparser.add_argument(
@@ -282,10 +282,6 @@ def main():
             Sequencing errors: {coverages.total_error_kmers}\n\t \
             Fraction or errors: {round(coverages.total_error_kmers/coverages.total_kmers, 3)}"
         )
-        with open(args.o + "_masked_errors_smu.txt", "w") as error_annotated_smu:
-            error_annotated_smu.write("covB\tcovA\tfreq\tis_error\n")
-            for idx, covB, covA, freq, is_error in coverages.cov_tab.itertuples():
-                error_annotated_smu.write(f"{covB}\t{covA}\t{freq}\t{is_error}\n")  # might not be needed
 
         smudge_size_cutoff = (
             0  # 0.01  # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
@@ -318,6 +314,16 @@ def main():
             sys.stderr.write(f"\nUser defined coverage: {cov:.3f}\n")
 
         sys.stderr.write("\nCreating smudge report\n")
+        
+        smudges.local_agg_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "local_aggregation")
+        annotated_smudges = list(smudges.local_agg_smudge_container.keys())
+        with open(args.o + "_with_annotated_smu.txt", "w") as annotated_smu:
+            annotated_smu.write("covB\tcovA\tfreq\tsmudge\n")
+            for smudge in annotated_smudges:
+                formated_smudge = smg.smudge2short(smudge)
+                for idx, covB, covA, freq, smu in smudges.local_agg_smudge_container[smudge].itertuples():
+                    annotated_smu.write(f"{covB}\t{covA}\t{freq}\t{formated_smudge}\n")
+
         smg.generate_smudge_report(smudges, coverages, cov, args, smudge_size_cutoff, print_header=True)
         sys.stderr.write("\nCreating smudgeplots\n")
         smg.generate_plots(smudges, coverages, cov, smudge_size_cutoff, args.o, title)
