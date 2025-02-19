@@ -317,10 +317,12 @@ def main():
         
         smudges.local_agg_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "local_aggregation")
         annotated_smudges = list(smudges.local_agg_smudge_container.keys())
-        with open(args.o + "_with_annotated_smu.txt", "w") as annotated_smu:
+        with open(args.o + ".sma", "w") as annotated_smu:
             annotated_smu.write("covB\tcovA\tfreq\tsmudge\n")
             for smudge in annotated_smudges:
                 formated_smudge = smg.smudge2short(smudge)
+                if "0" in formated_smudge:
+                    continue 
                 for idx, covB, covA, freq, smu in smudges.local_agg_smudge_container[smudge].itertuples():
                     annotated_smu.write(f"{covB}\t{covA}\t{freq}\t{formated_smudge}\n")
 

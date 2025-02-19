@@ -18,8 +18,6 @@
 #include <math.h>
 #include <pthread.h>
 
-#undef  SOLO_CHECK
-
 #undef  DEBUG_GENERAL
 #undef  DEBUG_RECURSION
 #undef  DEBUG_THREADS
@@ -31,22 +29,27 @@
 #include "matrix.h"
 
 static char *Usage[] = { " [-v] [-T<int(4)>] [-P<dir(/tmp)>]",
-                         " [-o<output>] [-e<int(4)>] <source>[.ktab]"
+                         " [-o<output>] [-e<int(4)>] <source>[.ktab] <smudges>[.sma]"
                        };
 
 static int VERBOSE;
 static int NTHREADS;   //  At most 64 allowed
 static int ETHRESH;
 
-#ifdef SOLO_CHECK
-
-static uint8 *CENT;
-static int64  CIDX;
-
-#endif
-
 #define SMAX  1000    //  Max. value of CovA+CovB
 #define FMAX   500    //  Max. value of min(CovA,CovB)
+
+static int **PLOT;    //  Pixel annotations
+
+typedef struct
+  { int   a;
+    int   b;
+    FILE *f;
+    pthread_mutex_t _mutx, *mutx;
+  } Smudge;
+
+static int     SM_NUM;   //  # of distinct smudges
+static Smudge *SMUDGE;   //  output file for each smudge
 
 static int BLEVEL;     //  <= 4
 static int BWIDTH;     //  = 4^BLEVEL
@@ -106,7 +109,7 @@ static void print_hap(uint8 *seq, int len, int half)
   for (i = 0; i < h; i++)
     printf("%s",fmer[seq[i]]);
   k = 6;
-  for (i = h << 2; k >= 0; i++)
+  for (i = h << 2; k >= 0 && i < len; i++)
     { if (i == half)
         printf("%c",dna[(seq[h] >> k) & 0x3]-32);
       else
@@ -116,10 +119,49 @@ static void print_hap(uint8 *seq, int len, int half)
   for (i = h+1; i < b; i++)
     printf("%s",fmer[seq[i]]);
   k = 6;
-  for (i = b << 2; i < len; i++)
+  for (i <<= 2; i < len; i++)
     { printf("%c",dna[(seq[b] >> k) & 0x3]);
       k -= 2;
     }
+}
+
+static void print_het(uint8 *seq, int len, int half, int alt, FILE *f)
+{ static int firstime = 1;
+  int i, b, h, k;
+
+  if (firstime)
+    { firstime = 0;
+      setup_fmer_table();
+    }
+
+/*
+b = ((len-1) >> 2) + 1;
+fprintf(f," len = %d half = %d, alt = %d\n",len,half,alt);
+for (i = 0; i < b; i++)
+  fprintf(f," %02x",seq[i]);
+fprintf(f,"\n");
+*/
+
+  h = half >> 2;
+  b = len >> 2;
+  for (i = 0; i < h; i++)
+    fprintf(f,"%s",fmer[seq[i]]);
+  k = 6;
+  for (i = h << 2; k >= 0 && i < len; i++)
+    { if (i == half)
+        fprintf(f,"(%c/%c)",dna[(seq[h] >> k) & 0x3],dna[alt]);
+      else
+        fprintf(f,"%c",dna[(seq[h] >> k) & 0x3]);
+      k -= 2;
+    }
+  for (i = h+1; i < b; i++)
+    fprintf(f,"%s",fmer[seq[i]]);
+  k = 6;
+  for (i <<= 2; i < len; i++)
+    { fprintf(f,"%c",dna[(seq[b] >> k) & 0x3]);
+      k -= 2;
+    }
+  fprintf(f,"\n");
 }
 
 static inline int mycmp(uint8 *a, uint8 *b, int n)
@@ -152,12 +194,6 @@ typedef struct
     int64         cidx;     //  Table index of 1st cache entry
     uint8        *ept[4];   //  Each list is in [ptr[a],eptr[a])
     uint8        *ptr[4];   //    in steps of TBYTES
-                          //  Plot:
-    int64       **plot;     //  Accumulate A+B, B/(A+B) pairs here
-
-#ifdef SOLO_CHECK
-    uint8        *cptr;
-#endif
   } TP;
 
 static uint8 *Pair;  //  Incidence array (# of table entries)
@@ -306,7 +342,6 @@ static void *analysis_thread_2(void *args)
   Kmer_Stream **fng   = parm->fng;
   int           level = parm->level;
   int64        *bound = parm->bound;
-  int64       **plot  = parm->plot;
 
   int ll = ((level+1)>>2);
   int ls = Shift[(level+1)&0x3];
@@ -321,7 +356,7 @@ static void *analysis_thread_2(void *args)
   int    cnt[4];
   int    mc, hc;
   uint8 *mr, *hr;
-  int    a, i, x;
+  int    a, i, x, p;
 
   for (a = 0; a < 4; a++)
     { ent[a] = NULL;
@@ -387,17 +422,6 @@ static void *analysis_thread_2(void *args)
           }
 
       if (itop > 1)
-#ifdef SOLO_CHECK
-        { for (i = 0; i < itop; i++)
-            if (mycmp(ent[in[i]],CENT,KBYTE) == 0)
-              for (a = 0; a < itop; a++)
-                if (a != i)
-                  { printf("  ");
-                    print_hap(ent[in[a]],KMER,level);
-                    printf(": %d\n",*((uint16 *) (ent[in[a]]+KBYTE)));
-                  }
-        }
-#else
         { cnt[0] = *((uint16 *) (ent[in[0]]+KBYTE));
           for (i = 1; i < itop; i++)
             { cnt[i] = *((uint16 *) (ent[in[i]]+KBYTE));
@@ -406,14 +430,25 @@ static void *analysis_thread_2(void *args)
                   { x = cnt[a]+cnt[i];
                     if (x <= SMAX && Pair[fng[in[a]]->cidx] <= 1)
                       { if (cnt[a] < cnt[i])
-                          plot[x][cnt[a]] += 1;
+                          { p = PLOT[x][cnt[a]];
+                            if (p > 0)
+                              { pthread_mutex_lock(SMUDGE[p].mutx);
+                                print_het(ent[in[i]],KMER,level,in[a],SMUDGE[p].f);
+                                pthread_mutex_unlock(SMUDGE[p].mutx);
+                              }
+                          }
                         else
-                          plot[x][cnt[i]] += 1;
+                          { p = PLOT[x][cnt[i]];
+                            if (p > 0)
+                              { pthread_mutex_lock(SMUDGE[p].mutx);
+                                print_het(ent[in[a]],KMER,level,in[i],SMUDGE[p].f);
+                                pthread_mutex_unlock(SMUDGE[p].mutx);
+                              }
+                          }
                       }
                   }
             }
         }
-#endif
 
       for (i = 0; i < itop; i++)
         { Kmer_Stream *t;
@@ -573,7 +608,6 @@ static void *analysis_in_core_2(void *args)
   uint8      **ept   = parm->ept;
   int          level = parm-> level;
   uint8      **bound = (uint8 **) (parm->bound);
-  int64      **plot  = parm->plot;
   uint8       *cache = parm->cache;
   int64        aidx  = parm->cidx;
 
@@ -589,7 +623,7 @@ static void *analysis_in_core_2(void *args)
   int    cnt[4];
   int    mc, hc;
   uint8 *mr, *hr;
-  int    a, i, x;
+  int    a, i, x, p;
 
   for (a = 0; a < 4; a++)
     { lst[a] = 0;
@@ -643,17 +677,6 @@ static void *analysis_in_core_2(void *args)
           }
 
       if (itop > 1)
-#ifdef SOLO_CHECK
-        { for (i = 0; i < itop; i++)
-            if (mycmp(ptr[in[i]],CENT,KBYTE) == 0)
-              for (a = 0; a < itop; a++)
-                if (a != i)
-                  { printf("  ");
-                    print_hap(ptr[in[a]],KMER,level);
-                    printf(": %d\n",*((uint16 *) (ptr[in[a]]+KBYTE)));
-                  }
-        }
-#else
         { cnt[0] = *((uint16 *) (ptr[in[0]]+KBYTE));
           for (i = 1; i < itop; i++)
             { cnt[i] = *((uint16 *) (ptr[in[i]]+KBYTE));
@@ -662,14 +685,25 @@ static void *analysis_in_core_2(void *args)
                   { x = cnt[a]+cnt[i];
                     if (x <= SMAX && Pair[aidx+(ptr[in[a]]-cache)/TBYTE] <= 1)
                       { if (cnt[a] < cnt[i])
-                          plot[x][cnt[a]] += 1;
+                          { p = PLOT[x][cnt[a]];
+                            if (p > 0)
+                              { pthread_mutex_lock(SMUDGE[p].mutx);
+                                print_het(ptr[in[i]],KMER,level,in[a],SMUDGE[p].f);
+                                pthread_mutex_unlock(SMUDGE[p].mutx);
+                              }
+                          }
                         else
-                          plot[x][cnt[i]] += 1;
+                          { p = PLOT[x][cnt[i]];
+                            if (p > 0)
+                              { pthread_mutex_lock(SMUDGE[p].mutx);
+                                print_het(ptr[in[a]],KMER,level,in[i],SMUDGE[p].f);
+                                pthread_mutex_unlock(SMUDGE[p].mutx);
+                              }
+                          }
                       }
                   }
             }
         }
-#endif
 
       for (i = 0; i < itop; i++)
         { a = in[i];
@@ -852,18 +886,6 @@ static void in_core_recursion(uint8 **aptr, int level, TP *parm)
 { uint8 *bound[17];
   int    a;
 
-#ifdef SOLO_CHECK
-  if (aptr[0] <= parm->cptr && parm->cptr < aptr[4])
-    { printf("Inside %ld-%ld (%d %d)\n",
-             (aptr[0]-parm->cache)/TBYTE,(aptr[4]-parm->cache)/TBYTE,parm->tid,level);
-      printf("     ");
-      print_hap(aptr[0],KMER,level);
-      printf(" : ");
-      print_hap(aptr[4],KMER,level);
-      printf("\n");
-    }
-#endif
-
   if (aptr[4]-aptr[0] <= TBYTE) return;
 
 #ifdef DEBUG_RECURSION
@@ -941,15 +963,6 @@ static void small_recursion(int64 *adiv, int level, TP *parm)
         Kmer_Stream *T;
         int64   i;
         int     a;
-
-#ifdef SOLO_CHECK
-        if (adiv[0] <= CIDX && CIDX < adiv[4])
-          { printf("Heading in %lld-%lld (%d %d)\n",adiv[0],adiv[4],parm->tid,level);
-            parm->cptr = parm->cache + (CIDX - adiv[0])*TBYTE;
-          }  
-        else
-          parm->cptr = NULL;
-#endif
 
         T = parm->fng[0];
         GoTo_Kmer_Index(T,adiv[0]);
@@ -1092,44 +1105,6 @@ static void *small_window(void *args)
 
 static char template[15] = "._SPAIR.XXXX";
 
-#ifdef SOLO_CHECK
-
-static uint8 code[128] =
-  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-static void compress_norm(char *s, int len, uint8 *t)
-{ int    i;
-  char   c, d, e;
-  char  *s0, *s1, *s2, *s3;
-
-  s0 = s;
-  s1 = s0+1;
-  s2 = s1+1;
-  s3 = s2+1;
-
-  c = s0[len];
-  d = s1[len];
-  e = s2[len];
-  s0[len] = s1[len] = s2[len] = 'a';
-
-  for (i = 0; i < len; i += 4)
-    *t++ = ((code[(int) s0[i]] << 6) | (code[(int) s1[i]] << 4)
-         |  (code[(int) s2[i]] << 2) | code[(int) s3[i]] );
-
-  s0[len] = c;
-  s1[len] = d;
-  s2[len] = e;
-}
-
-#endif
-
 static uint8 comp[128] =
   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1233,11 +1208,11 @@ int main(int argc, char *argv[])
 { Kmer_Stream *T;
   char        *input;
   char        *troot;
-  int64      **PLOT;
 
   char  *SORT_PATH;
   char  *OUT;
   char  *SRC;
+  char  *SMA;
 
   //  Process command line arguments
 
@@ -1247,7 +1222,7 @@ int main(int argc, char *argv[])
     int    flags[128];
     char  *eptr;
 
-    ARG_INIT("PloidyPlot");
+    ARG_INIT("PloidyList");
 
     OUT      = NULL;
     ETHRESH  = 4;
@@ -1288,11 +1263,7 @@ int main(int argc, char *argv[])
 
     VERBOSE = flags['v'];
 
-#ifdef SOLO_CHECK
     if (argc != 3)
-#else
-    if (argc != 2)
-#endif
       { fprintf(stderr,"\nUsage: %s %s\n",Prog_Name,Usage[0]);
         fprintf(stderr,"       %*s %s\n",(int) strlen(Prog_Name),"",Usage[1]);
         fprintf(stderr,"\n");
@@ -1307,33 +1278,78 @@ int main(int argc, char *argv[])
       }
 
     SRC = argv[1];
+    SMA = PathnRoot(argv[2],".sma");
     if (OUT == NULL)
       OUT = PathnRoot(argv[1],".ktab");
 
     troot = mktemp(template);
   }
 
-  //  If appropriately named het-mer table found then ask if reuse
+  //  Read in the .sma file and set up POST & SMUDGE
 
   { FILE *f;
-    int   a;
+    char  buf[1000];
+    int   i, j, a, b;
+    int   s, nmax;
 
-    f = fopen(Catenate(OUT,".smu","",""),"r");
-    if (f != NULL)
-      { int bypass;
+    PLOT    = Malloc(sizeof(int64 *)*(SMAX+1),"Allocating thread working memory");
+    PLOT[0] = Malloc(sizeof(int64)*(SMAX+1)*(FMAX+1),"Allocating plot");
+    for (a = 1; a <= SMAX; a++)
+      PLOT[a] = PLOT[a-1] + (FMAX+1);
+    bzero(PLOT[0],sizeof(int64)*(SMAX+1)*(FMAX+1));
 
-        bypass = 0;
-        fprintf(stdout,"\n  Found het-table %s.smu, use it? ",OUT);
-        fflush(stdout);
-        while ((a = getc(stdin)) != '\n')
-          if (a == 'y' || a == 'Y')
-            bypass = 1;
-        if (bypass)
-          { fprintf(stderr,"\n  Using the found het-table, done\n");
-            fclose(f);
-            exit (0);
-          }
+    f = fopen(Catenate(SMA,".sma","",""),"r");
+    if (f == NULL)
+      { fprintf(stderr,"\n%s: Could not open smudge file %s.sma",Prog_Name,SMA);
+        exit (1);
       }
+
+    nmax   = 100;
+    SM_NUM = 0;
+    SMUDGE = Malloc(nmax*sizeof(Smudge),"Expanding smudge table");
+    if (SMUDGE == NULL)
+      exit (1);
+
+    fgets(buf,1000,f);
+    while (fgets(buf,1000,f) != NULL)
+      { if (sscanf(buf," %d %d %*d %dA%dB",&i,&j,&a,&b) != 4)
+          { fprintf(stderr,"%s: Cannot parse line '%s'\n",Prog_Name,buf);
+            exit (1);
+          }
+        if (a <= 0 || b <= 0 || a < b)
+          { fprintf(stderr,"%s: %dA%dB is not a valid smudge label'\n",Prog_Name,a,b);
+            exit (1);
+          }
+        if (i < 0 || i >= FMAX || j < i || i+j >= SMAX)
+          { fprintf(stderr,"%s: (%d,%d) is not a valid pixel coordinate\n",Prog_Name,i,j);
+            exit (1);
+          }
+        for (s = 0; s < SM_NUM; s++)
+          if (SMUDGE[s].a == a && SMUDGE[s].b == b)
+            break;
+        if (s >= SM_NUM)
+          { if (SM_NUM >= nmax)
+              { nmax  += 100; 
+                SMUDGE = Realloc(SMUDGE,nmax*sizeof(Smudge),"Expanding smudge table");
+                if (SMUDGE == NULL)
+                  exit (1);
+              }
+            SMUDGE[s].a = a;
+            SMUDGE[s].b = b;
+            sprintf(buf,".%dA%dB",a,b);
+            SMUDGE[s].f = fopen(Catenate(OUT,buf,".txt",""),"w");
+            if (SMUDGE[s].f == NULL)
+              { fprintf(stderr,"%s: Cannot open smudge file %s.%dA%dB.txt\n",Prog_Name,OUT,a,b);
+                exit (1);
+              }
+            SMUDGE[s].mutx = &(SMUDGE[s]._mutx);
+            pthread_mutex_init(SMUDGE[s].mutx,NULL);
+            SM_NUM += 1;
+          }
+        PLOT[i+j][i] = s+1;
+      }
+
+    SMUDGE -= 1;
   }
 
   //  Open input table and see if it needs conditioning
@@ -1439,38 +1455,13 @@ int main(int argc, char *argv[])
 
   Cache_Size = (MEMORY_LIMIT/NTHREADS)/TBYTE;
 
-#ifdef SOLO_CHECK
-  if ((int) strlen(argv[2]) != KMER)
-    { fprintf(stderr,"%s: string is not of length %d\n",Prog_Name,KMER);
-      exit (1);
-    }
-  CENT = Current_Entry(T,NULL);
-  compress_norm(argv[2],KMER,CENT);
-  if (GoTo_Kmer_Entry(T,CENT) < 0)
-    { fprintf(stderr,"%s: string is not in table\n",Prog_Name);
-      exit (1);
-    }
-  printf("%s: %d\n",argv[2],Current_Count(T));
-  CIDX = T->cidx;
-#endif
-
 #ifdef DEBUG_GENERAL
   printf("Threads = %d BL = %d(%d) Cache = %lld\n",NTHREADS,BLEVEL,BWIDTH,Cache_Size);
 #endif
 
   { TP      parm[NTHREADS];
     int     a, t;
-    int64 **plot;
     uint8  *cache;
-
-    for (t = 0; t < NTHREADS; t++)
-      { plot    = Malloc(sizeof(int64 *)*(SMAX+1),"Allocating thread working memory");
-        plot[0] = Malloc(sizeof(int64)*(SMAX+1)*(FMAX+1),"Allocating plot");
-        for (a = 1; a <= SMAX; a++)
-          plot[a] = plot[a-1] + (FMAX+1);
-        bzero(plot[0],sizeof(int64)*(SMAX+1)*(FMAX+1));
-        parm[t].plot = plot;
-      }
 
     parm[0].fng[0] = T;
     for (t = 0; t < NTHREADS; t++)
@@ -1557,29 +1548,12 @@ int main(int argc, char *argv[])
     free(Divpt);
 
     { char  *command;
-      int64 *plot0, *plott;
-      int    i;
 
       for (t = NTHREADS-1; t >= 0; t--)
         for (a = 3; a >= 0; a--)
           if (a+t > 0)
             Free_Kmer_Stream(parm[t].fng[a]);
       Free_Kmer_Stream(T);
-
-      for (t = 1; t < NTHREADS; t++)
-        for (i = 0; i <= SMAX; i++)
-          { plot0 = parm[0].plot[i];
-            plott = parm[t].plot[i];
-            for (a = 0; a <= FMAX; a++)
-              plot0[a] += plott[a];
-          }
-
-      for (t = NTHREADS-1; t >= 1; t--)
-        { free(parm[t].plot[0]);
-          free(parm[t].plot);
-        }
-
-      PLOT = parm[0].plot;
 
       if (input != NULL)
         { command = Malloc(strlen(input)+100,"Allocating strings");
@@ -1590,34 +1564,13 @@ int main(int argc, char *argv[])
           free(command);
           free(input);
         }
+
+      for (t = 0; t < SM_NUM; t++)
+        fclose(SMUDGE[t].f);
     }
   }
 
-#ifndef SOLO_CHECK
-
-  if (VERBOSE)
-    { fprintf(stderr,"\n  Count complete, outputting table\n");
-      fflush(stderr);
-    }
-
-  { int   a, i;
-    FILE *f;
-
-    f = fopen(Catenate(OUT,".smu","",""),"w");
-    if (f == NULL)
-      { fprintf(stderr,"Could not open %s.smu\n",troot);
-        exit (1);
-      }
-
-    for (a = 0; a <= SMAX; a++)
-      for (i = 0; i < FMAX; i++)
-        if (PLOT[a][i] > 0)
-          fprintf(f,"%i\t%i\t%lld\n",i,a-i,PLOT[a][i]);
-    fclose(f);
-  }
-
-#endif
-
+  free(SMUDGE+1);
   free(PLOT[0]);
   free(PLOT);
   free(OUT);
