@@ -1,3 +1,8 @@
+```
+python -m pip install .
+smudgeplot -h
+```
+
 *** Sploidyplot branch ***
 
 <font size ="4">**_Authors: [Gene W Myers](https://github.com/thegenemyers) and [Kamil S. Jaron](https://github.com/KamilSJaron)._**</font>

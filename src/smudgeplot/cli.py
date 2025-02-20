@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import sys
 import argparse
 import numpy as np
-import lib.smudgeplot as smg
-
+import smudgeplot.smudgeplot as smg
 
 class Parser:
     def __init__(self):
@@ -259,7 +261,7 @@ def main():
         smg.smudgeplot(smudgeplot_data, log=False)
         smg.smudgeplot(smudgeplot_data, log=True)
 
-        fin()
+        smg.fin()
 
     sys.stderr.write("\nLoading data\n")
     coverages = smg.Coverages(smg.load_hetmers(args.infile))
@@ -317,12 +319,10 @@ def main():
         
         smudges.local_agg_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "local_aggregation")
         annotated_smudges = list(smudges.local_agg_smudge_container.keys())
-        with open(args.o + ".sma", "w") as annotated_smu:
+        with open(args.o + "_with_annotated_smu.txt", "w") as annotated_smu:
             annotated_smu.write("covB\tcovA\tfreq\tsmudge\n")
             for smudge in annotated_smudges:
                 formated_smudge = smg.smudge2short(smudge)
-                if "0" in formated_smudge:
-                    continue 
                 for idx, covB, covA, freq, smu in smudges.local_agg_smudge_container[smudge].itertuples():
                     annotated_smu.write(f"{covB}\t{covA}\t{freq}\t{formated_smudge}\n")
 
@@ -331,3 +331,6 @@ def main():
         smg.generate_plots(smudges, coverages, cov, smudge_size_cutoff, args.o, title)
 
     fin()
+
+if __name__ == "__main__":
+    main()
