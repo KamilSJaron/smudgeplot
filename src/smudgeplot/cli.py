@@ -4,6 +4,7 @@
 import sys
 import argparse
 import numpy as np
+from os import system
 import smudgeplot.smudgeplot as smg
 
 class Parser:
