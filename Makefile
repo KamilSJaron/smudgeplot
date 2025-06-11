@@ -16,12 +16,13 @@ $(INSTALL_PREFIX)/bin/% : exec/%
 $(INSTALL_PREFIX)/bin/smudgeplot.py: smudgeplot.py
 	install -C $< $(INSTALL_PREFIX)/bin
 
-exec/hetmers: src_ploidyplot/PloidyPlot.c src_ploidyplot/libfastk.c src_ploidyplot/libfastk.h src_ploidyplot/matrix.c src_ploidyplot/matrix.h
-	gcc $(CFLAGS) -o $@ src_ploidyplot/PloidyPlot.c src_ploidyplot/libfastk.c src_ploidyplot/matrix.c -lpthread -lm
+exec/hetmers: src/lib/PloidyPlot.c src/lib/libfastk.c src/lib/libfastk.h src/lib/matrix.c src/lib/matrix.h
+	gcc $(CFLAGS) -o $@ src/lib/PloidyPlot.c src/lib/libfastk.c src/lib/matrix.c -lpthread -lm
 
-exec/extract_kmer_pairs: src_ploidyplot/PloidyList.c src_ploidyplot/libfastk.c src_ploidyplot/libfastk.h src_ploidyplot/matrix.c src_ploidyplot/matrix.h
-	gcc $(CFLAGS) -o $@ src_ploidyplot/PloidyList.c src_ploidyplot/libfastk.c src_ploidyplot/matrix.c -lpthread -lm
+exec/extract_kmer_pairs: src/lib/PloidyList.c src/lib/libfastk.c src/lib/libfastk.h src/lib/matrix.c src/lib/matrix.h
+	gcc $(CFLAGS) -o $@ src/lib/PloidyList.c src/lib/libfastk.c src/lib/matrix.c -lpthread -lm
 
 .PHONY : clean
 clean :
-	rm -f exec/hetmers
+	rm -f hetmers
+	rm -f extract_kmer_pairs

@@ -1,5 +1,27 @@
+Metadata-Version: 2.4
+Name: smudgeplot
+Version: 0.5.0.0a3
+Summary: Smudgeplot description
+Author-email: "Kamil S. Jaron" <kj11@sanger.ac.uk>, Sam Ebdon <se13@sanger.ac.uk>
+Maintainer-email: Kamil Jaron <kj11@sanger.ac.uk>, Sam Ebdon <se13@sanger.ac.uk>
+License-Expression: Apache-2.0
+Project-URL: Homepage, https://github.com/KamilSJaron/smudgeplot/tree/sploidyplot_obj
+Project-URL: Issues, https://github.com/KamilSJaron/smudgeplot/issues
+Keywords: smudgeplot,kmer,ploidy
+Classifier: Development Status :: 3 - Alpha
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.11.11
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: numpy>=2.2.3
+Requires-Dist: matplotlib>=3.10.0
+Requires-Dist: pandas>=2.2.3
+Dynamic: license-file
+
 ```
 python -m pip install .
+mkdir -p exec && make exec/hetmers exec/extract_kmer_pairs
+install -c exec/hetmers exec/extract_kmer_pairs /usr/local/bin
 
 smudgeplot -h
 ```

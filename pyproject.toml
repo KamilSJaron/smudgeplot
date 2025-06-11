@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "smudgeplot"
@@ -14,10 +14,9 @@ dependencies = [
 requires-python = ">=3.11.11"
 authors = [
   {name = "Kamil S. Jaron", email = "kj11@sanger.ac.uk"},
-  {name = "Gene W. Myers", email = ""},
-  {name = "Tianyi Ma", email = ""},
   {name = "Sam Ebdon", email = "se13@sanger.ac.uk"},
 ]
+# add authors
 
 maintainers = [
   {name = "Kamil Jaron", email = "kj11@sanger.ac.uk"},
@@ -27,7 +26,7 @@ maintainers = [
 description = "Smudgeplot description"
 readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE.md"]
 keywords = ["smudgeplot","kmer","ploidy"]
 
 classifiers = [
@@ -41,3 +40,9 @@ Issues = "https://github.com/KamilSJaron/smudgeplot/issues"
 
 [project.scripts]
 smudgeplot = "smudgeplot.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
