@@ -1,5 +1,8 @@
 ```
 python -m pip install .
+mkdir -p exec && make exec/hetmers exec/extract_kmer_pairs
+install -c exec/hetmers exec/extract_kmer_pairs /usr/local/bin
+
 smudgeplot -h
 ```
 
