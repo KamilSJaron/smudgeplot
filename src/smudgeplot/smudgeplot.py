@@ -396,12 +396,11 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
     plot_hists = True
     if plot_hists:
 
-        bin_number = int(lims['ylim'][1]/10)
         #right hist - total coverage of kmer pair
         plot_hist(data = cov_tab['total_pair_cov'], 
                   ax = size_ax, 
                   orientation = 'horizontal',
-                  bins = bin_number,
+                  bins = max(cov_tab['total_pair_cov']) - min(cov_tab['total_pair_cov']),
                   weights = cov_tab['freq'],
                   log = log
         )
@@ -410,7 +409,7 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
         plot_hist(data = cov_tab["minor_variant_rel_cov"], 
                   ax = top_ax,
                   weights=cov_tab['freq'],
-                  bins = bin_number,
+                  bins = 60,
                   log = log
         )
 
