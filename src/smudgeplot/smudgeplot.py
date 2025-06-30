@@ -299,7 +299,7 @@ class SmudgeplotData:
             fig_title = str(title)
         else:
             fig_title = "NA"
-        self.fig_title = f"{fig_title}\n\n1n = {self.cov:.0f}\nerr = {self.error_fraction*100:.2f}%"
+        self.fig_title = f"{fig_title}\n1n = {self.cov:.0f}\nerr = {self.error_fraction*100:.2f}%"
         self.linear_plot_file = output + "_smudgeplot_py.pdf"
         self.log_plot_file = output + "_smudgeplot_log10_py.pdf"
 
@@ -380,18 +380,11 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
     )  # so things like lims can be set using user defined plotting parameters (I imagine palette will be the same although I did not try that one yet)
     fig_title = data.fig_title
 
-    fig, axs = plt.subplots(nrows=2, ncols=2, width_ratios=[3, 1], height_ratios=[1, 3], figsize=(20, 20))
+    fig, ((top_ax, legend_ax), (main_ax, size_ax)) = plt.subplots(nrows=2, ncols=2, width_ratios=[3, 1], height_ratios=[1, 3], figsize=(20, 20))#, sharey='row', sharex='col')
+    size_ax.sharey(main_ax), top_ax.sharex(main_ax)
+    legend_ax.axis("off"), size_ax.axis("off"), top_ax.axis("off")
     plt.subplots_adjust(wspace=0.05, hspace=0.05)
     fontsize = 32
-
-    main_ax = axs[1][0]
-    legend_ax = axs[0][1]
-    size_ax = axs[1][1]
-    top_ax = axs[0][0]
-
-    legend_ax.axis("off")
-    size_ax.axis("off")
-    top_ax.axis("off")
 
     if log:
         colour_ramp = get_col_ramp(delay=16)
@@ -400,6 +393,25 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
         colour_ramp = get_col_ramp()
         outfile = data.linear_plot_file
 
+    plot_hists = True
+    if plot_hists:
+
+        #right hist - total coverage of kmer pair
+        plot_hist(data = cov_tab['total_pair_cov'], 
+                  ax = size_ax, 
+                  orientation = 'horizontal',
+                  bins = int(lims['ylim'][1]/10),
+                  weights = cov_tab['freq'],
+                  log = log
+        )
+
+        #upper hist - normalised minor kmer coverage
+        plot_hist(data = cov_tab["minor_variant_rel_cov"], 
+                  ax = top_ax,
+                  weights=cov_tab['freq'],
+                  log = log
+        )
+
     plot_smudges(cov_tab, colour_ramp, main_ax, lims, log=log, fontsize=fontsize)
 
     if cov > 0:
@@ -407,25 +419,32 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
 
     plot_legend(ax=legend_ax, kmer_max=max(cov_tab["freq"]), colour_ramp=colour_ramp, log=log)
 
-    plot_hists = False
-    if plot_hists:
-        ## Not properly aligned with smudgeplot axes
-        #right hist - total coverage of kmer pair
-        plot_hist(data = cov_tab['total_pair_cov'], ax = size_ax, weights = np.nan(),orientation = 'horizontal')
-        #upper hist - normalised minor kmer coverage
-        plot_hist(data = cov_tab["minor_variant_rel_cov"], ax = top_ax, weights = np.nan())
-
     plot_smudge_sizes(smudge_tab, cov, data.error_string, size_ax)
 
-    top_ax.set_title(fig_title, fontsize=42, loc="left", y=1.0, pad=-14, weight="bold")
+    top_ax.set_title(fig_title, 
+        fontsize=32, 
+        loc="left", 
+        y=1.0, 
+        pad=-14, 
+        weight="bold",
+        #bbox=dict(
+        #    facecolor='white',
+        #    edgecolor='black',
+        #    alpha=0.5
+        #)
+    )
 
     fig.savefig(outfile, dpi=200)
     plt.close()
 
-def plot_hist(data, ax, weights, orientation='vertical'):
+def plot_hist(data, ax, weights, orientation='vertical', bins=50, log=False):
+    
+    #if log:
+    #    weights = np.log10(weights)
+
     ax.hist(data,
         weights = weights,
-        bins = 100,
+        bins = bins,
         color = 'firebrick',
         edgecolor='firebrick',
         orientation = orientation
@@ -505,6 +524,7 @@ def plot_expected_haplotype_structure(smudge_tab, cov, ax, adjust=False, xmax=0.
 def plot_smudge_sizes(smudge_tab, cov, error_string, ax, min_size=0.03):
     ax.plot()
     ax.set_title("")
+
     if cov > 0:
 
         size_tuples = sorted(
@@ -523,10 +543,21 @@ def plot_smudge_sizes(smudge_tab, cov, error_string, ax, min_size=0.03):
 
         label_string = "\n".join(labels)
 
-        ax.text(0, 1, label_string, ha="left", va="top", fontsize=28, transform=ax.transAxes)
-
     else:
-        ax.text(0, 1, error_string, ha="left", va="top", fontsize=28, transform=ax.transAxes)
+
+        label_string = error_string
+
+    ax.text(0.1, 1, 
+            label_string, 
+            ha="left", va="top", 
+            fontsize=28, 
+            transform=ax.transAxes,
+            #bbox=dict(
+            #    facecolor='white',
+            #    edgecolor='black',
+            #    alpha=0.5
+            #)
+        )
 
 
 def reduce_structure_representation(smudge_labels):
