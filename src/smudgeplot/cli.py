@@ -224,7 +224,7 @@ def fin():
 def main():
     _parser = Parser()
 
-    version = "0.4.0dev"
+    version = "0.5.0 skylight"
     sys.stderr.write("Running smudgeplot v" + version + "\n")
     if _parser.task == "version":
         exit(0)
