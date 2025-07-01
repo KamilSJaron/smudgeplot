@@ -1,8 +1,30 @@
-# Smudgeplot 
+```
+python -m pip install .
 
-<font size ="4">**_Version: 0.4.0 Arched_**</font>
+smudgeplot -h
+```
 
-<font size ="4">**_Authors: [Gene W Myers](https://github.com/thegenemyers) and [Kamil S. Jaron](https://github.com/KamilSJaron), Tianyi Ma._**</font>
+*** Sploidyplot branch ***
+
+<font size ="4">**_Version: 0.5.0 Skylight_**</font>
+
+<font size ="4">**_Authors: Sam Ebdon, [Gene W Myers](https://github.com/thegenemyers) and [Kamil S. Jaron](https://github.com/KamilSJaron), Tianyi Ma._**</font>
+This is a merger of PloidyPlot from https://github.com/KamilSJaron/MERQURY.FK & Smudgeplot.
+
+The big changes are
+ + the search for the kmer pair will be within both canonical and non-canonical k-mer sets (Gene demonstrated it makes a difference)
+ + the tool will be supporting FastK kmer counter only
+ + the backend by Gene is paralelized and massively faster
+ + the intermediate file will be a flat file with the 2d histogram with cov1, cov2, freq columns (as opposed to list of coverages of pairs cov1 cov2);
+ + at least for now WE LOSE the ability to extract sequences of the kmers in the pair; this functionality will hopefully restore at some point together with functionality to assess the quality of assembly.
+ + we added "run all" functionality for people that want "FastK database -> plot" type of solution.
+ + completelly revamped plot showing how all individual kmer pairs insead of agregating them into squares
+ + new smudge detection algorithm based on grid projection on the smudge plane (working, but under revisions at the moment)
+ + R package smudgeplot was retired and is no longer used
+
+We keep the same pythonic interface, the interface of older smudgeplot and this version are very similar and largely compatible.
+
+Current state: RUNNING; beta-testing;
 
 ### Install the whole thing
  
@@ -72,6 +94,12 @@ ls data/Scer/trial_run_*
 ```
 
 The y-axis scaling is by default 100, one can spcify argument `ylim` to scale it differently
+
+```bash
+smudgeplot.py all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs_text.smu -ylim 70
+```
+
+And that's it for now! I will be streamlining this over the next few days so hopefully it will all work with a single command;
 
 ```bash
 smudgeplot.py all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs_text.smu -ylim 70

@@ -84,13 +84,16 @@ extern char *Prog_Name;   //  Name of program, available everywhere
 //  The following general utilities return NULL if any of their input pointers are NULL, or if they
 //    could not perform their function (in which case they also print an error to stderr).
 
+void SystemX(char *command);                             //  Guarded version of system
+
 void *Malloc(int64 size, char *mesg);                    //  Guarded versions of malloc, realloc
 void *Realloc(void *object, int64 size, char *mesg);     //  and strdup, that output "mesg" to
 char *Strdup(char *string, char *mesg);                  //  stderr if out of memory
 char *Strndup(char *string, int len, char *mesg);        //  stderr if out of memory
 
-char *PathTo(char *path);                // Return path portion of file name "path"
-char *Root(char *path, char *suffix);    // Return the root name, excluding suffix, of "path"
+char *PathTo(char *path);                   // Return path portion of file name "path"
+char *Root(char *path, char *suffix);       // Return the root name, excluding suffix, of "path"
+char *PathnRoot(char *path, char *suffix);  // Return the path name, excluding suffix, of "path"
 
 // Catenate returns concatenation of path.sep.root.suffix in a *temporary* buffer
 // Numbered_Suffix returns concatenation of left.<num>.right in a *temporary* buffer

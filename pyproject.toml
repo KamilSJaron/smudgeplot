@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smudgeplot"
+version = "0.5.0.0a3"
+dependencies = [
+  "numpy >= 2.2.3",
+  "matplotlib >= 3.10.0",
+  "pandas >= 2.2.3"
+]
+
+requires-python = ">=3.11.11"
+authors = [
+  {name = "Kamil S. Jaron", email = "kj11@sanger.ac.uk"},
+  {name = "Sam Ebdon", email = "se13@sanger.ac.uk"},
+]
+# add authors
+
+maintainers = [
+  {name = "Kamil Jaron", email = "kj11@sanger.ac.uk"},
+  {name = "Sam Ebdon", email = "se13@sanger.ac.uk"},
+]
+
+description = "Smudgeplot description"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE.md"]
+keywords = ["smudgeplot","kmer","ploidy"]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3"
+]
+
+[project.urls]
+Homepage = "https://github.com/KamilSJaron/smudgeplot/tree/sploidyplot_obj"
+Issues = "https://github.com/KamilSJaron/smudgeplot/issues"
+
+[project.scripts]
+smudgeplot = "smudgeplot.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,11 +1,11 @@
 /******************************************************************************************
  *
- *  PloidyPlot: A C-backed searching quickly for hetmers:
- *                 unique k-mer pairs different by exactly one nucleotide
+ * PloidyPlot: A C backend searching quickly for hetmers:
+ *                  unique k-mer pairs different by exactly one nucleotide
  *
  *  Author:  Gene Myers
  *  Date  :  May, 2021
- *  Reduced to the k-mer pair search by Kamil Jaron in August, 2023
+ *  Reduced to the k-mer pair search by Kamil Jaron, August 2023
  *
  ********************************************************************************************/
 
@@ -36,6 +36,7 @@ static char *Usage[] = { " [-v] [-T<int(4)>] [-P<dir(/tmp)>]",
 
 static int VERBOSE;
 static int NTHREADS;   //  At most 64 allowed
+static int ETHRESH;
 
 #ifdef SOLO_CHECK
 
@@ -43,8 +44,6 @@ static uint8 *CENT;
 static int64  CIDX;
 
 #endif
-
-static int ETHRESH;   //  Error threshold
 
 #define SMAX  1000    //  Max. value of CovA+CovB
 #define FMAX   500    //  Max. value of min(CovA,CovB)
@@ -187,12 +186,23 @@ static void *analysis_thread_1(void *args)
   int    mc, hc;
   uint8 *mr, *hr;
   int    a, i, x;
-  
+
   for (a = 0; a < 4; a++)
-    { ent[a] = Current_Entry(fng[a],NULL);
-      lst[a] = (ent[a][ll] >> ls) & 0x3;
+    { ent[a] = NULL;
+      if (fng[a]->cidx <= 0)
+        lst[a] = 0;
+      else
+        { GoTo_Kmer_Index(fng[a],fng[a]->cidx-1);
+          ent[a] = Current_Entry(fng[a],NULL);
+          if (((ent[a][level>>2] >> Shift[level&0x3]) & 0x3) == a)
+            lst[a] = (ent[a][ll] >> ls) & 0x3;
+          else
+            lst[a] = 0;
+          Next_Kmer_Entry(fng[a]);
+        }
       if (fng[a]->cidx < end[a])
-        { x = (ent[a][ll] >> ls) & 0x3;
+        { ent[a] = Current_Entry(fng[a],ent[a]);
+          x = (ent[a][ll] >> ls) & 0x3;
           while (x > lst[a])
             bound[(a<<2)+(++(lst[a]))] = fng[a]->cidx;
         }
@@ -312,17 +322,28 @@ static void *analysis_thread_2(void *args)
   int    mc, hc;
   uint8 *mr, *hr;
   int    a, i, x;
-  
+
   for (a = 0; a < 4; a++)
-    { ent[a] = Current_Entry(fng[a],NULL);
-      lst[a] = (ent[a][ll] >> ls) & 0x3;
+    { ent[a] = NULL;
+      if (fng[a]->cidx <= 0)
+        lst[a] = 0;
+      else
+        { GoTo_Kmer_Index(fng[a],fng[a]->cidx-1);
+          ent[a] = Current_Entry(fng[a],NULL);
+          if (((ent[a][level>>2] >> Shift[level&0x3]) & 0x3) == a)
+            lst[a] = (ent[a][ll] >> ls) & 0x3;
+          else
+            lst[a] = 0;
+          Next_Kmer_Entry(fng[a]);
+        }
       if (fng[a]->cidx < end[a])
-        { x = (ent[a][ll] >> ls) & 0x3;
+        { ent[a] = Current_Entry(fng[a],ent[a]);
+          x = (ent[a][ll] >> ls) & 0x3;
           while (x > lst[a])
             bound[(a<<2)+(++(lst[a]))] = fng[a]->cidx;
         }
     }
-
+  
 #ifdef DEBUG_SCAN
   for (a = 0; a < 4; a++)
     { printf(" %c %10lld: ",dna[a],fng[a]->cidx);
@@ -698,13 +719,18 @@ static void big_window(int64 *adiv, int level, TP *parm)
 
   { int64        e;
     uint8        lm;
-    int          t, ls;
+    int          b, t, ls;
     Kmer_Stream *T;
 #ifndef DEBUG_THREADS
     pthread_t    threads[NTHREADS];
 #endif
 
-    T = parm[0].fng[0];
+    b = 0;
+    for (a = 1; a < 4; a++)
+      if (adiv[a+1]-adiv[a] > adiv[b+1]-adiv[b])
+        b = a;
+    if (adiv[b+1]-adiv[b] == 0)
+      return;
 
     ls = Shift[level];      //  level < BLEVEL
     lm = 0xff ^ (0x3<<ls);
@@ -715,16 +741,17 @@ static void big_window(int64 *adiv, int level, TP *parm)
     for (t = 1; t < NTHREADS; t++)
       { parm[t].level = level;
         parm[t].bound = bound;
-        parm[t-1].end[0] = e = adiv[0] + t*(adiv[1]-adiv[0])/NTHREADS;
-        T = parm[t].fng[0];
+        parm[t-1].end[b] = e = adiv[b] + t*(adiv[b+1]-adiv[b])/NTHREADS;
+        T = parm[t].fng[b];
         GoTo_Kmer_Index(T,e);
         Current_Entry(T,Divpt);
-        for (a = 1; a < 4; a++)
-          { Divpt[0] = (Divpt[0] & lm) | (a << ls);
-            T = parm[t].fng[a];
-            GoTo_Kmer_Entry(T,Divpt);
-            parm[t-1].end[a] = T->cidx;
-          }
+        for (a = 0; a < 4; a++)
+          if (a != b)
+            { Divpt[0] = (Divpt[0] & lm) | (a << ls);
+              T = parm[t].fng[a];
+              GoTo_Kmer_Entry(T,Divpt);
+              parm[t-1].end[a] = T->cidx;
+            }
       }
     for (a = 0; a < 4; a++)
       parm[NTHREADS-1].end[a] = adiv[a+1];
@@ -733,8 +760,12 @@ static void big_window(int64 *adiv, int level, TP *parm)
     for (a = 0; a < 4; a++)
       for (t = 0; t < NTHREADS; t++)
         { printf("%c/%d %10lld: ",dna[a],t,parm[t].fng[a]->cidx);
-          Current_Entry(parm[t].fng[a],Divpt);
-          print_hap(Divpt,KMER,level);
+          if (parm[t].fng[a]->cidx < parm[t].fng[a]->nels)
+            { Current_Entry(parm[t].fng[a],Divpt);
+              print_hap(Divpt,KMER,level);
+            }
+          else
+            printf(" EOT");
           printf("\n");
         }
 #endif
@@ -744,6 +775,7 @@ static void big_window(int64 *adiv, int level, TP *parm)
         for (t = 1; t < 4; t++)
           bound[a+t] = -1;
       }
+    bound[16] = adiv[4];
 
     if (PASS1)
 #ifdef DEBUG_THREADS
@@ -770,27 +802,33 @@ static void big_window(int64 *adiv, int level, TP *parm)
 #endif
       }
 
-    for (a = 0; a < 16; a += 4)
-      for (t = 1; t < 4; t++)
-        if (bound[a+t] < 0)
-          bound[a+t] = adiv[(a>>2)+1];
-    bound[16] = adiv[4];
+    for (a = 15; a > 0; a--)
+      if (bound[a] < 0)
+        bound[a] = bound[a+1];
 
 #ifdef DEBUG_BOUNDARY
     T = parm[0].fng[0];
     for (a = 0; a <= 16; a++)
       { if (a > 0)
           { GoTo_Kmer_Index(T,bound[a]-1);
-            Current_Entry(T,Divpt);
-            printf("%c %10lld: ",dna[a&0x3],T->cidx);
-            print_hap(Divpt,KMER,level+1);
+            if (T->cidx < T->nels)
+              { Current_Entry(T,Divpt);
+                printf("%c %10lld: ",dna[a&0x3],T->cidx);
+                print_hap(Divpt,KMER,level+1);
+              }
+            else
+              printf("%c %10lld: EOT",dna[a&0x3],T->cidx);
             printf("\n");
           }
         if (a < 16)
           { GoTo_Kmer_Index(T,bound[a]);
-            Current_Entry(T,Divpt);
-            printf("%c %10lld: ",dna[a&0x3],T->cidx);
-            print_hap(Divpt,KMER,level+1);
+            if (T->cidx < T->nels)
+              { Current_Entry(T,Divpt);
+                printf("%c %10lld: ",dna[a&0x3],T->cidx);
+                print_hap(Divpt,KMER,level+1);
+              }
+            else
+              printf("%c %10lld: EOT",dna[a&0x3],T->cidx);
             printf("\n");
           }
       }
@@ -854,10 +892,9 @@ static void in_core_recursion(uint8 **aptr, int level, TP *parm)
     else
       analysis_in_core_2(parm);
 
-    for (a = 0; a < 16; a += 4)
-      for (t = 1; t < 4; t++)
-        if (bound[a+t] == NULL)
-          bound[a+t] = bound[a+4];
+    for (a = 15; a > 0; a--)
+      if (bound[a] == NULL)
+        bound[a] = bound[a+1];
 
 #ifdef DEBUG_BOUNDARY
     { uint8 *cache = parm->cache;
@@ -949,17 +986,16 @@ static void small_recursion(int64 *adiv, int level, TP *parm)
           for (t = 1; t < 4; t++)
             bound[a+t] = -1;
         }
+      bound[16] = adiv[4];
 
       if (PASS1)
         analysis_thread_1(parm);
       else
         analysis_thread_2(parm);
 
-      for (a = 0; a < 16; a += 4)
-        for (t = 1; t < 4; t++)
-          if (bound[a+t] < 0)
-            bound[a+t] = bound[a+4];
-      bound[16] = adiv[4];
+      for (a = 15; a > 0; a--)
+        if (bound[a] < 0)
+          bound[a] = bound[a+1];
 
 #ifdef DEBUG_BOUNDARY
       { Kmer_Stream *T;
@@ -969,16 +1005,24 @@ static void small_recursion(int64 *adiv, int level, TP *parm)
           for (a = 0; a <= 16; a++)
             { if (a > 0)
                 { GoTo_Kmer_Index(T,bound[a]-1);
-                  Current_Entry(T,Divpt);
-                  printf("%c %10lld: ",dna[a&0x3],T->cidx);
-                  print_hap(Divpt,KMER,level+1);
+                  if (T->cidx < T->nels)
+                    { Current_Entry(T,Divpt);
+                      printf("%c %10lld: ",dna[a&0x3],T->cidx);
+                      print_hap(Divpt,KMER,level+1);
+                    }
+                  else
+                    printf("%c %10lld: EOT",dna[a&0x3],T->cidx);
                   printf("\n");
                 }
               if (a < 16)
                 { GoTo_Kmer_Index(T,bound[a]);
-                  Current_Entry(T,Divpt);
-                  printf("%c %10lld: ",dna[a&0x3],T->cidx); 
-                  print_hap(Divpt,KMER,level+1);
+                  if (T->cidx < T->nels)
+                    { Current_Entry(T,Divpt);
+                      printf("%c %10lld: ",dna[a&0x3],T->cidx); 
+                      print_hap(Divpt,KMER,level+1);
+                    }
+                  else
+                    printf("%c %10lld: EOT",dna[a&0x3],T->cidx);
                   printf("\n");
                 }
             }
@@ -1038,6 +1082,7 @@ static void *small_window(void *args)
 
   return (NULL);
 }
+
 
 /****************************************************************************************
  *
@@ -1189,7 +1234,6 @@ int main(int argc, char *argv[])
   char        *input;
   char        *troot;
   int64      **PLOT;
-  int          bypass;
 
   char  *SORT_PATH;
   char  *OUT;
@@ -1204,7 +1248,8 @@ int main(int argc, char *argv[])
     char  *eptr;
 
     ARG_INIT("PloidyPlot");
-    OUT  = NULL;
+
+    OUT      = NULL;
     ETHRESH  = 4;
     NTHREADS = 4;
     SORT_PATH = "/tmp";
@@ -1220,9 +1265,9 @@ int main(int argc, char *argv[])
             ARG_POSITIVE(ETHRESH,"Error-mer threshold")
             break;
           case 'o':
-            if (OUT == NULL)
+            if (OUT != NULL)
               free(OUT);
-            OUT = Strdup(argv[i]+2,"Allocating name");
+            OUT = Strdup(argv[i]+2,"Allocating output name");
             if (OUT == NULL)
               exit (1);
             break;
@@ -1251,20 +1296,19 @@ int main(int argc, char *argv[])
       { fprintf(stderr,"\nUsage: %s %s\n",Prog_Name,Usage[0]);
         fprintf(stderr,"       %*s %s\n",(int) strlen(Prog_Name),"",Usage[1]);
         fprintf(stderr,"\n");
-        fprintf(stderr,"      -o: root name for output plots\n");
-        fprintf(stderr,"          default is root path of <asm> argument\n");
+        fprintf(stderr,"      -o: root name for output table\n");
+        fprintf(stderr,"            default is root of <source> argument\n");
         fprintf(stderr,"\n");
         fprintf(stderr,"      -e: count threshold below which k-mers are considered erroneous\n");
         fprintf(stderr,"      -v: verbose mode\n");
         fprintf(stderr,"      -T: number of threads to use\n");
-        // This P argument does not work properly, only some of the files are saved where it claims it does
         fprintf(stderr,"      -P: Place all temporary files in directory -P.\n");
         exit (1);
       }
 
     SRC = argv[1];
     if (OUT == NULL)
-      OUT = Root(argv[1],".ktab");
+      OUT = PathnRoot(argv[1],".ktab");
 
     troot = mktemp(template);
   }
@@ -1274,24 +1318,21 @@ int main(int argc, char *argv[])
   { FILE *f;
     int   a;
 
-    bypass = 0;
     f = fopen(Catenate(OUT,".smu","",""),"r");
     if (f != NULL)
-      { fprintf(stdout,"\n  Found het-table %s.smu, use it? ",OUT);
+      { int bypass;
+
+        bypass = 0;
+        fprintf(stdout,"\n  Found het-table %s.smu, use it? ",OUT);
         fflush(stdout);
         while ((a = getc(stdin)) != '\n')
           if (a == 'y' || a == 'Y')
             bypass = 1;
-
         if (bypass)
-          { PLOT    = Malloc(sizeof(int64 *)*(SMAX+1),"Allocating thread working memory");
-            PLOT[0] = Malloc(sizeof(int64)*(SMAX+1)*(FMAX+1),"Allocating plot");
-            for (a = 1; a <= SMAX; a++)
-              PLOT[a] = PLOT[a-1] + (FMAX+1);
-            fread(PLOT[0],sizeof(int64),(SMAX+1)*(FMAX+1),f);
+          { fprintf(stderr,"\n  Using the found het-table, done\n");
+            fclose(f);
+            exit (0);
           }
-
-        fclose(f);
       }
   }
 
@@ -1315,9 +1356,6 @@ int main(int argc, char *argv[])
     KMER  = T->kmer;
     KBYTE = T->kbyte;
     TBYTE = T->tbyte;
-
-    if (bypass)
-      goto skip_build;
 
     examine_table(T,&trim,&symm);
 
@@ -1347,10 +1385,7 @@ int main(int argc, char *argv[])
           }
 
         sprintf(command,"Logex -T%d '%s.trim=A[%d-]' %s",NTHREADS,troot,ETHRESH,tname);
-        if (system(command) != 0)
-          { fprintf(stderr,"%s: Something went wrong with command:\n    %s\n",Prog_Name,command);
-            exit (1);
-          }
+        SystemX(command);
 
         sprintf(tname,"%s.trim",troot);
       }
@@ -1368,18 +1403,11 @@ int main(int argc, char *argv[])
 
         sprintf(command,"Symmex -T%d -P%s %s %s.symx",NTHREADS,SORT_PATH,tname,troot);
 
-        if (system(command) != 0)
-          { fprintf(stderr,"%s: Something went wrong with command:\n    %s\n",Prog_Name,command);
-            exit (1);
-          }
+        SystemX(command);
 
         if (!trim)
           { sprintf(command,"Fastrm %s.trim",troot);
-            if (system(command) != 0)
-              { fprintf(stderr,"%s: Something went wrong with command:\n    %s\n",
-                               Prog_Name,command);
-                exit (1);
-              }
+            SystemX(command);
           }
 
         sprintf(tname,"%s.symx",troot);
@@ -1412,17 +1440,17 @@ int main(int argc, char *argv[])
   Cache_Size = (MEMORY_LIMIT/NTHREADS)/TBYTE;
 
 #ifdef SOLO_CHECK
-  if ((int) strlen(argv[3]) != KMER)
+  if ((int) strlen(argv[2]) != KMER)
     { fprintf(stderr,"%s: string is not of length %d\n",Prog_Name,KMER);
       exit (1);
     }
   CENT = Current_Entry(T,NULL);
-  compress_norm(argv[3],KMER,CENT);
+  compress_norm(argv[2],KMER,CENT);
   if (GoTo_Kmer_Entry(T,CENT) < 0)
     { fprintf(stderr,"%s: string is not in table\n",Prog_Name);
       exit (1);
     }
-  printf("%s: %d\n",argv[3],Current_Count(T));
+  printf("%s: %d\n",argv[2],Current_Count(T));
   CIDX = T->cidx;
 #endif
 
@@ -1558,54 +1586,45 @@ int main(int argc, char *argv[])
           if (command == NULL)
             exit (1);
           sprintf(command,"Fastrm %s",input);
-          if (system(command) != 0)
-            { fprintf(stderr,"%s: Something went wrong with command:\n    %s\n",Prog_Name,command);
-              exit (1);
-            }
+          SystemX(command);
           free(command);
           free(input);
         }
     }
   }
 
-#ifdef SOLO_CHECK
-
-  exit (0);
-
-#endif
+#ifndef SOLO_CHECK
 
   if (VERBOSE)
-    { fprintf(stderr,"\n  Count complete, plotting\n");
+    { fprintf(stderr,"\n  Count complete, outputting table\n");
       fflush(stderr);
     }
 
-skip_build:
+  { int   a, i;
+    FILE *f;
 
-fprintf(stderr,"\n  About to save stuff\n");
-
-FILE  *f;
-int    a, i;
-
-f = fopen(Catenate(OUT,"_text.smu","",""),"w");
-fprintf(stderr,"\n  Saving stuff\n");
-
-// fprintf(f, "// %dx%d matrix, the i'th number in the j'th row give the number of hetmer pairs (a,b)\n", SMAX,FMAX);
-// fprintf(f, "//                     s.t. count(a)+count(b) = j+1 and min(count(a),count(b)) = i+1.\n");
-for (a = 0; a <= SMAX; a++)
-  {
-    for (i = 0; i < FMAX; i++)
-      if(PLOT[a][i] > 0)
-      {
-        fprintf(f,"%i\t%i\t%lld\n",i,a-i,PLOT[a][i]);
+    f = fopen(Catenate(OUT,".smu","",""),"w");
+    if (f == NULL)
+      { fprintf(stderr,"Could not open %s.smu\n",troot);
+        exit (1);
       }
+
+    for (a = 0; a <= SMAX; a++)
+      for (i = 0; i < FMAX; i++)
+        if (PLOT[a][i] > 0)
+          fprintf(f,"%i\t%i\t%lld\n",i,a-i,PLOT[a][i]);
+    fclose(f);
   }
-fclose(f);
 
-free(OUT);
+#endif
 
-Catenate(NULL,NULL,NULL,NULL);
-Numbered_Suffix(NULL,0,NULL);
-free(Prog_Name);
+  free(PLOT[0]);
+  free(PLOT);
+  free(OUT);
 
-exit (0);
+  Catenate(NULL,NULL,NULL,NULL);
+  Numbered_Suffix(NULL,0,NULL);
+  free(Prog_Name);
+
+  exit (0);
 }
