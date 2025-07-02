@@ -1,10 +1,4 @@
-```
-python -m pip install .
-
-smudgeplot -h
-```
-
-*** Sploidyplot branch ***
+*** Smudgeplot ***
 
 <font size ="4">**_Version: 0.5.0 Skylight_**</font>
 
@@ -28,45 +22,30 @@ Current state: RUNNING; beta-testing;
 
 ### Install the whole thing
  
-This version of smudgeplot operates on FastK k-mer databases. So, before installing smudgeplot, please install [FastK](https://github.com/thegenemyers/FASTK). The smudgeplot installation consist of one python, two R scripts and the C-backend to search for all the k-mer pairs (hetmers) that needs to be compilet.
+This version of smudgeplot operates on FastK k-mer databases. So, before installing smudgeplot, please install [FastK](https://github.com/thegenemyers/FASTK). The smudgeplot installation consist of a python package and C-backend to search for all the k-mer pairs (hetmers) and extract sequences of k-mer pairs (extract_kmer_pairs).
 
-#### Quick
+#### Quick installation
 
-Assuming you have admin right / can write to `/usr/local/bin`, you can simply run
-
-```bash
-sudo make
-```
-That should do everything necesarry to make smudgeplot fully operational. You can run `smudgeplot.py --help` to see if it worked.
-
-#### Custom installation location
-
-If there is a different directory where you store your executables, you can specify `INSTALL_PREFIX` variable to make. The binaries are then added to `$INSTALL_PREFIX/bin`. For example
+Download this repository and enter the smudgeplot directory, you can run
 
 ```bash
-make -s INSTALL_PREFIX=~
+python -m pip install .
 ```
 
-will install smudgeplot to `~/bin/`.
+That should do everything necesarry to make smudgeplot fully operational. You can run `smudgeplot --help` to see if it worked. If you would activate a virtual environment (either `conda` or any other), this installation will install within the environment.
 
-#### Manual installation
+#### Compiling the C code
 
-Compiling the `C` executable
-
-```
-make exec/hetmers # this will compile hetmers (kmer pair searching engine of PloidyPlot) backend
-```
-
-Now you can move all three files from the `exec` directory somewhere your system will see it (or alternativelly, you can add that directory to `$PATH` variable).
+The process above install everything including compilation of the C backend. If you would like to know how to compile the code yourself you can simply run
 
 ```
-install -C exec/smudgeplot.py /usr/local/bin
-install -C exec/hetmers /usr/local/bin
-install -C exec/smudgeplot_plot.R /usr/local/bin
-install -C exec/centrality_plot.R /usr/local/bin
+make
 ```
+
+This will, however, won't install the smudgeplot python package. 
 
 ### Runing this version on Sacharomyces data
+
 Requires ~2.1GB of space and `FastK` and `smudgeplot` installed.
 
 ```bash
@@ -82,12 +61,12 @@ mv *fastq.gz data/Scer/
 FastK -v -t4 -k31 -M16 -T4 data/Scer/SRR3265401_[12].fastq.gz -Ndata/Scer/FastK_Table
 
 # Find all k-mer pairs in the dataset using hetmer module
-smudgeplot.py hetmers -L 12 -t 4 -o data/Scer/kmerpairs --verbose data/Scer/FastK_Table
+smudgeplot hetmers -L 12 -t 4 -o data/Scer/kmerpairs --verbose data/Scer/FastK_Table
 # this now generated `data/Scer/kmerpairs_text.smu` file;
 # it's a flat file with three columns; covB, covA and freq (the number of k-mer pairs with these respective coverages)
 
 # use the .smu file to infer ploidy and create smudgeplot
-smudgeplot.py all -o data/Scer/trial_run data/Scer/kmerpairs_text.smu
+smudgeplot all -o data/Scer/trial_run data/Scer/kmerpairs_text.smu
 
 # check that bunch files are generated (3 pdfs; some summary tables and logs)
 ls data/Scer/trial_run_*
@@ -96,13 +75,7 @@ ls data/Scer/trial_run_*
 The y-axis scaling is by default 100, one can spcify argument `ylim` to scale it differently
 
 ```bash
-smudgeplot.py all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs_text.smu -ylim 70
-```
-
-And that's it for now! I will be streamlining this over the next few days so hopefully it will all work with a single command;
-
-```bash
-smudgeplot.py all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs_text.smu -ylim 70
+smudgeplot all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs_text.smu -ylim 70
 ```
 
 There is also a plotting module that requires the coverage and a list of smudges and their respective sizes listed in a tabular file. This plotting module does not inference and should be used only if you know the right answers already. 
