@@ -213,6 +213,12 @@ class Parser:
             default=False,
             help="Revert the colour palette (default False).",
         )
+        argparser.add_argument(
+            "--format",
+            default="pdf",
+            help="Output format for the plots (default pdf)",
+            choices=["pdf", "png"],
+        )
         return argparser
 
 
@@ -309,7 +315,7 @@ def main():
                 cov = 0
 
             sys.stderr.write("\nCreating centrality plot\n")
-            smudges.centrality_plot(args.o)
+            smudges.centrality_plot(args.o, args.format)
             sys.stderr.write(f"\nInferred coverage: {cov:.3f}\n")
 
         else:
@@ -329,7 +335,7 @@ def main():
 
         smg.generate_smudge_report(smudges, coverages, cov, args, smudge_size_cutoff, print_header=True)
         sys.stderr.write("\nCreating smudgeplots\n")
-        smg.generate_plots(smudges, coverages, cov, smudge_size_cutoff, args.o, title)
+        smg.generate_plots(smudges, coverages, cov, smudge_size_cutoff, args.o, title, format=args.format)
 
     fin()
 

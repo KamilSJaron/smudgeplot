@@ -225,7 +225,7 @@ class Smudges:
             }
         )
 
-    def centrality_plot(self, output):
+    def centrality_plot(self, output, format="pdf"):
         fig, axs = plt.subplots(figsize=(8, 8))
         fontsize = 32
         plt.plot(
@@ -237,7 +237,7 @@ class Smudges:
         )
         axs.set_xlabel("Coverage")
         axs.set_ylabel("Centrality [(theoretical_center - actual_center) / coverage ]")
-        fig.savefig(output + "_centralities.pdf")
+        fig.savefig(f"{output}_centralities.{format}")
 
 
 class SmudgeplotData:
@@ -292,7 +292,7 @@ class SmudgeplotData:
             self.lims["ylim"][1] = upper_ylim
         self.lims["xlim"] = [0, 0.5]
 
-    def def_strings(self, title=None, output="smudgeplot"):
+    def def_strings(self, title=None, output="smudgeplot", format="pdf"):
         # self.error_string = f"err = {round(self.error_fraction*100, 1)} %"
         # self.cov_string = f"1n = {self.cov}"
         if title:
@@ -300,8 +300,8 @@ class SmudgeplotData:
         else:
             fig_title = "NA"
         self.fig_title = f"{fig_title}\n1n = {self.cov:.0f}\nerr = {self.error_fraction*100:.2f}%"
-        self.linear_plot_file = output + "_smudgeplot_py.pdf"
-        self.log_plot_file = output + "_smudgeplot_log10_py.pdf"
+        self.linear_plot_file = f"{output}_smudgeplot_py.{format}"
+        self.log_plot_file = f"{output}_smudgeplot_log10_py.{format}"
 
 
 def get_centrality(smudge_container, cov, centre="mode", dist="theoretical_center"):
@@ -352,23 +352,23 @@ def get_centrality(smudge_container, cov, centre="mode", dist="theoretical_cente
     return fmean(centralities, weights=freqs)
 
 
-def generate_plots(smudges, coverages, cov, smudge_size_cutoff, outfile, title):
+def generate_plots(smudges, coverages, cov, smudge_size_cutoff, outfile, title, format=None):
     smudges.fishnet_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "fishnet")
     smudges.generate_smudge_table(smudges.fishnet_smudge_container)
 
     smudgeplot_data = SmudgeplotData(coverages.cov_tab, smudges.smudge_tab, cov, coverages.error_fraction)
-    prepare_smudgeplot_data_for_plotting(smudgeplot_data, outfile, title)
+    prepare_smudgeplot_data_for_plotting(smudgeplot_data, outfile, title, format=format)
 
     smudgeplot(smudgeplot_data, log=False)
     smudgeplot(smudgeplot_data, log=True)
 
 
-def prepare_smudgeplot_data_for_plotting(smudgeplot_data, output, title):
+def prepare_smudgeplot_data_for_plotting(smudgeplot_data, output, title, format=None):
 
     smudgeplot_data.calc_cov_columns()
     smudgeplot_data.filter_cov_quant()
     smudgeplot_data.get_ax_lims()
-    smudgeplot_data.def_strings(output=output, title=title)
+    smudgeplot_data.def_strings(output=output, title=title, format=format)
 
 
 def smudgeplot(data, log=False):  # I think user arguments need to be passed here
@@ -435,7 +435,7 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
         #)
     )
 
-    fig.savefig(outfile, dpi=200)
+    fig.savefig(outfile, dpi=100)
     plt.close()
 
 def plot_hist(data, ax, weights, orientation='vertical', bins=50, log=False):
