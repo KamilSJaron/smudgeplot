@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+from importlib.metadata import version
 from os import system
 
 import numpy as np
@@ -221,6 +222,12 @@ class Parser:
             help="Output format for the plots (default pdf)",
             choices=["pdf", "png"],
         )
+        argparser.add_argument(
+            "--json_report",
+            action="store_true",
+            default=False,
+            help="Generate a JSON format report alongside the plots (default False)",
+        )
         return argparser
 
 
@@ -232,8 +239,8 @@ def fin():
 def main():
     _parser = Parser()
 
-    version = "0.5.0 skylight"
-    sys.stderr.write("Running smudgeplot v" + version + "\n")
+    smdg_v = version("smudgeplot")
+    sys.stderr.write(f"Running smudgeplot v{smdg_v}\n")
     if _parser.task == "version":
         exit(0)
 
@@ -325,7 +332,7 @@ def main():
             sys.stderr.write(f"\nUser defined coverage: {cov:.3f}\n")
 
         sys.stderr.write("\nCreating smudge report\n")
-        
+
         smudges.local_agg_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "local_aggregation")
         annotated_smudges = list(smudges.local_agg_smudge_container.keys())
         with open(args.o + "_with_annotated_smu.txt", "w") as annotated_smu:
@@ -337,7 +344,16 @@ def main():
 
         smg.generate_smudge_report(smudges, coverages, cov, args, smudge_size_cutoff, print_header=True)
         sys.stderr.write("\nCreating smudgeplots\n")
-        smg.generate_plots(smudges, coverages, cov, smudge_size_cutoff, args.o, title, format=args.format)
+        smg.generate_plots(
+            smudges,
+            coverages,
+            cov,
+            smudge_size_cutoff,
+            args.o,
+            title,
+            fmt=args.format,
+            json_report=args.json_report,
+        )
 
     fin()
 
