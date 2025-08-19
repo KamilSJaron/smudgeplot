@@ -46,3 +46,35 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "ARG",
+    "B",
+    "BLE",
+    "C4",
+    "COM",
+    "DTZ",
+    "E",
+    "EM",
+    "F",
+    "I",
+    "ISC",
+    "LOG",
+    "N",
+    "PYI",
+    "S",
+    "SIM",
+    "U",
+]
+ignore = [
+    "COM812",
+    "C901",
+    "LOG015",
+    "N803",
+    "N806",
+]
