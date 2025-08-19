@@ -1,22 +1,16 @@
 #!/usr/bin/env python3
 
 import sys
-import numpy as np
-from pandas import read_csv  # type: ignore
-from pandas import DataFrame  # type: ignore
-from pandas import Series  # type: ignore
-from pandas import concat  # type: ignore
-from numpy import arange
-from numpy import argmin
-from numpy import concatenate
-from math import log
-from math import ceil
-from statistics import fmean
 from collections import defaultdict
+from math import ceil, log
+from statistics import fmean
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.collections import PatchCollection
-from itertools import product
+from numpy import arange, argmin, concatenate
+from pandas import DataFrame, Series, concat, read_csv
 
 
 class Coverages:

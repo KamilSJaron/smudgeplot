@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
-import sys
 import argparse
-import numpy as np
+import sys
 from os import system
+
+import numpy as np
+
 import smudgeplot.smudgeplot as smg
+
 
 class Parser:
     def __init__(self):
