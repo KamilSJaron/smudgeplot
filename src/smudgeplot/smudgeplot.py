@@ -359,6 +359,7 @@ def generate_plots(
     title,
     fmt=None,
     json_report=False,
+    input_params=None,
 ):
     smudges.fishnet_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "fishnet")
     smudges.generate_smudge_table(smudges.fishnet_smudge_container)
@@ -370,13 +371,14 @@ def generate_plots(
     smudgeplot(smudgeplot_data, log=True)
 
     if json_report:
-        write_json_report(smudgeplot_data)
+        write_json_report(smudgeplot_data, input_params)
 
 
-def write_json_report(smg_data, min_size=0.03):
+def write_json_report(smg_data, input_params=None, min_size=0.03):
     report = {
         "version": version("smudgeplot"),
         "commandline_arguments": sys.argv[1:],
+        "input_parameters": input_params,
         "haploid_coverage": float(f"{smg_data.cov:.3f}"),
         "error_fraction": smg_data.error_fraction,
         "top_smudges": [

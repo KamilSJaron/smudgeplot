@@ -219,7 +219,7 @@ class Parser:
         )
         argparser.add_argument(
             "--format",
-            default="pdf",
+            default="png",
             help="Output format for the plots (default pdf)",
             choices=["pdf", "png"],
         )
@@ -273,7 +273,7 @@ def main():
     if _parser.task == "plot":
         smudge_tab = smg.read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
         cov_tab = smg.load_hetmers(args.infile)
-        smudgeplot_data = SmudgeplotData(cov_tab, smudge_tab, args.n)
+        smudgeplot_data = smg.SmudgeplotData(cov_tab, smudge_tab, args.n)
         smg.prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
         smg.smudgeplot(smudgeplot_data, log=False)
         smg.smudgeplot(smudgeplot_data, log=True)
@@ -354,6 +354,7 @@ def main():
             title,
             fmt=args.format,
             json_report=args.json_report,
+            input_params=vars(args),
         )
 
     fin()
