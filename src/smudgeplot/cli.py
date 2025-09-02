@@ -16,13 +16,14 @@ class Parser:
         argparser = argparse.ArgumentParser(
             # description='Inference of ploidy and heterozygosity structure using whole genome sequencing data',
             usage="""
-            smudgeplot <task> [options] \n
-            tasks: cutoff           Calculate meaningful values for lower kmer histogram cutoff.
-                   hetmers          Calculate unique kmer pairs from a FastK k-mer database.
+            smudgeplot <task> [options]
+
+            tasks: cutoff            Calculate meaningful values for lower kmer histogram cutoff.
+                   hetmers           Calculate unique kmer pairs from a FastK k-mer database.
                    peak_aggregation  Agregates smudges using local aggregation algorithm.
-                   plot             Generate 2d histogram; infere ploidy and plot a smudgeplot.
-                   all              Runs all the steps (with default options)\n\n
-                   """
+                   plot              Generate 2d histogram; infere ploidy and plot a smudgeplot.
+                   all               Runs all the steps (with default options)
+            """
         )
         # removing this for now;
         #        extract   Extract kmer pairs within specified coverage sum and minor covrage ratio ranges
@@ -214,7 +215,7 @@ class Parser:
             "--invert_cols",
             action="store_true",
             default=False,
-            help="Revert the colour palette (default False).",
+            help="Invert the colour palette (default False).",
         )
         argparser.add_argument(
             "--format",
