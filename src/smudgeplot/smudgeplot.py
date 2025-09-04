@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
 
+import json
 import sys
-import numpy as np
-from pandas import read_csv  # type: ignore
-from pandas import DataFrame  # type: ignore
-from pandas import Series  # type: ignore
-from pandas import concat  # type: ignore
-from numpy import arange
-from numpy import argmin
-from numpy import concatenate
-from math import log
-from math import ceil
-from statistics import fmean
 from collections import defaultdict
+from importlib.metadata import version
+from math import ceil, log
+from statistics import fmean
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.collections import PatchCollection
-from itertools import product
+from numpy import arange, argmin, concatenate
+from pandas import DataFrame, Series, concat, read_csv
 
 
 class Coverages:
@@ -225,7 +221,7 @@ class Smudges:
             }
         )
 
-    def centrality_plot(self, output):
+    def centrality_plot(self, output, fmt="pdf"):
         fig, axs = plt.subplots(figsize=(8, 8))
         fontsize = 32
         plt.plot(
@@ -237,7 +233,7 @@ class Smudges:
         )
         axs.set_xlabel("Coverage")
         axs.set_ylabel("Centrality [(theoretical_center - actual_center) / coverage ]")
-        fig.savefig(output + "_centralities.pdf")
+        fig.savefig(f"{output}_centralities.{fmt}")
 
 
 class SmudgeplotData:
@@ -252,6 +248,7 @@ class SmudgeplotData:
         self.fig_title = None
         self.linear_plot_file = None
         self.log_plot_file = None
+        self.json_report_file = None
 
     def calc_cov_columns(self):
         self.cov_tab["total_pair_cov"] = self.cov_tab[["covA", "covB"]].sum(axis=1)
@@ -292,7 +289,7 @@ class SmudgeplotData:
             self.lims["ylim"][1] = upper_ylim
         self.lims["xlim"] = [0, 0.5]
 
-    def def_strings(self, title=None, output="smudgeplot"):
+    def def_strings(self, title=None, output="smudgeplot", fmt="pdf"):
         # self.error_string = f"err = {round(self.error_fraction*100, 1)} %"
         # self.cov_string = f"1n = {self.cov}"
         if title:
@@ -300,8 +297,9 @@ class SmudgeplotData:
         else:
             fig_title = "NA"
         self.fig_title = f"{fig_title}\n1n = {self.cov:.0f}\nerr = {self.error_fraction*100:.2f}%"
-        self.linear_plot_file = output + "_smudgeplot_py.pdf"
-        self.log_plot_file = output + "_smudgeplot_log10_py.pdf"
+        self.linear_plot_file = f"{output}_smudgeplot.{fmt}"
+        self.log_plot_file = f"{output}_smudgeplot_log10.{fmt}"
+        self.json_report_file = f"{output}_smudgeplot_report.json"
 
 
 def get_centrality(smudge_container, cov, centre="mode", dist="theoretical_center"):
@@ -318,8 +316,8 @@ def get_centrality(smudge_container, cov, centre="mode", dist="theoretical_cente
             center_A, center_B = get_centre_cov_by_mode(smudge_tab)
 
         if centre == "mean":
-            center_A = sum((smudge_tab["freq"] * smudge_tab["covA"])) / kmer_in_the_smudge
-            center_B = sum((smudge_tab["freq"] * smudge_tab["covB"])) / kmer_in_the_smudge
+            center_A = sum(smudge_tab["freq"] * smudge_tab["covA"]) / kmer_in_the_smudge
+            center_B = sum(smudge_tab["freq"] * smudge_tab["covB"]) / kmer_in_the_smudge
 
         if dist == "empirical_edge":
             distA = min(
@@ -352,23 +350,64 @@ def get_centrality(smudge_container, cov, centre="mode", dist="theoretical_cente
     return fmean(centralities, weights=freqs)
 
 
-def generate_plots(smudges, coverages, cov, smudge_size_cutoff, outfile, title):
+def generate_plots(
+    smudges,
+    coverages,
+    cov,
+    smudge_size_cutoff,
+    outfile,
+    title,
+    fmt=None,
+    json_report=False,
+    input_params=None,
+):
     smudges.fishnet_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "fishnet")
     smudges.generate_smudge_table(smudges.fishnet_smudge_container)
 
     smudgeplot_data = SmudgeplotData(coverages.cov_tab, smudges.smudge_tab, cov, coverages.error_fraction)
-    prepare_smudgeplot_data_for_plotting(smudgeplot_data, outfile, title)
+    prepare_smudgeplot_data_for_plotting(smudgeplot_data, outfile, title, fmt=fmt)
 
     smudgeplot(smudgeplot_data, log=False)
     smudgeplot(smudgeplot_data, log=True)
 
+    if json_report:
+        write_json_report(smudgeplot_data, input_params)
 
-def prepare_smudgeplot_data_for_plotting(smudgeplot_data, output, title):
+
+def write_json_report(smg_data, input_params=None, min_size=0.03):
+    report = {
+        "version": version("smudgeplot"),
+        "commandline_arguments": sys.argv[1:],
+        "input_parameters": input_params,
+        "haploid_coverage": float(f"{smg_data.cov:.3f}"),
+        "error_fraction": smg_data.error_fraction,
+        "top_smudges": [
+            {
+                "structure": row.structure,
+                "fraction": row.rel_size,
+            }
+            for row in smg_data.smudge_tab.itertuples(index=False)
+            if row.rel_size > min_size
+        ],
+        "smudges": [
+            {
+                "structure": row.structure,
+                "count": row.size,
+                "fraction": row.rel_size,
+            }
+            for row in smg_data.smudge_tab.itertuples(index=False)
+        ],
+    }
+    with open(smg_data.json_report_file, "w") as fh:
+        fh.write(json.dumps(report, indent=2) + "\n")
+
+
+def prepare_smudgeplot_data_for_plotting(smudgeplot_data, output, title, fmt=None):
 
     smudgeplot_data.calc_cov_columns()
     smudgeplot_data.filter_cov_quant()
     smudgeplot_data.get_ax_lims()
-    smudgeplot_data.def_strings(output=output, title=title)
+    smudgeplot_data.def_strings(output=output, title=title, fmt=fmt)
 
 
 def smudgeplot(data, log=False):  # I think user arguments need to be passed here
@@ -380,9 +419,14 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
     )  # so things like lims can be set using user defined plotting parameters (I imagine palette will be the same although I did not try that one yet)
     fig_title = data.fig_title
 
-    fig, ((top_ax, legend_ax), (main_ax, size_ax)) = plt.subplots(nrows=2, ncols=2, width_ratios=[3, 1], height_ratios=[1, 3], figsize=(20, 20))#, sharey='row', sharex='col')
-    size_ax.sharey(main_ax), top_ax.sharex(main_ax)
-    legend_ax.axis("off"), size_ax.axis("off"), top_ax.axis("off")
+    fig, ((top_ax, legend_ax), (main_ax, size_ax)) = plt.subplots(
+        nrows=2, ncols=2, width_ratios=[3, 1], height_ratios=[1, 3], figsize=(20, 20)
+    )  # , sharey='row', sharex='col')
+    size_ax.sharey(main_ax)
+    top_ax.sharex(main_ax)
+    legend_ax.axis("off")
+    size_ax.axis("off")
+    top_ax.axis("off")
     plt.subplots_adjust(wspace=0.05, hspace=0.05)
     fontsize = 32
 
@@ -435,7 +479,7 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
         #)
     )
 
-    fig.savefig(outfile, dpi=200)
+    fig.savefig(outfile, dpi=100)
     plt.close()
 
 def plot_hist(data, ax, weights, orientation='vertical', bins=50, log=False):
@@ -486,7 +530,7 @@ def get_one_coverage(cov_tab, cov, ax):
     lefts = (cov_row_to_plot["minor_variant_rel_cov"] - width).to_numpy()
     rights = (cov_row_to_plot["minor_variant_rel_cov"].apply(lambda x: min(0.5, x + width))).to_numpy()
     cols = cov_row_to_plot["col"].to_numpy()
-    return [get_one_box(left, right, cov, col, ax) for left, right, col in zip(lefts, rights, cols)]
+    return [get_one_box(left, right, cov, col, ax) for left, right, col in zip(lefts, rights, cols, strict=True)]
 
 
 def get_one_box(left, right, cov, colour, ax):
@@ -512,7 +556,7 @@ def plot_expected_haplotype_structure(smudge_tab, cov, ax, adjust=False, xmax=0.
 
     for index, row in smudge_tab.iterrows():
 
-        if (smudge_tab["corrected_minor_variant_cov"][index] == 0.5) & adjust:
+        if (smudge_tab["corrected_minor_variant_cov"][index] == 0.5) and adjust:
             ha = "right"
         else:
             ha = "center"
@@ -534,6 +578,7 @@ def plot_smudge_sizes(smudge_tab, cov, error_string, ax, min_size=0.03):
                 for smudge, size in zip(
                     reduce_structure_representation(smudge_tab["structure"]).to_list(),
                     round(smudge_tab["rel_size"], 2),
+                    strict=True,
                 )
             ],
             key=lambda x: x[1],
@@ -619,9 +664,9 @@ def generate_smudge_report(smudges, coverages, cov, args, smudge_size_cutoff, pr
     smudges.generate_smudge_table(smudges.local_agg_smudge_container)
 
     sys.stderr.write(
-        f'Detected smudges / sizes : \n\
-        \t {smudges.smudge_tab["structure"].to_list()} \n\
-        \t {smudges.smudge_tab["size"].to_list()} \n'
+        f"Detected smudges / sizes:\n"
+        f"  {smudges.smudge_tab['structure'].to_list()}\n"
+        f"  {smudges.smudge_tab['size'].to_list()}\n"
     )
 
     write_smudge_report(smudges, coverages, cov, args, print_header=print_header)
@@ -692,7 +737,8 @@ def cutoff(kmer_hist, boundary):
         sys.stdout.write(str(L))
     else:
         sys.stderr.write(
-            "Warning: We discourage using the original hetmer algorithm.\n\tThe updated (recommended) version does not take the argument U\n"
+            "Warning: We discourage using the original hetmer algorithm.\n"
+            "\tThe updated (recommended) version does not take the argument U\n"
         )
         # take 99.8 quantile of kmers that are more than one in the read set
         number_of_kmers = np.sum(hist[1:])

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
-import sys
 import argparse
-import numpy as np
+import sys
+from importlib.metadata import version
 from os import system
+
+import numpy as np
+
 import smudgeplot.smudgeplot as smg
+
 
 class Parser:
     def __init__(self):
@@ -13,13 +16,14 @@ class Parser:
         argparser = argparse.ArgumentParser(
             # description='Inference of ploidy and heterozygosity structure using whole genome sequencing data',
             usage="""
-            smudgeplot <task> [options] \n
-            tasks: cutoff           Calculate meaningful values for lower kmer histogram cutoff.
-                   hetmers          Calculate unique kmer pairs from a FastK k-mer database.
+            smudgeplot <task> [options]
+
+            tasks: cutoff            Calculate meaningful values for lower kmer histogram cutoff.
+                   hetmers           Calculate unique kmer pairs from a FastK k-mer database.
                    peak_aggregation  Agregates smudges using local aggregation algorithm.
-                   plot             Generate 2d histogram; infere ploidy and plot a smudgeplot.
-                   all              Runs all the steps (with default options)\n\n
-                   """
+                   plot              Generate 2d histogram; infere ploidy and plot a smudgeplot.
+                   all               Runs all the steps (with default options)
+            """
         )
         # removing this for now;
         #        extract   Extract kmer pairs within specified coverage sum and minor covrage ratio ranges
@@ -211,7 +215,19 @@ class Parser:
             "--invert_cols",
             action="store_true",
             default=False,
-            help="Revert the colour palette (default False).",
+            help="Invert the colour palette (default False).",
+        )
+        argparser.add_argument(
+            "--format",
+            default="png",
+            help="Output format for the plots (default pdf)",
+            choices=["pdf", "png"],
+        )
+        argparser.add_argument(
+            "--json_report",
+            action="store_true",
+            default=False,
+            help="Generate a JSON format report alongside the plots (default False)",
         )
         return argparser
 
@@ -224,8 +240,8 @@ def fin():
 def main():
     _parser = Parser()
 
-    version = "0.5.0 skylight"
-    sys.stderr.write("Running smudgeplot v" + version + "\n")
+    smdg_v = version("smudgeplot")
+    sys.stderr.write(f"Running smudgeplot v{smdg_v}\n")
     if _parser.task == "version":
         exit(0)
 
@@ -257,7 +273,7 @@ def main():
     if _parser.task == "plot":
         smudge_tab = smg.read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
         cov_tab = smg.load_hetmers(args.infile)
-        smudgeplot_data = SmudgeplotData(cov_tab, smudge_tab, args.n)
+        smudgeplot_data = smg.SmudgeplotData(cov_tab, smudge_tab, args.n)
         smg.prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
         smg.smudgeplot(smudgeplot_data, log=False)
         smg.smudgeplot(smudgeplot_data, log=True)
@@ -309,7 +325,7 @@ def main():
                 cov = 0
 
             sys.stderr.write("\nCreating centrality plot\n")
-            smudges.centrality_plot(args.o)
+            smudges.centrality_plot(args.o, args.format)
             sys.stderr.write(f"\nInferred coverage: {cov:.3f}\n")
 
         else:
@@ -317,7 +333,7 @@ def main():
             sys.stderr.write(f"\nUser defined coverage: {cov:.3f}\n")
 
         sys.stderr.write("\nCreating smudge report\n")
-        
+
         smudges.local_agg_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "local_aggregation")
         annotated_smudges = list(smudges.local_agg_smudge_container.keys())
         with open(args.o + "_with_annotated_smu.txt", "w") as annotated_smu:
@@ -329,7 +345,17 @@ def main():
 
         smg.generate_smudge_report(smudges, coverages, cov, args, smudge_size_cutoff, print_header=True)
         sys.stderr.write("\nCreating smudgeplots\n")
-        smg.generate_plots(smudges, coverages, cov, smudge_size_cutoff, args.o, title)
+        smg.generate_plots(
+            smudges,
+            coverages,
+            cov,
+            smudge_size_cutoff,
+            args.o,
+            title,
+            fmt=args.format,
+            json_report=args.json_report,
+            input_params=vars(args),
+        )
 
     fin()
 
