@@ -1320,7 +1320,7 @@ int main(int argc, char *argv[])
           { fprintf(stderr,"%s: %dA%dB is not a valid smudge label'\n",Prog_Name,a,b);
             exit (1);
           }
-        if (i < 0 || i >= FMAX || j < i || i+j >= SMAX)
+        if (i < 0 || i > FMAX || j < i || i+j > SMAX)
           { fprintf(stderr,"%s: (%d,%d) is not a valid pixel coordinate\n",Prog_Name,i,j);
             exit (1);
           }
