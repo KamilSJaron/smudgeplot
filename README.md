@@ -1,11 +1,17 @@
 *** Installation *** 
 
 OPTIONAL: 
+
 `conda create -n smudgeplot && conda activate smudgeplot` 
+
 `conda install pip`
+
 Then: 
+
 `git clone --branch skylight https://github.com/KamilSJaron/smudgeplot.git` 
+
 `cd smudgeplot && python -m pip install .` 
+
 `smudgeplot -h # check it is working`
 
 *** Smudgeplot ***
