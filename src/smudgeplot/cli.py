@@ -220,7 +220,7 @@ class Parser:
         argparser.add_argument(
             "--format",
             default="png",
-            help="Output format for the plots (default pdf)",
+            help="Output format for the plots (default png)",
             choices=["pdf", "png"],
         )
         argparser.add_argument(
