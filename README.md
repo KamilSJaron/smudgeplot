@@ -66,7 +66,7 @@ smudgeplot hetmers -L 12 -t 4 -o data/Scer/kmerpairs --verbose data/Scer/FastK_T
 # it's a flat file with three columns; covB, covA and freq (the number of k-mer pairs with these respective coverages)
 
 # use the .smu file to infer ploidy and create smudgeplot
-smudgeplot all -o data/Scer/trial_run data/Scer/kmerpairs_text.smu
+smudgeplot all -o data/Scer/trial_run data/Scer/kmerpairs.smu
 
 # check that bunch files are generated (3 pdfs; some summary tables and logs)
 ls data/Scer/trial_run_*
@@ -75,7 +75,7 @@ ls data/Scer/trial_run_*
 The y-axis scaling is by default 100, one can spcify argument `ylim` to scale it differently
 
 ```bash
-smudgeplot all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs_text.smu -ylim 70
+smudgeplot all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs.smu -ylim 70
 ```
 
 There is also a plotting module that requires the coverage and a list of smudges and their respective sizes listed in a tabular file. This plotting module does not inference and should be used only if you know the right answers already. 

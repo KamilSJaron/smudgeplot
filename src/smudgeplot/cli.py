@@ -299,7 +299,7 @@ def main():
             Genomic kmers: {coverages.total_genomic_kmers}\n\t \
             Genomic kmers in smudges: {coverages.total_genomic_kmers_in_smudges}\n\t \
             Sequencing errors: {coverages.total_error_kmers}\n\t \
-            Fraction or errors: {round(coverages.total_error_kmers/coverages.total_kmers, 3)}"
+            Fraction of errors: {round(coverages.total_error_kmers/coverages.total_kmers, 3)}"
         )
 
         smudge_size_cutoff = (
