@@ -41,6 +41,9 @@ class Coverages:
             )
             if freq < noise_filter:
                 break
+            if mask_errors and covB < L + distance:
+                cov2peak[(covA, covB)] = -1  # error line
+                continue
             highest_neigbour_coords = (0, 0)
             highest_neigbour_freq = 0
             # for each kmer pair I will retrieve all neibours (Manhattan distance)
@@ -51,19 +54,16 @@ class Coverages:
                     xB, xA = sorted([xA, xB])  # this is to make sure xB is smaller than xA
                     # iterating only though those that were assigned already
                     # and recording only the one with highest frequency
-                    if cov2peak[(xA, xB)] and cov2freq[(xA, xB)] > highest_neigbour_freq:
+                    if cov2peak[(xA, xB)] > 0 and cov2freq[(xA, xB)] > highest_neigbour_freq:
                         highest_neigbour_coords = (xA, xB)
                         highest_neigbour_freq = cov2freq[(xA, xB)]
-            if highest_neigbour_freq:  # > 0:
+            if highest_neigbour_freq > 0:  # > 0:
                 cov2peak[covA, covB] = cov2peak[highest_neigbour_coords]
             else:
-                if mask_errors and covB < L + distance:
-                    cov2peak[(covA, covB)] = -1  # error line
-                else:
-                    cov2peak[(covA, covB)] = (
-                        next_peak  # if I want to keep info about all locally agregated smudges
-                    )
-                    next_peak += 1
+                cov2peak[(covA, covB)] = (
+                    next_peak  # if I want to keep info about all locally agregated smudges
+                )
+                next_peak += 1
         self.cov2peak = cov2peak
 
     def peak_aggregation(self):
