@@ -275,7 +275,7 @@ def main():
         smg.smudgeplot(smudgeplot_data, log=False, palette=args.col_ramp, invert_cols=args.invert_cols)
         smg.smudgeplot(smudgeplot_data, log=True, palette=args.col_ramp, invert_cols=args.invert_cols)
 
-        smg.fin()
+        fin()
 
     sys.stderr.write("\nLoading data\n")
     coverages = smg.Coverages(smg.load_hetmers(args.infile))
