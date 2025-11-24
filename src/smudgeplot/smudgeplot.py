@@ -322,20 +322,20 @@ def get_centrality(smudge_container, cov, centre="mode", dist="theoretical_cente
         if dist == "empirical_edge":
             distA = min(
                 [
-                    abs(smudge_tab["covA"].max() - center["covA"]),
-                    abs(center["covA"] - smudge_tab["covA"].min()),
+                    abs(smudge_tab["covA"].max() - center_A),
+                    abs(center_A - smudge_tab["covA"].min()),
                 ]
             )
             distB = min(
                 [
-                    abs(smudge_tab["covB"].max() - center["covB"]),
-                    abs(center["covB"] - smudge_tab["covB"].min()),
+                    abs(smudge_tab["covB"].max() - center_B),
+                    abs(center_B - smudge_tab["covB"].min()),
                 ]
             )
 
         if dist == "theoretical_edge":
-            distA = min(abs(center["covA"] - (cov * (As - 0.5))), abs((cov * (As + 0.5)) - center["covA"]))
-            distB = min(abs(center["covB"] - (cov * (Bs - 0.5))), abs((cov * (Bs + 0.5)) - center["covB"]))
+            distA = min(abs(center_A - (cov * (As - 0.5))), abs((cov * (As + 0.5)) - center_A))
+            distB = min(abs(center_B - (cov * (Bs - 0.5))), abs((cov * (Bs + 0.5)) - center_B))
 
         if dist == "theoretical_center":
             distA = abs((center_A - (cov * As)) / cov)
