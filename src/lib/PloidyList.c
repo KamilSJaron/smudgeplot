@@ -1565,7 +1565,7 @@ int main(int argc, char *argv[])
           free(input);
         }
 
-      for (t = 0; t < SM_NUM; t++)
+      for (t = 1; t <= SM_NUM; t++)
         fclose(SMUDGE[t].f);
     }
   }
