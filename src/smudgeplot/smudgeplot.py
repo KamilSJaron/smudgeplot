@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PatchCollection
 from numpy import arange, argmin, concatenate
-from pandas import DataFrame, Series, concat, read_csv
+from pandas import DataFrame, Series, concat, read_csv # type: ignore
 
 
 class Coverages:
@@ -54,7 +54,7 @@ class Coverages:
                     xB, xA = sorted([xA, xB])  # this is to make sure xB is smaller than xA
                     # iterating only though those that were assigned already
                     # and recording only the one with highest frequency
-                    if cov2peak[(xA, xB)] > 0 and cov2freq[(xA, xB)] > highest_neigbour_freq:
+                    if cov2peak[(xA, xB)] and cov2freq[(xA, xB)] > highest_neigbour_freq:
                         highest_neigbour_coords = (xA, xB)
                         highest_neigbour_freq = cov2freq[(xA, xB)]
             if highest_neigbour_freq > 0:  # > 0:
