@@ -1,44 +1,35 @@
-*** Installation *** 
+# Smudgeplot 
 
-OPTIONAL: 
-
-`conda create -n smudgeplot && conda activate smudgeplot` 
-
-`conda install pip`
-
-Then: 
-
-`git clone --branch skylight https://github.com/KamilSJaron/smudgeplot.git` 
-
-`cd smudgeplot && python -m pip install .` 
-
-`smudgeplot -h # check it is working`
-
-*** Smudgeplot ***
-
-<font size ="4">**_Version: 0.5.0 Skylight_**</font>
+<font size ="4">**_Version: 0.5.1 Skylight_**</font>
 
 <font size ="4">**_Authors: Sam Ebdon, [Gene W Myers](https://github.com/thegenemyers) and [Kamil S. Jaron](https://github.com/KamilSJaron), Tianyi Ma._**</font>
 
-We keep the same pythonic interface, the interface of older smudgeplot and this version are very similar and largely compatible.
+We keep the same pythonic interface; the interface of this and previous versions are very similar and largely compatible.
 
 Current state: RUNNING; beta-testing;
 
-### Install the whole thing
+## Installation
  
-This version of smudgeplot operates on FastK k-mer databases. So, before installing smudgeplot, please install [FastK](https://github.com/thegenemyers/FASTK). The smudgeplot installation consist of a python package and C-backend to search for all the k-mer pairs (hetmers) and extract sequences of k-mer pairs (extract_kmer_pairs).
+This version of smudgeplot operates on FastK k-mer databases. The smudgeplot installation consists of a python package and C-backend to search for all the k-mer pairs (hetmers) and extract sequences of k-mer pairs (extract_kmer_pairs).
 
-#### Quick installation
+We recommend installing smudgeplot within a [conda](https://conda-forge.org/download/) environment.
 
-Download this repository and enter the smudgeplot directory, you can run
+```
+#optional conda environment setup
+conda create -n smudgeplot && conda activate smudgeplot
+conda install pip
 
-```bash
-python -m pip install .
+#download and install
+git clone https://github.com/KamilSJaron/smudgeplot.git
+cd smudgeplot && pip install .
+smudgeplot -h # check installation succeeded
 ```
 
-That should do everything necesarry to make smudgeplot fully operational. You can run `smudgeplot --help` to see if it worked. If you would activate a virtual environment (either `conda` or any other), this installation will install within the environment.
+That should do everything necesarry to make smudgeplot fully operational. You can run `smudgeplot --help` to see if it worked. If you activated a virtual environment prior to installation (either `conda` or any other) then smudgeplot installed within the environment.
 
-#### Compiling the C code
+Note the smudgeplot version downloadable from conda itself is not currently up to date.
+
+### Compiling the C code
 
 The process above install everything including compilation of the C backend. If you would like to know how to compile the code yourself you can simply run
 
@@ -46,9 +37,9 @@ The process above install everything including compilation of the C backend. If 
 make
 ```
 
-This will, however, won't install the smudgeplot python package. 
+This will not, however, install the smudgeplot python package. 
 
-### Runing this version on Sacharomyces data
+## Example run on Saccharomyces data
 
 Requires ~2.1GB of space and `FastK` and `smudgeplot` installed.
 
@@ -82,9 +73,9 @@ The y-axis scaling is by default 100, one can spcify argument `ylim` to scale it
 smudgeplot all -o data/Scer/trial_run_ylim70 data/Scer/kmerpairs_text.smu -ylim 70
 ```
 
-There is also a plotting module that requires the coverage and a list of smudges and their respective sizes listed in a tabular file. This plotting module does not inference and should be used only if you know the right answers already. 
+There is also a plotting module that requires the coverage, a list of smudges, and the smudge sizes listed in a tabular file. This plotting module does not perform the inference and should be used only if you know the right answers already. 
 
-### How smudgeplot works
+## How smudgeplot works
 
 This tool extracts heterozygous kmer pairs from kmer count databases and performs gymnastics with them. We are able to disentangle genome structure by comparing the sum of kmer pair coverages (CovA + CovB) to their relative coverage (CovB / (CovA + CovB)). Such an approach also allows us to analyze obscure genomes with duplications, various ploidy levels, etc.
 
@@ -96,11 +87,11 @@ Every haplotype structure has a unique smudge on the graph and the heat of the s
 
 This tool is planned to be a part of [GenomeScope](https://github.com/tbenavi1/genomescope2.0) in the near future.
 
-### More about the use
+### More usage information
 
-The input is a set of whole genome sequencing reads, the more coverage the better. The method is designed to process big datasets, don't hesitate to pull all single-end/pair-end libraries together.
+The input is a set of whole genome sequencing reads, the higher the coverage the better. The method is designed to process big datasets, don't hesitate to pull all single-end/pair-end libraries together.
 
-The workflow is automatic, but it's not fool-proof. It requires some decisions. Use this tool joinlty with [GenomeScope](https://github.com/tbenavi1/genomescope2.0). The tutorials on our wiki are currently outdated (build for version 0.2.5), and will be updated by 18th of October. 
+The workflow is automatic, but it's not fool-proof. It requires some decisions. Use this tool jointly with [GenomeScope](https://github.com/tbenavi1/genomescope2.0).
 
 Smudgeplot generates two plots, one with coloration on a log scale and the other on a linear scale. The legend indicates approximate kmer pairs per tile densities. Note that a single polymorphism generates multiple heterozygous kmers. As such, the reported numbers do not directly correspond to the number of variants. Instead, the actual number is approximately 1/k times the reported numbers, where k is the kmer size (in summary already recalculated). It's important to note that this process does not exhaustively attempt to find all of the heterozygous kmers from the genome. Instead, only a sufficient sample is obtained in order to identify relative genome structure. You can also report the minimal number of loci that are heterozygous if the inference is correct.
 
@@ -112,7 +103,7 @@ This tool estimates the size, heterozygosity, and repetitive fraction of the gen
 
 ## Frequently Asked Questions
 
-Are collected on [our wiki](https://github.com/KamilSJaron/smudgeplot/wiki/FAQ). Smudgeplot does not demand much on computational resources, but make sure you check [memory requirements](https://github.com/KamilSJaron/smudgeplot/wiki/smudgeplot-hetkmers#memory-requirements) before you extract kmer pairs (`hetkmers` task). If you don't find an answer for your question in FAQ, open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new/choose) or drop us an email.
+Are collected on [our wiki](https://github.com/KamilSJaron/smudgeplot/wiki/FAQ). Smudgeplot does not demand much computational resources, but make sure you check [memory requirements](https://github.com/KamilSJaron/smudgeplot/wiki/smudgeplot-hetkmers#memory-requirements) before you extract kmer pairs (`hetkmers` task). If you don't find an answer for your question in FAQ, open an [issue](https://github.com/KamilSJaron/smudgeplot/issues/new/choose) or drop us an email.
 
 Check [projects](https://github.com/KamilSJaron/smudgeplot/projects) to see how the development goes.
 
@@ -128,7 +119,7 @@ Ranallo-Benavidez, T.R., Jaron, K.S. & Schatz, M.C. GenomeScope 2.0 and Smudgepl
 
 This [blogpost](http://www.everydayanalytics.ca/2014/09/5-ways-to-do-2d-histograms-in-r.html) by Myles Harrison has largely inspired the visual output of smudgeplots. The colourblind friendly colour theme was suggested by @ggrimes. Grateful for helpful comments of beta testers and pre-release chatters!
 
-## Changelong
+## Changelog
 
 #### 0.5
 
