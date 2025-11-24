@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import sys
 from importlib.metadata import version
 from os import system
@@ -18,13 +19,12 @@ class Parser:
 
             tasks: cutoff            Calculate meaningful values for lower kmer histogram cutoff.
                    hetmers           Calculate unique kmer pairs from a FastK k-mer database.
-                   peak_aggregation  Aggregates smudges using local aggregation algorithm.
-                   plot              Generate 2d histogram; infer ploidy and plot a smudgeplot.
-                   all               Runs all the steps (with default options).
+                   peak_aggregation  Agregates smudges using local aggregation algorithm.
+                   plot              Generate 2d histogram; infere ploidy and plot a smudgeplot.
+                   all               Runs all the steps (with default options)
+                   extract           Extract kmer pair sequences from a FastK k-mer database.
             """
         )
-        # removing this for now;
-        #        extract   Extract kmer pairs within specified coverage sum and minor covrage ratio ranges
         argparser.add_argument(
             "task",
             help="Task to execute; for task specific options execute smudgeplot <task> -h",
@@ -51,7 +51,9 @@ class Parser:
             getattr(self, self.task)()
         else:
             argparser.print_usage()
-            if self.task != "":
+            if self.task == "":
+                sys.stderr.write("No task provided\n")            
+            else: 
                 sys.stderr.write('"' + self.task + '" is not a valid task name\n')
             exit(1)
 
@@ -132,6 +134,30 @@ class Parser:
         )
         self.arguments = argparser.parse_args(sys.argv[2:])
 
+    def extract(self):
+        """
+        Extract kmer pair sequences from a FastK k-mer database.
+        """
+        argparser = argparse.ArgumentParser(
+            prog="smudgeplot extract",
+            description="Extract kmer pair sequences from a FastK k-mer database.",
+        )
+        argparser.add_argument("infile", help="Input FastK database (.ktab) file.")
+        argparser.add_argument("sma", help="Input annotated k-mer pair file (.sma).")
+        argparser.add_argument("-t", help="Number of threads (default 4)", type=int, default=4)
+        argparser.add_argument(
+            "-o",
+            help="The pattern used to name the output (kmerpairs).",
+            default="kmerpairs",
+        )
+        argparser.add_argument(
+            "-tmp",
+            help="Directory where all temporary files will be stored (default /tmp).",
+            default=".",
+        )
+        argparser.add_argument("--verbose", action="store_true", default=False, help="verbose mode")
+        self.arguments = argparser.parse_args(sys.argv[2:])
+
     def plot(self):
         """
         Given coverage, infer ploidy and plot a smudgeplot.
@@ -169,8 +195,8 @@ class Parser:
             help="The pattern used to name the output (smudgeplot).",
             default="smudgeplot",
         )
-        argparser.add_argument("-cov_min", help="Minimal coverage to explore (default 6).", default=6)
-        argparser.add_argument("-cov_max", help="Maximal coverage to explore (default 60).", default=60)
+        argparser.add_argument("-cov_min", help="Minimal coverage to explore (default 6)", default=6)
+        argparser.add_argument("-cov_max", help="Maximal coverage to explore (default 100)", default=100)
         argparser.add_argument(
             "-cov",
             help="The assumed coverage (no inference of 1n coverage is made).",
@@ -267,6 +293,24 @@ def main():
 
         fin()
 
+    if _parser.task == "extract":
+        plot_args = " -o" + str(args.o)
+        plot_args += " -T" + str(args.t)
+        if args.verbose:
+            plot_args += " -v"
+        if args.tmp != ".":
+            plot_args += " -P" + args.tmp
+        plot_args += " " + args.infile
+        if args.sma.endswith(".sma"):
+            plot_args += " " + args.sma.removesuffix(".sma")
+        else:
+            plot_args += " " + args.sma
+
+        sys.stderr.write("Calling: extract_kmer_pairs " + plot_args + "\n")
+        system("extract_kmer_pairs " + plot_args)
+    
+        fin()
+
     if _parser.task == "plot":
         smudge_tab = smg.read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
         cov_tab = smg.load_hetmers(args.infile)
@@ -275,6 +319,11 @@ def main():
         smg.smudgeplot(smudgeplot_data, log=False, palette=args.col_ramp, invert_cols=args.invert_cols)
         smg.smudgeplot(smudgeplot_data, log=True, palette=args.col_ramp, invert_cols=args.invert_cols)
 
+        fin()
+
+    # test for existence of smudge file
+    if not os.path.exists(args.infile):
+        sys.stderr.write(f"The input file {args.infile} not found. Please provide a valid smudge file.\n")
         fin()
 
     sys.stderr.write("\nLoading data\n")
@@ -287,7 +336,6 @@ def main():
         coverages.write_peaks()
 
     if _parser.task == "all":
-
         coverages.local_aggregation(distance=args.d, noise_filter=1000, mask_errors=True)
         coverages.count_kmers()
         sys.stderr.write(
@@ -333,7 +381,7 @@ def main():
 
         smudges.local_agg_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "local_aggregation")
         annotated_smudges = list(smudges.local_agg_smudge_container.keys())
-        with open(args.o + "_with_annotated_smu.txt", "w") as annotated_smu:
+        with open(args.o + ".sma", "w") as annotated_smu:
             annotated_smu.write("covB\tcovA\tfreq\tsmudge\n")
             for smudge in annotated_smudges:
                 formated_smudge = smg.smudge2short(smudge)
