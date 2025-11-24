@@ -19,7 +19,7 @@ class Parser:
 
             tasks: cutoff            Calculate meaningful values for lower kmer histogram cutoff.
                    hetmers           Calculate unique kmer pairs from a FastK k-mer database.
-                   peak_aggregation  Agregates smudges using local aggregation algorithm.
+                   peak_aggregation  Agregates smudges using local aggregation algorithm; prints assignments to stdout.
                    plot              Generate 2d histogram; infere ploidy and plot a smudgeplot.
                    all               Runs all the steps (with default options)
                    extract           Extract kmer pair sequences from a FastK k-mer database.
@@ -110,7 +110,7 @@ class Parser:
             description="Aggregates smudges using local aggregation algorithm.")
         argparser.add_argument(
             "infile",
-            help="Name of the input tsv file with covarages and frequencies.",
+            help="Name of the input smu file with covarages and frequencies.",
         )
         argparser.add_argument(
             "-nf",
@@ -132,6 +132,7 @@ class Parser:
             action="store_true",
             default=False,
         )
+        argparser.add_argument("-title", help="name printed at the top of the smudgeplot (default: infile prefix).", default=None)
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def extract(self):
@@ -268,11 +269,6 @@ def main():
 
     args = _parser.arguments
 
-    if args.title:
-        title=args.title
-    else:
-        title = ".".join(args.infile.split("/")[-1].split(".")[0:2])
-
     if _parser.task == "cutoff":
         smg.cutoff(args.infile, args.boundary)
         fin()
@@ -310,6 +306,11 @@ def main():
         system("extract_kmer_pairs " + plot_args)
     
         fin()
+
+    if args.title:
+        title=args.title
+    else:
+        title = ".".join(args.infile.split("/")[-1].split(".")[0:2])
 
     if _parser.task == "plot":
         smudge_tab = smg.read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
