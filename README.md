@@ -19,18 +19,6 @@ Then:
 <font size ="4">**_Version: 0.5.0 Skylight_**</font>
 
 <font size ="4">**_Authors: Sam Ebdon, [Gene W Myers](https://github.com/thegenemyers) and [Kamil S. Jaron](https://github.com/KamilSJaron), Tianyi Ma._**</font>
-This is a merger of PloidyPlot from https://github.com/KamilSJaron/MERQURY.FK & Smudgeplot.
-
-The big changes are
- + the search for the kmer pair will be within both canonical and non-canonical k-mer sets (Gene demonstrated it makes a difference)
- + the tool will be supporting FastK kmer counter only
- + the backend by Gene is paralelized and massively faster
- + the intermediate file will be a flat file with the 2d histogram with cov1, cov2, freq columns (as opposed to list of coverages of pairs cov1 cov2);
- + at least for now WE LOSE the ability to extract sequences of the kmers in the pair; this functionality will hopefully restore at some point together with functionality to assess the quality of assembly.
- + we added "run all" functionality for people that want "FastK database -> plot" type of solution.
- + completelly revamped plot showing how all individual kmer pairs insead of agregating them into squares
- + new smudge detection algorithm based on grid projection on the smudge plane (working, but under revisions at the moment)
- + R package smudgeplot was retired and is no longer used
 
 We keep the same pythonic interface, the interface of older smudgeplot and this version are very similar and largely compatible.
 
@@ -118,13 +106,9 @@ Smudgeplot generates two plots, one with coloration on a log scale and the other
 
 ### GenomeScope
 
-You can feed the kmer coverage histogram to GenomeScope. (Either run the [genomescope script](https://github.com/schatzlab/genomescope/blob/master/genomescope.R) or use the [web server](http://qb.cshl.edu/genomescope/))
+You can feed the kmer coverage histogram to GenomeScope. (Either run the [genomescope](https://github.com/tbenavi1/genomescope2.0) or use the [web server](http://genomescope.org/genomescope2.0))
 
-```
-Rscript genomescope.R kmcdb_k21.hist <k-mer_length> <read_length> <output_dir> [kmer_max] [verbose]
-```
-
-This script estimates the size, heterozygosity, and repetitive fraction of the genome. By inspecting the fitted model you can determine the location of the smallest peak after the error tail. Then, you can decide the low end cutoff below which all kmers will be discarded as errors (cca 0.5 times the haploid kmer coverage), and the high end cutoff above which all kmers will be discarded (cca 8.5 times the haploid kmer coverage).
+This tool estimates the size, heterozygosity, and repetitive fraction of the genome. By inspecting the fitted model you can determine the location of the smallest peak after the error tail. Then, you can decide the low end cutoff below which all kmers will be discarded as errors (cca 0.5 times the haploid kmer coverage), and the high end cutoff above which all kmers will be discarded (cca 8.5 times the haploid kmer coverage).
 
 ## Frequently Asked Questions
 
@@ -143,3 +127,20 @@ Ranallo-Benavidez, T.R., Jaron, K.S. & Schatz, M.C. GenomeScope 2.0 and Smudgepl
 ## Acknowledgements
 
 This [blogpost](http://www.everydayanalytics.ca/2014/09/5-ways-to-do-2d-histograms-in-r.html) by Myles Harrison has largely inspired the visual output of smudgeplots. The colourblind friendly colour theme was suggested by @ggrimes. Grateful for helpful comments of beta testers and pre-release chatters!
+
+## Changelong
+
+#### 0.5
+
+ + experimental feature to extract sequences of the kmers in the pair; this functionality will hopefully restore at some point together with functionality to assess the quality of assembly.
+ + histograms are back
+
+#### 0.4
+
+ + the search for the kmer pair will be within both canonical and non-canonical k-mer sets (Gene demonstrated it makes a difference)
+ + the tool will be supporting FastK kmer counter only
+ + the backend by Gene is paralelized and massively faster
+ + the intermediate file will be a flat file with the 2d histogram with cov1, cov2, freq columns (as opposed to list of coverages of pairs cov1 cov2);
+ + completelly revamped plot showing how all individual kmer pairs insead of agregating them into squares
+ + new smudge detection algorithm based on grid projection on the smudge plane (working, but under revisions at the moment)
+ + R package smudgeplot was retired and is no longer used
