@@ -4,9 +4,7 @@ import argparse
 import sys
 from importlib.metadata import version
 from os import system
-
 import numpy as np
-
 import smudgeplot.smudgeplot as smg
 
 
@@ -20,9 +18,9 @@ class Parser:
 
             tasks: cutoff            Calculate meaningful values for lower kmer histogram cutoff.
                    hetmers           Calculate unique kmer pairs from a FastK k-mer database.
-                   peak_aggregation  Agregates smudges using local aggregation algorithm.
-                   plot              Generate 2d histogram; infere ploidy and plot a smudgeplot.
-                   all               Runs all the steps (with default options)
+                   peak_aggregation  Aggregates smudges using local aggregation algorithm.
+                   plot              Generate 2d histogram; infer ploidy and plot a smudgeplot.
+                   all               Runs all the steps (with default options).
             """
         )
         # removing this for now;
@@ -36,7 +34,7 @@ class Parser:
             "--version",
             action="store_true",
             default=False,
-            help="print the version and exit",
+            help="Print the version and exit.",
         )
         # print version is a special case
         if len(sys.argv) > 1:
@@ -53,24 +51,41 @@ class Parser:
             getattr(self, self.task)()
         else:
             argparser.print_usage()
-            sys.stderr.write('"' + self.task + '" is not a valid task name\n')
+            if self.task != "":
+                sys.stderr.write('"' + self.task + '" is not a valid task name\n')
             exit(1)
+
+    def cutoff(self):
+        """
+        Calculate meaningful values for lower kmer histogram cutoff.
+        """
+        argparser = argparse.ArgumentParser(
+            prog="smudgeplot cutoff",
+            description="Calculate meaningful values for lower kmer histogram cutoff.",
+        )
+        argparser.add_argument(
+            "infile",
+            type=argparse.FileType("r"),
+            help='Name of the input kmer histogram file (default "kmer.hist")."',
+        )
+        argparser.add_argument("boundary", help="Which bounary to compute L (lower) or U (upper).")
+        self.arguments = argparser.parse_args(sys.argv[2:])
 
     def hetmers(self):
         """
         Calculate the frequencies of unique kmer pairs (hetmers) from a FastK database.
         """
         argparser = argparse.ArgumentParser(
-            prog="smudgeplot hetkmers",
+            prog="smudgeplot hetmers",
             description="Calculate unique kmer pairs from FastK k-mer database.",
         )
-        argparser.add_argument("infile", nargs="?", help="Input FastK database (.ktab) file.")
+        argparser.add_argument("infile", help="Input FastK database (.ktab) file.")
         argparser.add_argument(
             "-L",
-            help="Count threshold below which k-mers are considered erroneous",
+            help="Count threshold below which k-mers are considered erroneous.",
             type=int,
         )
-        argparser.add_argument("-t", help="Number of threads (default 4)", type=int, default=4)
+        argparser.add_argument("-t", help="Number of threads (default 4).", type=int, default=4)
         argparser.add_argument(
             "-o",
             help="The pattern used to name the output (kmerpairs).",
@@ -81,7 +96,40 @@ class Parser:
             help="Directory where all temporary files will be stored (default /tmp).",
             default=".",
         )
-        argparser.add_argument("--verbose", action="store_true", default=False, help="verbose mode")
+        argparser.add_argument("--verbose", action="store_true", default=False, help="Verbose mode.")
+        self.arguments = argparser.parse_args(sys.argv[2:])
+
+    def peak_aggregation(self):
+        """
+        Aggregate k-mer pairs by local maxima. Locality is definted by user defined manhattan distance (-d) and the individual smudges are reported as incremeting indicies order by heights of peaks (not sizes of smudges). Unassigned k-mer pairs are labelled as 0.
+        """
+        argparser = argparse.ArgumentParser(
+            prog="smudgeplot peak_aggregation",
+            description="Aggregates smudges using local aggregation algorithm.")
+        argparser.add_argument(
+            "infile",
+            help="Name of the input tsv file with covarages and frequencies.",
+        )
+        argparser.add_argument(
+            "-nf",
+            "-noise_filter",
+            help="k-mer pairs with frequencies lower than this value will not be aggregated into smudges.",
+            type=int,
+            default=50,
+        )
+        argparser.add_argument(
+            "-d",
+            "-distance",
+            help="Manthattan distance of k-mer pairs that are considered neighbouring for the local aggregation purposes.",
+            type=int,
+            default=5,
+        )
+        argparser.add_argument(
+            "--mask_errors",
+            help="All k-mer pairs belonging to smudges with the peak distant less than -d from the error line will be labeled as -1 (errors).",
+            action="store_true",
+            default=False,
+        )
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def plot(self):
@@ -89,12 +137,13 @@ class Parser:
         Given coverage, infer ploidy and plot a smudgeplot.
         """
         argparser = argparse.ArgumentParser(
-            prog="smudgeplot plot", description="Generate 2d histogram for smudgeplot"
+            prog="smudgeplot plot", 
+            description="Generate 2d histogram; infer ploidy and plot a smudgeplot."
         )
-        argparser.add_argument("infile", help="name of the input tsv file with covarages and frequencies")
+        argparser.add_argument("infile", help="Mame of the input tsv file with coverages and frequencies.")
         argparser.add_argument(
             "smudgefile",
-            help="name of the input tsv file with sizes of individual smudges",
+            help="Name of the input tsv file with sizes of individual smudges.",
         )
         argparser.add_argument("n", help="The expected haploid coverage.", type=float)
         argparser.add_argument(
@@ -107,78 +156,31 @@ class Parser:
 
         self.arguments = argparser.parse_args(sys.argv[2:])
 
-    def cutoff(self):
-        """
-        Calculate meaningful values for lower kmer histogram cutoff.
-        """
-        argparser = argparse.ArgumentParser(
-            prog="smudgeplot cutoff",
-            description="Calculate meaningful values for lower/upper kmer histogram cutoff.",
-        )
-        argparser.add_argument(
-            "infile",
-            type=argparse.FileType("r"),
-            help='Name of the input kmer histogram file (default "kmer.hist")."',
-        )
-        argparser.add_argument("boundary", help="Which bounary to compute L (lower) or U (upper)")
-        self.arguments = argparser.parse_args(sys.argv[2:])
-
-    def peak_aggregation(self):
-        """
-        Agregate k-mer pairs by local maxima. Locality is definted by user defined manhattan distance (-d) and the individual smudges are reported as incremeting indicies order by heights of peaks (not sizes of smudges). Unassigned k-mer pairs are labelled as 0.
-        """
-        argparser = argparse.ArgumentParser()
-        argparser.add_argument(
-            "infile",
-            nargs="?",
-            help="name of the input tsv file with covarages and frequencies.",
-        )
-        argparser.add_argument(
-            "-nf",
-            "-noise_filter",
-            help="Do not agregate into smudge k-mer pairs with frequency lower than this parameter",
-            type=int,
-            default=50,
-        )
-        argparser.add_argument(
-            "-d",
-            "-distance",
-            help="Manthattan distance of k-mer pairs that are considered neioboring for the local aggregation purposes.",
-            type=int,
-            default=5,
-        )
-        argparser.add_argument(
-            "--mask_errors",
-            help="All k-mer pairs belonging to smudges with the peak distant less than -d from the error line will be labeled as -1 (errors)",
-            action="store_true",
-            default=False,
-        )
-        self.arguments = argparser.parse_args(sys.argv[2:])
-
     def all(self):
-        argparser = argparse.ArgumentParser()
+        argparser = argparse.ArgumentParser(
+            prog="smudgeplot all",
+            description="Runs all the steps (with default options).")
         argparser.add_argument(
             "infile",
-            nargs="?",
-            help="name of the input tsv file with covarages and frequencies.",
+            help="Name of the input tsv file with covarages and frequencies.",
         )
         argparser.add_argument(
             "-o",
             help="The pattern used to name the output (smudgeplot).",
             default="smudgeplot",
         )
-        argparser.add_argument("-cov_min", help="Minimal coverage to explore (default 6)", default=6)
-        argparser.add_argument("-cov_max", help="Maximal coverage to explore (default 60)", default=60)
+        argparser.add_argument("-cov_min", help="Minimal coverage to explore (default 6).", default=6)
+        argparser.add_argument("-cov_max", help="Maximal coverage to explore (default 60).", default=60)
         argparser.add_argument(
             "-cov",
-            help="The assumed coverage (no inference of 1n coverage is made)",
+            help="The assumed coverage (no inference of 1n coverage is made).",
             type=float, # this is funny, it seems like the interface rejects floats although here it all looks correct
             default=0.0,
         )
         argparser.add_argument(
             "-d",
             "-distance",
-            help="Manthattan distance of k-mer pairs that are considered neioboring for the local aggregation purposes.",
+            help="Manthattan distance of k-mer pairs that are considered neighbouring for local aggregation purposes.",
             type=int,
             default=2,
         )
@@ -188,27 +190,20 @@ class Parser:
 
     def add_plotting_arguments(self, argparser):
         argparser.add_argument(
-            "-c",
-            "-cov_filter",
-            help="Filter pairs with one of them having coverage bellow specified threshold (default 0; disables parameter L)",
-            type=float,
-            default=0,
-        )
-        argparser.add_argument(
             "-t",
             "--title",
-            help="name printed at the top of the smudgeplot (default none).",
-            default="",
+            help="name printed at the top of the smudgeplot (default: infile prefix).",
+            default=None,
         )
         argparser.add_argument(
             "-ylim",
             help="The upper limit for the coverage sum (the y axis)",
             type=int,
-            default=0,
+            default=None,
         )
         argparser.add_argument(
             "-col_ramp",
-            help='An R palette used for the plot (default "viridis", other sensible options are "magma", "mako" or "grey.colors" - recommended in combination with --invert_cols).',
+            help='Palette used for the plot (default "viridis", other sensible options are "magma", "mako" or "grey.colors" - recommended in combination with --invert_cols).',
             default="viridis",
         )
         argparser.add_argument(
@@ -231,11 +226,9 @@ class Parser:
         )
         return argparser
 
-
 def fin():
     sys.stderr.write("\nDone!\n")
     exit(0)
-
 
 def main():
     _parser = Parser()
@@ -248,7 +241,11 @@ def main():
     sys.stderr.write("Task: " + _parser.task + "\n")
 
     args = _parser.arguments
-    title = ".".join(args.infile.split("/")[-1].split(".")[0:2])
+
+    if args.title:
+        title=args.title
+    else:
+        title = ".".join(args.infile.split("/")[-1].split(".")[0:2])
 
     if _parser.task == "cutoff":
         smg.cutoff(args.infile, args.boundary)
@@ -274,9 +271,9 @@ def main():
         smudge_tab = smg.read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
         cov_tab = smg.load_hetmers(args.infile)
         smudgeplot_data = smg.SmudgeplotData(cov_tab, smudge_tab, args.n)
-        smg.prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title)
-        smg.smudgeplot(smudgeplot_data, log=False)
-        smg.smudgeplot(smudgeplot_data, log=True)
+        smg.prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title, upper_ylim=args.ylim)
+        smg.smudgeplot(smudgeplot_data, log=False, palette=args.col_ramp, invert_cols=args.invert_cols)
+        smg.smudgeplot(smudgeplot_data, log=True, palette=args.col_ramp, invert_cols=args.invert_cols)
 
         smg.fin()
 
@@ -299,7 +296,7 @@ def main():
             Genomic kmers: {coverages.total_genomic_kmers}\n\t \
             Genomic kmers in smudges: {coverages.total_genomic_kmers_in_smudges}\n\t \
             Sequencing errors: {coverages.total_error_kmers}\n\t \
-            Fraction or errors: {round(coverages.total_error_kmers/coverages.total_kmers, 3)}"
+            Fraction of errors: {round(coverages.total_error_kmers/coverages.total_kmers, 3)}"
         )
 
         smudge_size_cutoff = (
@@ -353,8 +350,11 @@ def main():
             args.o,
             title,
             fmt=args.format,
+            upper_ylim=args.ylim,
             json_report=args.json_report,
             input_params=vars(args),
+            palette=args.col_ramp,
+            invert_cols=args.invert_cols
         )
 
     fin()

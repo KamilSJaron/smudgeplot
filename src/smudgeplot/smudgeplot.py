@@ -358,21 +358,23 @@ def generate_plots(
     outfile,
     title,
     fmt=None,
+    upper_ylim=None,
     json_report=False,
     input_params=None,
+    palette='viridis',
+    invert_cols=False
 ):
     smudges.fishnet_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "fishnet")
     smudges.generate_smudge_table(smudges.fishnet_smudge_container)
 
     smudgeplot_data = SmudgeplotData(coverages.cov_tab, smudges.smudge_tab, cov, coverages.error_fraction)
-    prepare_smudgeplot_data_for_plotting(smudgeplot_data, outfile, title, fmt=fmt)
+    prepare_smudgeplot_data_for_plotting(smudgeplot_data, outfile, title, fmt=fmt, upper_ylim=upper_ylim)
 
-    smudgeplot(smudgeplot_data, log=False)
-    smudgeplot(smudgeplot_data, log=True)
+    smudgeplot(smudgeplot_data, log=False, palette=palette, invert_cols=invert_cols)
+    smudgeplot(smudgeplot_data, log=True, palette=palette, invert_cols=invert_cols)
 
     if json_report:
         write_json_report(smudgeplot_data, input_params)
-
 
 def write_json_report(smg_data, input_params=None, min_size=0.03):
     report = {
@@ -402,21 +404,22 @@ def write_json_report(smg_data, input_params=None, min_size=0.03):
         fh.write(json.dumps(report, indent=2) + "\n")
 
 
-def prepare_smudgeplot_data_for_plotting(smudgeplot_data, output, title, fmt=None):
+def prepare_smudgeplot_data_for_plotting(smudgeplot_data, output, title, fmt=None, upper_ylim=None):
 
     smudgeplot_data.calc_cov_columns()
     smudgeplot_data.filter_cov_quant()
-    smudgeplot_data.get_ax_lims()
+    smudgeplot_data.get_ax_lims(upper_ylim=upper_ylim)
     smudgeplot_data.def_strings(output=output, title=title, fmt=fmt)
 
 
-def smudgeplot(data, log=False):  # I think user arguments need to be passed here
+def smudgeplot(data, log=False, palette='viridis', invert_cols=False):
     cov_tab = data.cov_tab.copy(deep=True)
     smudge_tab = data.smudge_tab
     cov = data.cov
     lims = (
         data.lims
-    )  # so things like lims can be set using user defined plotting parameters (I imagine palette will be the same although I did not try that one yet)
+    ) 
+
     fig_title = data.fig_title
 
     fig, ((top_ax, legend_ax), (main_ax, size_ax)) = plt.subplots(
@@ -431,10 +434,10 @@ def smudgeplot(data, log=False):  # I think user arguments need to be passed her
     fontsize = 32
 
     if log:
-        colour_ramp = get_col_ramp(delay=16)
+        colour_ramp = get_col_ramp(col_ramp=palette, delay=16, invert_cols=invert_cols)
         outfile = data.log_plot_file
     else:
-        colour_ramp = get_col_ramp()
+        colour_ramp = get_col_ramp(col_ramp=palette, invert_cols=invert_cols)
         outfile = data.linear_plot_file
 
     plot_hists = True
