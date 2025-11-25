@@ -23,7 +23,7 @@ maintainers = [
   {name = "Sam Ebdon", email = "se13@sanger.ac.uk"},
 ]
 
-description = "Smudgeplot description"
+description = "Inference of ploidy and heterozygosity structure using whole genome sequencing data."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE.md"]
@@ -35,7 +35,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/KamilSJaron/smudgeplot/tree/sploidyplot_obj"
+Homepage = "https://github.com/KamilSJaron/smudgeplot"
 Issues = "https://github.com/KamilSJaron/smudgeplot/issues"
 
 [project.scripts]
