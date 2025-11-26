@@ -31,17 +31,19 @@ jobs:
 
       - name: Build and install package
         run: |
-          pip install -e .
+          pip install .
 
       - name: Verify binaries are bundled
         run: |
           python -c "from smudgeplot.cli import get_binary_path; print(get_binary_path('hetmers'))"
           python -c "from smudgeplot.cli import get_binary_path; print(get_binary_path('extract_kmer_pairs'))"
 
-      - name: Test CLI help
+      - name: Test CLI
         run: |
           smudgeplot --version
           smudgeplot -h
+          # Verify the hetmers binary actually runs
+          smudgeplot hetmers --help 2>&1 || true
 
   build-wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -55,10 +57,7 @@ jobs:
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3
-        env:
-          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
-          CIBW_SKIP: "*-win32 *-manylinux_i686 pp* *-musllinux*"
-          CIBW_TEST_COMMAND: "smudgeplot --version"
+        # Config is read from pyproject.toml [tool.cibuildwheel]
 
       - uses: actions/upload-artifact@v4
         with:
@@ -76,7 +75,35 @@ jobs:
           pip install build
           python -m build --sdist
 
+      - name: Verify sdist doesn't contain binaries
+        run: |
+          tar -tzf dist/*.tar.gz | grep -E 'bin/(hetmers|extract_kmer_pairs)$' && exit 1 || echo "Good: no binaries in sdist"
+
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: dist/*.tar.gz
+
+  test-sdist:
+    name: Test sdist installation
+    needs: build-sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install from sdist
+        run: |
+          pip install dist/*.tar.gz
+
+      - name: Test CLI from sdist install
+        run: |
+          smudgeplot --version
+          python -c "from smudgeplot.cli import get_binary_path; print(get_binary_path('hetmers'))"

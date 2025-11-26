@@ -64,11 +64,17 @@ where = ["src"]
 smudgeplot = ["bin/*"]
 
 [tool.cibuildwheel]
-skip = ["*-win32", "*-manylinux_i686", "pp*", "*-musllinux*"]
+# Skip 32-bit, PyPy, musllinux, and Windows (no Windows support for now)
+skip = ["*-win32", "*-win_amd64", "*-manylinux_i686", "pp*", "*-musllinux*"]
 build = ["cp39-*", "cp310-*", "cp311-*", "cp312-*"]
 
+# Test that the CLI works after building
+test-command = "smudgeplot --version"
+
 [tool.cibuildwheel.linux]
-before-build = "make clean && make"
+# manylinux has gcc available
+before-all = "yum install -y gcc || apt-get update && apt-get install -y gcc || true"
 
 [tool.cibuildwheel.macos]
-before-build = "make clean && make"
+# macOS runners have clang available by default
+# Nothing special needed

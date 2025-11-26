@@ -2,8 +2,9 @@ include LICENSE.md
 include README.md
 include Makefile
 
-# Include C source files for compilation
+# Include C source files for compilation during install
 recursive-include src/lib *.c *.h
 
-# Include pre-compiled binaries if present
-recursive-include src/smudgeplot/bin *
+# Explicitly exclude compiled binaries - they must be built per-platform
+global-exclude src/smudgeplot/bin/*
+prune src/smudgeplot/bin
