@@ -42,8 +42,8 @@ jobs:
         run: |
           smudgeplot --version
           smudgeplot -h
-          # Verify the hetmers binary actually runs
-          smudgeplot hetmers --help 2>&1 || true
+          smudgeplot hetmers --help
+          smudgeplot extract_kmer_pairs --help
 
   build-wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -85,9 +85,13 @@ jobs:
           path: dist/*.tar.gz
 
   test-sdist:
-    name: Test sdist installation
+    name: Test sdist on ${{ matrix.os }}
     needs: build-sdist
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -103,7 +107,12 @@ jobs:
         run: |
           pip install dist/*.tar.gz
 
-      - name: Test CLI from sdist install
+      - name: Verify binaries are compiled
         run: |
-          smudgeplot --version
           python -c "from smudgeplot.cli import get_binary_path; print(get_binary_path('hetmers'))"
+          python -c "from smudgeplot.cli import get_binary_path; print(get_binary_path('extract_kmer_pairs'))"
+
+      - name: Test compiled binaries execute
+        run: |
+          smudgeplot hetmers --help
+          smudgeplot extract_kmer_pairs --help
