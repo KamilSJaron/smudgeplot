@@ -16,3 +16,7 @@ src/smudgeplot/__pycache__
 src/smudgeplot.egg-info
 dist
 .venv
+smudgeplot_dev/
+
+# Compiled binaries (built during install)
+src/smudgeplot/bin/
