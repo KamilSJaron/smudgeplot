@@ -2,11 +2,69 @@
 
 import argparse
 import os
+import shutil
 import sys
 from importlib.metadata import version
-from os import system
+from pathlib import Path
+
 import numpy as np
+
 import smudgeplot.smudgeplot as smg
+
+
+def get_binary_path(name: str) -> str:
+    """
+    Find the path to a bundled binary.
+
+    Searches in order:
+    1. Bundled binaries in package (for wheel installs)
+    2. System PATH (for development or conda installs)
+
+    Args:
+        name: Name of the binary (e.g., 'hetmers', 'extract_kmer_pairs')
+
+    Returns:
+        Full path to the binary
+
+    Raises:
+        FileNotFoundError: If binary cannot be found
+    """
+    # First, check for bundled binary in package
+    package_dir = Path(__file__).parent
+    bundled_binary = package_dir / "bin" / name
+
+    if bundled_binary.exists() and os.access(bundled_binary, os.X_OK):
+        return str(bundled_binary)
+
+    # Fall back to system PATH
+    system_binary = shutil.which(name)
+    if system_binary:
+        return system_binary
+
+    raise FileNotFoundError(
+        f"Binary '{name}' not found. Please ensure smudgeplot is properly installed. "
+        f"Checked locations:\n"
+        f"  - Package: {bundled_binary}\n"
+        f"  - System PATH: (not found)\n"
+        f"\nYou may need to reinstall smudgeplot or install the binaries manually."
+    )
+
+
+def run_binary(name: str, args: str) -> int:
+    """
+    Run a binary with the given arguments.
+
+    Args:
+        name: Name of the binary
+        args: Space-separated argument string
+
+    Returns:
+        Return code from the binary
+    """
+    binary_path = get_binary_path(name)
+    cmd = f"{binary_path} {args}"
+    sys.stderr.write(f"Calling: {name} {args}\n")
+    return os.system(cmd)
 
 
 class Parser:
@@ -52,8 +110,8 @@ class Parser:
         else:
             argparser.print_usage()
             if self.task == "":
-                sys.stderr.write("No task provided\n")            
-            else: 
+                sys.stderr.write("No task provided\n")
+            else:
                 sys.stderr.write('"' + self.task + '" is not a valid task name\n')
             exit(1)
 
@@ -164,7 +222,7 @@ class Parser:
         Given coverage, infer ploidy and plot a smudgeplot.
         """
         argparser = argparse.ArgumentParser(
-            prog="smudgeplot plot", 
+            prog="smudgeplot plot",
             description="Generate 2d histogram; infer ploidy and plot a smudgeplot."
         )
         argparser.add_argument("infile", help="Mame of the input tsv file with coverages and frequencies.")
@@ -274,7 +332,7 @@ def main():
         fin()
 
     if _parser.task == "hetmers":
-        # PloidyPlot is expected ot be installed in the system as well as the R library supporting it
+        # PloidyPlot is expected to be installed in the system as well as the R library supporting it
         plot_args = " -o" + str(args.o)
         plot_args += " -e" + str(args.L)
         plot_args += " -T" + str(args.t)
@@ -284,8 +342,7 @@ def main():
             plot_args += " -P" + args.tmp
         plot_args += " " + args.infile
 
-        sys.stderr.write("Calling: hetmers (PloidyPlot kmer pair search) " + plot_args + "\n")
-        system("hetmers " + plot_args)
+        run_binary("hetmers", plot_args)
 
         fin()
 
@@ -302,9 +359,8 @@ def main():
         else:
             plot_args += " " + args.sma
 
-        sys.stderr.write("Calling: extract_kmer_pairs " + plot_args + "\n")
-        system("extract_kmer_pairs " + plot_args)
-    
+        run_binary("extract_kmer_pairs", plot_args)
+
         fin()
 
     if args.title:

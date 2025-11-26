@@ -1,0 +1,9 @@
+include LICENSE.md
+include README.md
+include Makefile
+
+# Include C source files for compilation
+recursive-include src/lib *.c *.h
+
+# Include pre-compiled binaries if present
+recursive-include src/smudgeplot/bin *
