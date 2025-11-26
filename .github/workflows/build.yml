@@ -43,7 +43,7 @@ jobs:
           smudgeplot --version
           smudgeplot -h
           smudgeplot hetmers --help
-          smudgeplot extract_kmer_pairs --help
+          smudgeplot extract --help
 
   build-wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -115,4 +115,4 @@ jobs:
       - name: Test compiled binaries execute
         run: |
           smudgeplot hetmers --help
-          smudgeplot extract_kmer_pairs --help
+          smudgeplot extract --help
