@@ -1,6 +1,6 @@
 # Smudgeplot 
 
-<font size ="4">**_Version: 0.5.1 Skylight_**</font>
+<font size ="4">**_Version: 0.5.2b Skylight_**</font>
 
 <font size ="4">**_Authors: Sam Ebdon, [Gene W Myers](https://github.com/thegenemyers) and [Kamil S. Jaron](https://github.com/KamilSJaron), Tianyi Ma._**</font>
 
@@ -19,7 +19,10 @@ We recommend installing smudgeplot within a [conda](https://conda-forge.org/down
 conda create -n smudgeplot && conda activate smudgeplot
 conda install pip
 
-#download and install
+# install via pypi
+pip install smudgeplot
+
+# or download and install directly. See below if you need to compile the C dependencies.
 git clone https://github.com/KamilSJaron/smudgeplot.git
 cd smudgeplot && pip install .
 smudgeplot -h # check installation succeeded
@@ -31,10 +34,10 @@ Note the smudgeplot version downloadable from conda itself is not currently up t
 
 ### Compiling the C code
 
-The process above install everything including compilation of the C backend. If you would like to know how to compile the code yourself you can simply run
+The process above should install everything including compilation of the C backend. If you need or would like to know how to compile the code yourself you can simply run
 
 ```
-make
+mkdir exec && make
 ```
 
 This will not, however, install the smudgeplot python package. 
