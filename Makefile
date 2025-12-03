@@ -8,10 +8,13 @@ endif
 HET_KMERS_INST = $(INSTALL_PREFIX)/bin/hetmers $(INSTALL_PREFIX)/bin/extract_kmer_pairs
 
 .PHONY : default
-default: exec/hetmers exec/extract_kmer_pairs
+default: exec/ exec/hetmers exec/extract_kmer_pairs
 
 .PHONY : install
 install : $(HET_KMERS_INST) 
+
+exec/:
+	mkdir -p exec
 
 $(INSTALL_PREFIX)/bin/% : exec/%
 	install -C $< $(INSTALL_PREFIX)/bin
