@@ -301,7 +301,7 @@ class Parser:
             "--format",
             default="png",
             help="Output format for the plots (default png)",
-            choices=["pdf", "png"],
+            choices=["pdf", "png", "svg"],
         )
         argparser.add_argument(
             "--json_report",
@@ -372,7 +372,7 @@ def main():
         smudge_tab = smg.read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
         cov_tab = smg.load_hetmers(args.infile)
         smudgeplot_data = smg.SmudgeplotData(cov_tab, smudge_tab, args.n)
-        smg.prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title, upper_ylim=args.ylim)
+        smg.prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title, upper_ylim=args.ylim, fmt=args.format)
         smg.smudgeplot(smudgeplot_data, log=False, palette=args.col_ramp, invert_cols=args.invert_cols)
         smg.smudgeplot(smudgeplot_data, log=True, palette=args.col_ramp, invert_cols=args.invert_cols)
 
