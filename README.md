@@ -1,16 +1,12 @@
 # Smudgeplot 
 
-<font size ="4">**_Version: 0.5.2b Skylight_**</font>
+<font size ="4">**_Version: 0.5.3 Skylight_**</font>
 
 <font size ="4">**_Authors: Sam Ebdon, [Gene W Myers](https://github.com/thegenemyers) and [Kamil S. Jaron](https://github.com/KamilSJaron), Tianyi Ma._**</font>
 
-We keep the same pythonic interface; the interface of this and previous versions are very similar and largely compatible.
-
-Current state: RUNNING; beta-testing;
-
 ## Installation
  
-This version of smudgeplot operates on FastK k-mer databases. The smudgeplot installation consists of a python package and C-backend to search for all the k-mer pairs (hetmers) and extract sequences of k-mer pairs (extract_kmer_pairs).
+This version of smudgeplot operates on FastK k-mer databases. The smudgeplot installation consists of a python package and C-backend to search for all the k-mer pairs (smudgeplot hetmers) and extract sequences of k-mer pairs (smudgeplot extract).
 
 We recommend installing smudgeplot within a [conda](https://conda-forge.org/download/) environment.
 
@@ -37,10 +33,18 @@ Note the smudgeplot version downloadable from conda itself is not currently up t
 The process above should install everything including compilation of the C backend. If you need or would like to know how to compile the code yourself you can simply run
 
 ```
-mkdir exec && make
+make
 ```
 
 This will not, however, install the smudgeplot python package. 
+
+### Pypi installation [EXPERIMENTAL] 
+
+We are working on packaging smudgeplot for pypi. You are welcome to try installing from pypi if you are interested and please open an issue if you have problems. If it fails please follow the main instructions above to install for now.
+
+```
+pip install smudgeplot
+```
 
 ## Example run on Saccharomyces data
 
