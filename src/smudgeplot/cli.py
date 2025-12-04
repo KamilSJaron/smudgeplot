@@ -78,7 +78,7 @@ class Parser:
             tasks: cutoff            Calculate meaningful values for lower kmer histogram cutoff.
                    hetmers           Calculate unique kmer pairs from a FastK k-mer database.
                    peak_aggregation  Agregates smudges using local aggregation algorithm; prints assignments to stdout.
-                   plot              Generate 2d histogram; infere ploidy and plot a smudgeplot.
+                   plot              Generate 2d histogram; infer ploidy and plot a smudgeplot.
                    all               Runs all the steps (with default options)
                    extract           Extract kmer pair sequences from a FastK k-mer database.
             """
