@@ -6,7 +6,7 @@
 
 ## Installation
  
-This version of smudgeplot operates on FastK k-mer databases. The smudgeplot installation consists of a python package and C-backend to search for all the k-mer pairs (hetmers) and extract sequences of k-mer pairs (extract_kmer_pairs).
+This version of smudgeplot operates on FastK k-mer databases. The smudgeplot installation consists of a python package and C-backend to search for all the k-mer pairs (smudgeplot hetmers) and extract sequences of k-mer pairs (smudgeplot extract).
 
 We recommend installing smudgeplot within a [conda](https://conda-forge.org/download/) environment.
 
