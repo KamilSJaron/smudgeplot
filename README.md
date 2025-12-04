@@ -1,6 +1,6 @@
 # Smudgeplot 
 
-<font size ="4">**_Version: 0.5.3b Skylight_**</font>
+<font size ="4">**_Version: 0.5.3 Skylight_**</font>
 
 <font size ="4">**_Authors: Sam Ebdon, [Gene W Myers](https://github.com/thegenemyers) and [Kamil S. Jaron](https://github.com/KamilSJaron), Tianyi Ma._**</font>
 
