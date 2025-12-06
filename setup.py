@@ -14,7 +14,7 @@ from pathlib import Path
 from setuptools import setup
 from setuptools.command.build_py import build_py
 from setuptools.command.develop import develop
-
+from setuptools.dist import Distribution
 
 class CompilationError(Exception):
     """Raised when C binary compilation fails."""
@@ -132,10 +132,14 @@ class DevelopWithBinaries(develop):
             print("Continuing with editable install, but binaries will not work.", file=sys.stderr)
         super().run()
 
+class BinaryDistribution(Distribution):
+    def has_ext_modules(self):
+        return True
 
 setup(
     cmdclass={
         "build_py": BuildPyWithBinaries,
         "develop": DevelopWithBinaries,
-    }
+    },
+    distclass=BinaryDistribution
 )
