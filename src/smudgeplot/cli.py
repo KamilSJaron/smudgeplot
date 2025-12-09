@@ -4,13 +4,12 @@ import argparse
 import os
 import shutil
 import sys
+import logging
 from importlib.metadata import version
 from pathlib import Path
-
 import numpy as np
-
 import smudgeplot.smudgeplot as smg
-
+from smudgeplot.config import PlotConfig, AnalysisConfig
 
 def get_binary_path(name: str) -> str:
     """
@@ -63,7 +62,7 @@ def run_binary(name: str, args: str) -> int:
     """
     binary_path = get_binary_path(name)
     cmd = f"{binary_path} {args}"
-    sys.stderr.write(f"Calling: {name} {args}\n")
+    logger.info(f"Calling: {name} {args}")
     return os.system(cmd)
 
 
@@ -110,9 +109,9 @@ class Parser:
         else:
             argparser.print_usage()
             if self.task == "":
-                sys.stderr.write("No task provided\n")
+                logger.info("No task provided")
             else:
-                sys.stderr.write('"' + self.task + '" is not a valid task name\n')
+                logger.info('"' + self.task + '" is not a valid task name')
             exit(1)
 
     def cutoff(self):
@@ -311,28 +310,31 @@ class Parser:
         )
         return argparser
 
-def fin():
-    sys.stderr.write("\nDone!\n")
-    exit(0)
-
 def main():
+
+    logging.basicConfig(level=logging.INFO,
+                    format="%(message)s",
+                    handlers=[
+                    logging.StreamHandler(sys.stderr)
+                    ]
+    )
+    logger = logging.getLogger(__name__)
     _parser = Parser()
 
     smdg_v = version("smudgeplot")
-    sys.stderr.write(f"Running smudgeplot v{smdg_v}\n")
+    logger.info(f"Running smudgeplot v{smdg_v}")
     if _parser.task == "version":
         exit(0)
 
-    sys.stderr.write("Task: " + _parser.task + "\n")
+    logger.info("Task: " + _parser.task)
 
     args = _parser.arguments
 
     if _parser.task == "cutoff":
         smg.cutoff(args.infile, args.boundary)
-        fin()
 
     if _parser.task == "hetmers":
-        # PloidyPlot is expected to be installed in the system as well as the R library supporting it
+        # PloidyPlot is expected to be installed in the system
         plot_args = " -o" + str(args.o)
         plot_args += " -e" + str(args.L)
         plot_args += " -T" + str(args.t)
@@ -343,8 +345,6 @@ def main():
         plot_args += " " + args.infile
 
         run_binary("hetmers", plot_args)
-
-        fin()
 
     if _parser.task == "extract":
         plot_args = " -o" + str(args.o)
@@ -361,8 +361,6 @@ def main():
 
         run_binary("extract_kmer_pairs", plot_args)
 
-        fin()
-
     if args.title:
         title=args.title
     else:
@@ -373,19 +371,18 @@ def main():
         cov_tab = smg.load_hetmers(args.infile)
         smudgeplot_data = smg.SmudgeplotData(cov_tab, smudge_tab, args.n)
         smg.prepare_smudgeplot_data_for_plotting(smudgeplot_data, args.o, title, upper_ylim=args.ylim, fmt=args.format)
-        smg.smudgeplot(smudgeplot_data, log=False, palette=args.col_ramp, invert_cols=args.invert_cols)
-        smg.smudgeplot(smudgeplot_data, log=True, palette=args.col_ramp, invert_cols=args.invert_cols)
-
-        fin()
+        config = PlotConfig(palette=args.col_ramp, invert_cols=args.invert_cols)
+        smg.smudgeplot(smudgeplot_data, config, log=False)
+        smg.smudgeplot(smudgeplot_data, config, log=True)
 
     # test for existence of smudge file
     if not os.path.exists(args.infile):
-        sys.stderr.write(f"The input file {args.infile} not found. Please provide a valid smudge file.\n")
-        fin()
+        logger.info(f"The input file {args.infile} not found. Please provide a valid smudge file.")
 
-    sys.stderr.write("\nLoading data\n")
-    coverages = smg.Coverages(smg.load_hetmers(args.infile))
-    sys.stderr.write("\nMasking errors using local aggregation algorithm\n")
+    logger.info("\nLoading data")
+    coverages = smg.Coverages()
+    coverages.cov_tab = smg.load_hetmers(args.infile)
+    logger.info("\nMasking errors using local aggregation algorithm")
 
     if _parser.task == "peak_aggregation":
 
@@ -393,26 +390,18 @@ def main():
         coverages.write_peaks()
 
     if _parser.task == "all":
-        coverages.local_aggregation(distance=args.d, noise_filter=1000, mask_errors=True)
-        coverages.count_kmers()
-        sys.stderr.write(
-            f"\t\
-            Total kmers: {coverages.total_kmers}\n\t \
-            Genomic kmers: {coverages.total_genomic_kmers}\n\t \
-            Genomic kmers in smudges: {coverages.total_genomic_kmers_in_smudges}\n\t \
-            Sequencing errors: {coverages.total_error_kmers}\n\t \
-            Fraction of errors: {round(coverages.total_error_kmers/coverages.total_kmers, 3)}"
+        coverages.local_aggregation(distance=args.d, noise_filter=AnalysisConfig.task_all_noise_filter, mask_errors=True)
+        stats = coverages.count_kmers()
+        logger.info(
+            stats
         )
 
-        smudge_size_cutoff = (
-            0  # 0.01  # this is % of all k-mer pairs smudge needs to have to be considered a valid smudge
-        )
         smudges = smg.Smudges(coverages.cov_tab, coverages.total_genomic_kmers)
 
         if args.cov == 0.0:
-            sys.stderr.write("\nInferring 1n coverage using grid algorithm\n")
+            logger.info("\nInferring 1n coverage using grid algorithm")
 
-            smudges.get_centrality_df(args.cov_min, args.cov_max, smudge_size_cutoff)
+            smudges.get_centrality_df(args.cov_min, args.cov_max, AnalysisConfig.smudge_size_cutoff)
             np.savetxt(
                 args.o + "_centralities.txt",
                 np.around(smudges.centrality_df, decimals=6),
@@ -420,38 +409,38 @@ def main():
                 delimiter="\t",
             )
 
-            limit = 0.7
-            if coverages.error_fraction < limit:
+            if coverages.error_fraction < AnalysisConfig.error_limit:
                 cov = smudges.cov
             else:
                 cov = 0
 
-            sys.stderr.write("\nCreating centrality plot\n")
+            logger.info("\nCreating centrality plot")
             smudges.centrality_plot(args.o, args.format)
-            sys.stderr.write(f"\nInferred coverage: {cov:.3f}\n")
+            logger.info(f"\nInferred coverage: {cov:.3f}")
 
         else:
             cov = args.cov
-            sys.stderr.write(f"\nUser defined coverage: {cov:.3f}\n")
+            logger(f"\nUser defined coverage: {cov:.3f}")
 
-        sys.stderr.write("\nCreating smudge report\n")
+        logger.info("\nCreating smudge report")
 
-        smudges.local_agg_smudge_container = smudges.get_smudge_container(cov, smudge_size_cutoff, "local_aggregation")
+        smudges.local_agg_smudge_container = smudges.get_smudge_container(cov, AnalysisConfig.smudge_size_cutoff, "local_aggregation")
         annotated_smudges = list(smudges.local_agg_smudge_container.keys())
         with open(args.o + ".sma", "w") as annotated_smu:
             annotated_smu.write("covB\tcovA\tfreq\tsmudge\n")
             for smudge in annotated_smudges:
                 formated_smudge = smg.smudge2short(smudge)
-                for idx, covB, covA, freq, smu in smudges.local_agg_smudge_container[smudge].itertuples():
+                for row in smudges.local_agg_smudge_container[smudge].itertuples():
+                    covB, covA, freq = row.covB, row.covA, row.freq
                     annotated_smu.write(f"{covB}\t{covA}\t{freq}\t{formated_smudge}\n")
 
-        smg.generate_smudge_report(smudges, coverages, cov, args, smudge_size_cutoff, print_header=True)
-        sys.stderr.write("\nCreating smudgeplots\n")
+        smg.generate_smudge_report(smudges, coverages, cov, args, AnalysisConfig.smudge_size_cutoff, print_header=True)
+        logger.info("\nCreating smudgeplots")
         smg.generate_plots(
             smudges,
             coverages,
             cov,
-            smudge_size_cutoff,
+            AnalysisConfig.smudge_size_cutoff,
             args.o,
             title,
             fmt=args.format,
@@ -461,8 +450,6 @@ def main():
             palette=args.col_ramp,
             invert_cols=args.invert_cols
         )
-
-    fin()
 
 if __name__ == "__main__":
     main()
