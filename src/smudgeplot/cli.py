@@ -49,7 +49,7 @@ def get_binary_path(name: str) -> str:
     )
 
 
-def run_binary(name: str, args: str) -> int:
+def run_binary(name: str, args: str, logger) -> int:
     """
     Run a binary with the given arguments.
 
@@ -332,6 +332,7 @@ def main():
 
     if _parser.task == "cutoff":
         smg.cutoff(args.infile, args.boundary)
+        exit(0)
 
     if _parser.task == "hetmers":
         # PloidyPlot is expected to be installed in the system
@@ -345,6 +346,7 @@ def main():
         plot_args += " " + args.infile
 
         run_binary("hetmers", plot_args)
+        exit(0)
 
     if _parser.task == "extract":
         plot_args = " -o" + str(args.o)
@@ -359,7 +361,8 @@ def main():
         else:
             plot_args += " " + args.sma
 
-        run_binary("extract_kmer_pairs", plot_args)
+        run_binary("extract_kmer_pairs", plot_args, logger)
+        exit(0)
 
     if args.title:
         title=args.title
@@ -374,6 +377,7 @@ def main():
         config = PlotConfig(palette=args.col_ramp, invert_cols=args.invert_cols)
         smg.smudgeplot(smudgeplot_data, config, log=False)
         smg.smudgeplot(smudgeplot_data, config, log=True)
+        exit(0)
 
     # test for existence of smudge file
     if not os.path.exists(args.infile):
@@ -388,6 +392,7 @@ def main():
 
         coverages.local_aggregation(distance=args.d, noise_filter=args.nf, mask_errors=args.mask_errors)
         coverages.write_peaks()
+        exit(0)
 
     if _parser.task == "all":
         coverages.local_aggregation(distance=args.d, noise_filter=AnalysisConfig.task_all_noise_filter, mask_errors=True)
