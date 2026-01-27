@@ -1222,7 +1222,7 @@ int main(int argc, char *argv[])
     int    flags[128];
     char  *eptr;
 
-    ARG_INIT("PloidyList");
+    ARG_INIT("extract_kmer_pairs");
 
     OUT      = NULL;
     ETHRESH  = 4;

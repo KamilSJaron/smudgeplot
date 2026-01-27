@@ -2,10 +2,13 @@
 
 import argparse
 import os
+import shlex
 import shutil
+import subprocess
 import sys
 from importlib.metadata import version
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -41,30 +44,32 @@ def get_binary_path(name: str) -> str:
     if system_binary:
         return system_binary
 
-    raise FileNotFoundError(
-        f"Binary '{name}' not found. Please ensure smudgeplot is properly installed. "
+    msg = (
+        f"Binary '{name}' not found. Please ensure smudgeplot is properly installed.\n"
         f"Checked locations:\n"
-        f"  - Package: {bundled_binary}\n"
-        f"  - System PATH: (not found)\n"
+        f"  - Package: {bundled_binary.parent}\n"
+        f"  - System PATH: {os.get_exec_path()}\n"
         f"\nYou may need to reinstall smudgeplot or install the binaries manually."
     )
+    raise FileNotFoundError(msg)
 
 
-def run_binary(name: str, args: str) -> int:
+def run_binary(name: str, args: list[Any]) -> None:
     """
     Run a binary with the given arguments.
 
     Args:
         name: Name of the binary
-        args: Space-separated argument string
+        args: List of (stringify-able) arguments
 
-    Returns:
-        Return code from the binary
+    Throws:
+        subprocess.CalledProcessError on non-zero exit of the command
     """
-    binary_path = get_binary_path(name)
-    cmd = f"{binary_path} {args}"
-    sys.stderr.write(f"Calling: {name} {args}\n")
-    return os.system(cmd)
+    cmd_line = [get_binary_path(name)]
+    for x in args:
+        cmd_line.append(str(x))
+    sys.stderr.write(f"Calling: {shlex.join(cmd_line)}\n")
+    subprocess.run(cmd_line, check=True)
 
 
 class Parser:
@@ -332,41 +337,38 @@ def main():
         fin()
 
     if _parser.task == "hetmers":
-        # PloidyPlot is expected to be installed in the system as well as the R library supporting it
-        plot_args = " -o" + str(args.o)
-        plot_args += " -e" + str(args.L)
-        plot_args += " -T" + str(args.t)
+        hetmer_args = [
+            f"-o{args.o}",
+            f"-e{args.L}",
+            f"-T{args.t}",
+        ]
         if args.verbose:
-            plot_args += " -v"
+            hetmer_args.append("-v")
         if args.tmp != ".":
-            plot_args += " -P" + args.tmp
-        plot_args += " " + args.infile
+            hetmer_args.append(f"-P{args.tmp}")
+        hetmer_args.append(args.infile)
 
-        run_binary("hetmers", plot_args)
+        run_binary("hetmers", hetmer_args)
 
         fin()
 
     if _parser.task == "extract":
-        plot_args = " -o" + str(args.o)
-        plot_args += " -T" + str(args.t)
+        extract_args = [
+            f"-o{args.o}",
+            f"-T{args.t}",
+        ]
         if args.verbose:
-            plot_args += " -v"
+            extract_args.append("-v")
         if args.tmp != ".":
-            plot_args += " -P" + args.tmp
-        plot_args += " " + args.infile
-        if args.sma.endswith(".sma"):
-            plot_args += " " + args.sma.removesuffix(".sma")
-        else:
-            plot_args += " " + args.sma
+            extract_args.append(f"-P{args.tmp}")
+        extract_args.append(args.infile)
+        extract_args.append(args.sma.removesuffix(".sma"))
 
-        run_binary("extract_kmer_pairs", plot_args)
+        run_binary("extract_kmer_pairs", extract_args)
 
         fin()
 
-    if args.title:
-        title=args.title
-    else:
-        title = ".".join(args.infile.split("/")[-1].split(".")[0:2])
+    title = args.title or str(Path(args.infile).with_suffix("").name)
 
     if _parser.task == "plot":
         smudge_tab = smg.read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
@@ -396,12 +398,11 @@ def main():
         coverages.local_aggregation(distance=args.d, noise_filter=1000, mask_errors=True)
         coverages.count_kmers()
         sys.stderr.write(
-            f"\t\
-            Total kmers: {coverages.total_kmers}\n\t \
-            Genomic kmers: {coverages.total_genomic_kmers}\n\t \
-            Genomic kmers in smudges: {coverages.total_genomic_kmers_in_smudges}\n\t \
-            Sequencing errors: {coverages.total_error_kmers}\n\t \
-            Fraction of errors: {round(coverages.total_error_kmers/coverages.total_kmers, 3)}"
+            f"\nTotal kmers: {coverages.total_kmers}\n"
+            f"Genomic kmers: {coverages.total_genomic_kmers}\n"
+            f"Genomic kmers in smudges: {coverages.total_genomic_kmers_in_smudges}\n"
+            f"Sequencing errors: {coverages.total_error_kmers}\n"
+            f"Fraction of errors: {coverages.error_fraction:.3f}\n"
         )
 
         smudge_size_cutoff = (
@@ -420,11 +421,7 @@ def main():
                 delimiter="\t",
             )
 
-            limit = 0.7
-            if coverages.error_fraction < limit:
-                cov = smudges.cov
-            else:
-                cov = 0
+            cov = smudges.cov if coverages.error_fraction < 0.7 else 0
 
             sys.stderr.write("\nCreating centrality plot\n")
             smudges.centrality_plot(args.o, args.format)
@@ -459,10 +456,11 @@ def main():
             json_report=args.json_report,
             input_params=vars(args),
             palette=args.col_ramp,
-            invert_cols=args.invert_cols
+            invert_cols=args.invert_cols,
         )
 
     fin()
+
 
 if __name__ == "__main__":
     main()
