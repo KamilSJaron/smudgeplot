@@ -385,7 +385,7 @@ def write_json_report(smg_data, input_params=None, min_size=0.03):
         "version": version("smudgeplot"),
         "commandline_arguments": shlex.join(sys.argv[1:]),
         "input_parameters": input_params,
-        "hetmers": hetmers_report,
+        "hetmers_input": hetmers_report,
         "haploid_coverage": float(f"{smg_data.cov:.3f}"),
         "error_fraction": smg_data.error_fraction,
         "top_smudges": [
