@@ -99,6 +99,7 @@ class Parser:
             default=False,
             help="Print the version and exit.",
         )
+
         # print version is a special case
         if len(sys.argv) > 1:
             if sys.argv[1] in ["-v", "--version"]:
@@ -149,6 +150,7 @@ class Parser:
             "-L",
             help="Count threshold below which k-mers are considered erroneous.",
             type=int,
+            required=True,
         )
         argparser.add_argument("-t", help="Number of threads (default 4).", type=int, default=4)
         argparser.add_argument(
@@ -162,6 +164,13 @@ class Parser:
             default=".",
         )
         argparser.add_argument("--verbose", action="store_true", default=False, help="Verbose mode.")
+        argparser.add_argument(
+            "--json_report",
+            action="store_true",
+            default=False,
+            help="Write a JSON format report recording the selected parameters (default False)",
+        )
+
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def peak_aggregation(self):
@@ -173,7 +182,7 @@ class Parser:
             description="Aggregates smudges using local aggregation algorithm.")
         argparser.add_argument(
             "infile",
-            help="Name of the input smu file with covarages and frequencies.",
+            help="Name of the input smu file with coverages and frequencies.",
         )
         argparser.add_argument(
             "-nf",
@@ -252,7 +261,7 @@ class Parser:
             description="Runs all the steps (with default options).")
         argparser.add_argument(
             "infile",
-            help="Name of the input tsv file with covarages and frequencies.",
+            help="Name of the input tsv file with coverages and frequencies.",
         )
         argparser.add_argument(
             "-o",
@@ -337,6 +346,7 @@ def main():
         fin()
 
     if _parser.task == "hetmers":
+
         hetmer_args = [
             f"-o{args.o}",
             f"-e{args.L}",
@@ -349,6 +359,9 @@ def main():
         hetmer_args.append(args.infile)
 
         run_binary("hetmers", hetmer_args)
+
+        if args.json_report:
+            smg.save_hetmers_json_report(args.o, input_params=vars(args))
 
         fin()
 
@@ -368,7 +381,7 @@ def main():
 
         fin()
 
-    title = args.title or str(Path(args.infile).with_suffix("").name)
+    title = args.title or Path(args.infile).stem
 
     if _parser.task == "plot":
         smudge_tab = smg.read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
