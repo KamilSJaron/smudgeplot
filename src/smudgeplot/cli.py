@@ -182,7 +182,7 @@ class Parser:
             description="Aggregates smudges using local aggregation algorithm.")
         argparser.add_argument(
             "infile",
-            help="Name of the input smu file with covarages and frequencies.",
+            help="Name of the input smu file with coverages and frequencies.",
         )
         argparser.add_argument(
             "-nf",
@@ -261,7 +261,7 @@ class Parser:
             description="Runs all the steps (with default options).")
         argparser.add_argument(
             "infile",
-            help="Name of the input tsv file with covarages and frequencies.",
+            help="Name of the input tsv file with coverages and frequencies.",
         )
         argparser.add_argument(
             "-o",
