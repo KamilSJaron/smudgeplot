@@ -1247,7 +1247,7 @@ int main(int argc, char *argv[])
     int    flags[128];
     char  *eptr;
 
-    ARG_INIT("PloidyPlot");
+    ARG_INIT("hetmers");
 
     OUT      = NULL;
     ETHRESH  = 4;

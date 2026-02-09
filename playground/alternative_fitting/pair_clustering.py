@@ -13,7 +13,7 @@ from statistics import mean
 ####
 
 parser = argparse.ArgumentParser()
-parser.add_argument('infile', nargs='?', help='name of the input tsv file with covarages and frequencies.')
+parser.add_argument('infile', nargs='?', help='name of the input tsv file with coverages and frequencies.')
 parser.add_argument('-nf', '-noise_filter', help='Do not agregate into smudge k-mer pairs with frequency lower than this parameter', type=int, default=50)
 parser.add_argument('-d', '-distance', help='Manthattan distance of k-mer pairs that are considered neioboring for the local agregation purposes.', type=int, default=5)
 parser.add_argument('--mask_errors', help='instead of reporting assignments to individual smudges, just remove all monotonically decreasing points from the error line', action="store_true", default = False)

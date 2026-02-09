@@ -1,5 +1,8 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = [
+  "setuptools>=61.0",
+  "wheel",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -68,7 +71,7 @@ smudgeplot = ["bin/*"]
 [tool.cibuildwheel]
 # Skip 32-bit, PyPy, musllinux, and Windows (no Windows support for now)
 skip = ["*-win32", "*-win_amd64", "*-manylinux_i686", "pp*", "*-musllinux*"]
-build = ["cp39-*", "cp310-*", "cp311-*", "cp312-*"]
+build = ["cp39-*", "cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
 environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 # Test that the CLI works after building
