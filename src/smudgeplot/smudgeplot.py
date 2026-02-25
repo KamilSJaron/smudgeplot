@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import shlex
 import sys
 import logging
 import copy
@@ -14,13 +15,11 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 from importlib.metadata import version
 from math import ceil, log
+from pathlib import Path
 from statistics import fmean
 from matplotlib.collections import PatchCollection
-from typing import Type, Dict, List, Tuple, Optional, Union, IO
-from smudgeplot.exceptions import *
-from smudgeplot.config import PlotConfig, AnalysisConfig
-
-logger = logging.getLogger(__name__)
+from numpy import arange, argmin, concatenate
+from pandas import DataFrame, Series, concat, read_csv
 
 # ==============================================================================
 # CLASS: Coverages
@@ -840,10 +839,12 @@ def write_json_report(smg_data: SmudgeplotData,
     Creates JSON file at smg_data.json_report_file with version info,
     parameters, coverage estimate, error fraction, and detected smudges.
     """
+    hetmers_report = read_hetmers_report_json(input_params["infile"])
     report = {
         "version": version("smudgeplot"),
-        "commandline_arguments": sys.argv[1:],
+        "commandline_arguments": shlex.join(sys.argv[1:]),
         "input_parameters": input_params,
+        "hetmers_input": hetmers_report,
         "haploid_coverage": float(f"{smg_data.cov:.3f}"),
         "error_fraction": smg_data.error_fraction,
         "top_smudges": [
@@ -855,8 +856,7 @@ def write_json_report(smg_data: SmudgeplotData,
             {"structure": row.structure, "count": row.size, "fraction": row.rel_size}
             for row in smg_data.smudge_tab.itertuples(index=False)
         ],
-    }
-    
+    }    
     try:
         with open(smg_data.json_report_file, "w") as fh:
             json.dump(report, fh, indent=2)
@@ -866,6 +866,34 @@ def write_json_report(smg_data: SmudgeplotData,
         logger.error(f"Failed to write JSON report: {e}")
         raise IOError(f"Failed to write JSON report to {smg_data.json_report_file}: {e}")
 
+def save_hetmers_json_report(outfile, input_params=None):
+    report = {
+        "version": version("smudgeplot"),
+        "commandline_arguments": shlex.join(sys.argv[1:]),
+        "input_parameters": input_params,
+    }
+    write_json_file(f"{outfile}_report.json", report)
+
+
+def write_json_file(filename: str, data):
+    Path(filename).write_text(json.dumps(data, indent=2) + "\n")
+
+
+def read_hetmers_report_json(hetmers: str):
+    """
+    Returns the parsed contents of the hetmers report JSON file if it exists
+    and its modification time is the same as or more recent than the hetmers
+    file itself.
+    """
+    hetmers_file = Path(hetmers)
+    report_file = Path(f"{hetmers_file.stem}_report.json")
+
+    if (
+        report_file.exists()
+        and report_file.stat().st_mtime >= hetmers_file.stat().st_mtime
+    ):
+        return json.loads(report_file.read_text())
+    return None
 
 def prepare_smudgeplot_data_for_plotting(smudgeplot_data: SmudgeplotData, output: str, title: str, fmt: str = None, upper_ylim: float = None) -> None:
     """

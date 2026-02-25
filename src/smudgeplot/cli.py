@@ -2,11 +2,15 @@
 
 import argparse
 import os
+import shlex
 import shutil
+import subprocess
 import sys
 import logging
 from importlib.metadata import version
 from pathlib import Path
+from typing import Any
+
 import numpy as np
 import smudgeplot.smudgeplot as smg
 from smudgeplot.config import PlotConfig, AnalysisConfig
@@ -40,30 +44,32 @@ def get_binary_path(name: str) -> str:
     if system_binary:
         return system_binary
 
-    raise FileNotFoundError(
-        f"Binary '{name}' not found. Please ensure smudgeplot is properly installed. "
+    msg = (
+        f"Binary '{name}' not found. Please ensure smudgeplot is properly installed.\n"
         f"Checked locations:\n"
-        f"  - Package: {bundled_binary}\n"
-        f"  - System PATH: (not found)\n"
+        f"  - Package: {bundled_binary.parent}\n"
+        f"  - System PATH: {os.get_exec_path()}\n"
         f"\nYou may need to reinstall smudgeplot or install the binaries manually."
     )
+    raise FileNotFoundError(msg)
 
 
-def run_binary(name: str, args: str, logger) -> int:
+def run_binary(name: str, args: list[Any]) -> None:
     """
     Run a binary with the given arguments.
 
     Args:
         name: Name of the binary
-        args: Space-separated argument string
+        args: List of (stringify-able) arguments
 
-    Returns:
-        Return code from the binary
+    Throws:
+        subprocess.CalledProcessError on non-zero exit of the command
     """
-    binary_path = get_binary_path(name)
-    cmd = f"{binary_path} {args}"
-    logger.info(f"Calling: {name} {args}")
-    return os.system(cmd)
+    cmd_line = [get_binary_path(name)]
+    for x in args:
+        cmd_line.append(str(x))
+    sys.stderr.write(f"Calling: {shlex.join(cmd_line)}\n")
+    subprocess.run(cmd_line, check=True)
 
 
 class Parser:
@@ -93,6 +99,7 @@ class Parser:
             default=False,
             help="Print the version and exit.",
         )
+
         # print version is a special case
         if len(sys.argv) > 1:
             if sys.argv[1] in ["-v", "--version"]:
@@ -143,6 +150,7 @@ class Parser:
             "-L",
             help="Count threshold below which k-mers are considered erroneous.",
             type=int,
+            required=True,
         )
         argparser.add_argument("-t", help="Number of threads (default 4).", type=int, default=4)
         argparser.add_argument(
@@ -156,6 +164,13 @@ class Parser:
             default=".",
         )
         argparser.add_argument("--verbose", action="store_true", default=False, help="Verbose mode.")
+        argparser.add_argument(
+            "--json_report",
+            action="store_true",
+            default=False,
+            help="Write a JSON format report recording the selected parameters (default False)",
+        )
+
         self.arguments = argparser.parse_args(sys.argv[2:])
 
     def peak_aggregation(self):
@@ -167,7 +182,7 @@ class Parser:
             description="Aggregates smudges using local aggregation algorithm.")
         argparser.add_argument(
             "infile",
-            help="Name of the input smu file with covarages and frequencies.",
+            help="Name of the input smu file with coverages and frequencies.",
         )
         argparser.add_argument(
             "-nf",
@@ -246,7 +261,7 @@ class Parser:
             description="Runs all the steps (with default options).")
         argparser.add_argument(
             "infile",
-            help="Name of the input tsv file with covarages and frequencies.",
+            help="Name of the input tsv file with coverages and frequencies.",
         )
         argparser.add_argument(
             "-o",
@@ -335,39 +350,42 @@ def main():
         exit(0)
 
     if _parser.task == "hetmers":
-        # PloidyPlot is expected to be installed in the system
-        plot_args = " -o" + str(args.o)
-        plot_args += " -e" + str(args.L)
-        plot_args += " -T" + str(args.t)
-        if args.verbose:
-            plot_args += " -v"
-        if args.tmp != ".":
-            plot_args += " -P" + args.tmp
-        plot_args += " " + args.infile
 
-        run_binary("hetmers", plot_args)
+        hetmer_args = [
+            f"-o{args.o}",
+            f"-e{args.L}",
+            f"-T{args.t}",
+        ]
+        if args.verbose:
+            hetmer_args.append("-v")
+        if args.tmp != ".":
+            hetmer_args.append(f"-P{args.tmp}")
+        hetmer_args.append(args.infile)
+
+        run_binary("hetmers", hetmer_args)
+
+        if args.json_report:
+            smg.save_hetmers_json_report(args.o, input_params=vars(args))
+
         exit(0)
 
     if _parser.task == "extract":
-        plot_args = " -o" + str(args.o)
-        plot_args += " -T" + str(args.t)
+        extract_args = [
+            f"-o{args.o}",
+            f"-T{args.t}",
+        ]
         if args.verbose:
-            plot_args += " -v"
+            extract_args.append("-v")
         if args.tmp != ".":
-            plot_args += " -P" + args.tmp
-        plot_args += " " + args.infile
-        if args.sma.endswith(".sma"):
-            plot_args += " " + args.sma.removesuffix(".sma")
-        else:
-            plot_args += " " + args.sma
+            extract_args.append(f"-P{args.tmp}")
+        extract_args.append(args.infile)
+        extract_args.append(args.sma.removesuffix(".sma"))
 
-        run_binary("extract_kmer_pairs", plot_args, logger)
+        run_binary("extract_kmer_pairs", extract_args)
+
         exit(0)
 
-    if args.title:
-        title=args.title
-    else:
-        title = ".".join(args.infile.split("/")[-1].split(".")[0:2])
+    title = args.title or Path(args.infile).stem
 
     if _parser.task == "plot":
         smudge_tab = smg.read_csv(args.smudgefile, sep="\t", names=["structure", "size", "rel_size"])
@@ -453,8 +471,11 @@ def main():
             json_report=args.json_report,
             input_params=vars(args),
             palette=args.col_ramp,
-            invert_cols=args.invert_cols
+            invert_cols=args.invert_cols,
         )
+
+    exit(0)
+
 
 if __name__ == "__main__":
     main()
