@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 
 import argparse
+import logging
 import os
 import shlex
 import shutil
 import subprocess
 import sys
-import logging
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
 import smudgeplot.smudgeplot as smg
-from smudgeplot.config import PlotConfig, AnalysisConfig
+from smudgeplot.config import AnalysisConfig, PlotConfig
+
+logger = logging.getLogger(__name__)
 
 def get_binary_path(name: str) -> str:
     """
@@ -54,13 +57,37 @@ def get_binary_path(name: str) -> str:
     raise FileNotFoundError(msg)
 
 
+def get_tool_search_path() -> str:
+    """Return PATH with the bundled package binary directory prepended."""
+    package_bin = Path(__file__).parent / "bin"
+    return os.pathsep.join([str(package_bin), os.environ.get("PATH", "")])
+
+
+def missing_fastk_conditioning_tools() -> list[str]:
+    """Return FastK helper tools needed when inputs must be trimmed or symmetrized."""
+    search_path = get_tool_search_path()
+    required_tools = ["Logex", "Symmex", "Fastrm"]
+    return [tool for tool in required_tools if shutil.which(tool, path=search_path) is None]
+
+
+def warn_missing_fastk_conditioning_tools() -> None:
+    missing_tools = missing_fastk_conditioning_tools()
+    if missing_tools:
+        logger.warning(
+            "FastK helper tool(s) not found: %s. If the input database is not already trimmed and symmetric, "
+            "the backend may fail while trying to condition it. Install or bundle these FastK tools to handle "
+            "inappropriate or unconditioned k-mer databases.",
+            ", ".join(missing_tools),
+        )
+
+
 def run_binary(name: str, args: list[Any]) -> None:
     """
     Run a binary with the given arguments.
 
     Args:
         name: Name of the binary
-        args: List of (stringify-able) arguments
+        args: List of arguments
 
     Throws:
         subprocess.CalledProcessError on non-zero exit of the command
@@ -69,7 +96,13 @@ def run_binary(name: str, args: list[Any]) -> None:
     for x in args:
         cmd_line.append(str(x))
     sys.stderr.write(f"Calling: {shlex.join(cmd_line)}\n")
-    subprocess.run(cmd_line, check=True)
+    env = os.environ.copy()
+    env["PATH"] = get_tool_search_path()
+    try:
+        subprocess.run(cmd_line, check=True, env=env)
+    except subprocess.CalledProcessError as exc:
+        logger.error("Backend command failed with exit code %s: %s", exc.returncode, shlex.join(cmd_line))
+        raise SystemExit(exc.returncode) from None
 
 
 class Parser:
@@ -119,7 +152,7 @@ class Parser:
                 logger.info("No task provided")
             else:
                 logger.info('"' + self.task + '" is not a valid task name')
-            exit(1)
+            sys.exit(1)
 
     def cutoff(self):
         """
@@ -339,7 +372,7 @@ def main():
     smdg_v = version("smudgeplot")
     logger.info(f"Running smudgeplot v{smdg_v}")
     if _parser.task == "version":
-        exit(0)
+        sys.exit(0)
 
     logger.info("Task: " + _parser.task)
 
@@ -347,9 +380,10 @@ def main():
 
     if _parser.task == "cutoff":
         smg.cutoff(args.infile, args.boundary)
-        exit(0)
+        sys.exit(0)
 
     if _parser.task == "hetmers":
+        warn_missing_fastk_conditioning_tools()
 
         hetmer_args = [
             f"-o{args.o}",
@@ -367,9 +401,11 @@ def main():
         if args.json_report:
             smg.save_hetmers_json_report(args.o, input_params=vars(args))
 
-        exit(0)
+        sys.exit(0)
 
     if _parser.task == "extract":
+        warn_missing_fastk_conditioning_tools()
+
         extract_args = [
             f"-o{args.o}",
             f"-T{args.t}",
@@ -383,7 +419,7 @@ def main():
 
         run_binary("extract_kmer_pairs", extract_args)
 
-        exit(0)
+        sys.exit(0)
 
     title = args.title or Path(args.infile).stem
 
@@ -395,7 +431,7 @@ def main():
         config = PlotConfig(palette=args.col_ramp, invert_cols=args.invert_cols)
         smg.smudgeplot(smudgeplot_data, config, log=False)
         smg.smudgeplot(smudgeplot_data, config, log=True)
-        exit(0)
+        sys.exit(0)
 
     # test for existence of smudge file
     if not os.path.exists(args.infile):
@@ -410,11 +446,12 @@ def main():
 
         coverages.local_aggregation(distance=args.d, noise_filter=args.nf, mask_errors=args.mask_errors)
         coverages.write_peaks()
-        exit(0)
+        sys.exit(0)
 
     if _parser.task == "all":
         coverages.local_aggregation(distance=args.d, noise_filter=AnalysisConfig.task_all_noise_filter, mask_errors=True)
         stats = coverages.count_kmers()
+        stats.warn_if_low_counts()
         logger.info(
             stats
         )
@@ -432,10 +469,14 @@ def main():
                 delimiter="\t",
             )
 
-            if coverages.error_fraction < AnalysisConfig.error_limit:
-                cov = smudges.cov
-            else:
-                cov = 0
+            cov = smudges.cov
+            if coverages.error_fraction >= AnalysisConfig.error_limit:
+                logger.warning(
+                    "Error fraction %.2f%% exceeds %.2f%%; using inferred coverage %.3f for downstream reports.",
+                    coverages.error_fraction * 100,
+                    AnalysisConfig.error_limit * 100,
+                    cov,
+                )
 
             logger.info("\nCreating centrality plot")
             smudges.centrality_plot(args.o, args.format)
@@ -443,7 +484,7 @@ def main():
 
         else:
             cov = args.cov
-            logger(f"\nUser defined coverage: {cov:.3f}")
+            logger.info(f"\nUser defined coverage: {cov:.3f}")
 
         logger.info("\nCreating smudge report")
 
@@ -474,7 +515,7 @@ def main():
             invert_cols=args.invert_cols,
         )
 
-    exit(0)
+    sys.exit(0)
 
 
 if __name__ == "__main__":

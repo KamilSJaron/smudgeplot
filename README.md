@@ -18,6 +18,9 @@ conda install pip
 # install via pypi
 pip install smudgeplot
 
+# install via conda
+conda install smudgeplot
+
 # or download and install directly. See below if you need to compile the C dependencies.
 git clone https://github.com/KamilSJaron/smudgeplot.git
 cd smudgeplot && pip install .
@@ -37,14 +40,6 @@ make
 ```
 
 This will not, however, install the smudgeplot python package. 
-
-### Pypi installation [EXPERIMENTAL] 
-
-We are working on packaging smudgeplot for pypi. You are welcome to try installing from pypi if you are interested and please open an issue if you have problems. If it fails please follow the main instructions above to install for now.
-
-```
-pip install smudgeplot
-```
 
 ## Example run on Saccharomyces data
 

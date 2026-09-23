@@ -1,25 +1,31 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
+import argparse
+import copy
 import json
+import logging
 import shlex
 import sys
-import logging
-import copy
-import argparse
+from collections import defaultdict
+from dataclasses import dataclass, field
+from importlib.metadata import version
+from math import ceil, log10
+from pathlib import Path
+from statistics import fmean
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd # type: ignore
-from numpy.typing import ArrayLike
-from dataclasses import dataclass, field
-from collections import defaultdict
-from importlib.metadata import version
-from math import ceil, log
-from pathlib import Path
-from statistics import fmean
+import pandas as pd
 from matplotlib.collections import PatchCollection
-from numpy import arange, argmin, concatenate
-from pandas import DataFrame, Series, concat, read_csv
+from numpy.typing import ArrayLike
+
+from smudgeplot.config import AnalysisConfig, PlotConfig
+from smudgeplot.exceptions import InvalidCoverageDataError
+
+logger = logging.getLogger(__name__)
 
 # ==============================================================================
 # CLASS: Coverages
@@ -106,7 +112,7 @@ class Coverages:
         highest_neighbour_coords = (0, 0)
         highest_neighbour_freq = 0
         # for each kmer pair I will retrieve all neighbours (Manhattan distance)
-        covB, covA, freq = row.covB, row.covA, row.freq
+        covB, covA = row.covB, row.covA
         for xA in range(covA - distance, covA + distance + 1):
             # for explored A coverage in neiborhood, we explore all possible B coordinates
             distanceB = distance - abs(covA - xA)
@@ -148,7 +154,7 @@ class Coverages:
         for row in self.cov_tab.itertuples():
             logger.info(f"{row.covB}\t{row.covA}\t{row.freq}\t{row.peak}")
 
-    def count_kmers(self) -> 'KmerStatistics':
+    def count_kmers(self) -> KmerStatistics:
         """
         Calculate k-mer statistics including total, genomic, and error counts.
         
@@ -220,6 +226,19 @@ class KmerStatistics:
             f"  Error k-mers: {self.error_kmers:,} ({self.error_percentage:.2f}%)\n"
             f"  K-mers in smudges: {self.genomic_kmers_in_smudges:,} ({self.smudge_fraction*100:.2f}%)"
         )
+
+    def warn_if_low_counts(self) -> None:
+        """Warn when counts are likely too low for reliable inference."""
+        if self.total_kmers < AnalysisConfig.low_total_kmer_warning:
+            logger.warning(
+                "Only %s total k-mers were found. Smudgeplot results may be unreliable with very small inputs.",
+                f"{self.total_kmers:,}",
+            )
+        if self.genomic_kmers_in_smudges < AnalysisConfig.low_smudge_kmer_warning:
+            logger.warning(
+                "Only %s genomic k-mers were assigned to smudges. This may indicate insufficient data, excessive errors, or unsuitable input for smudgeplot.",
+                f"{self.genomic_kmers_in_smudges:,}",
+            )
 
 # ==============================================================================
 # CLASS: Smudges
@@ -309,6 +328,12 @@ class Smudges:
 
         logger.info(f"Best coverage to precision of 1/{10**i} (just to be sure): {best_cov:.2f}")
 
+        if best_cov <= 0:
+            logger.warning(
+                "Inferred coverage is %.3f. This usually means the input contains too few usable k-mer pairs or the coverage search range is inappropriate.",
+                best_cov,
+            )
+
         self.cov = best_cov
         self.centrality_df = pd.DataFrame(
             {
@@ -317,7 +342,7 @@ class Smudges:
             }
         )
 
-    def get_best_coverage(self, cov_list: ArrayLike, smudge_size_cutoff=AnalysisConfig.min_smudge_size_default, centralities=None, last_check=False) -> tuple[float, List[float]]:
+    def get_best_coverage(self, cov_list: ArrayLike, smudge_size_cutoff=AnalysisConfig.min_smudge_size_default, centralities=None, last_check=False) -> tuple[float, list[float]]:
         """
         Find coverage with minimum centrality from a list of candidates.
         
@@ -371,6 +396,13 @@ class Smudges:
                 Dictionary mapping structure labels (e.g., 'AAAB') to DataFrames
                 containing the k-mer pairs belonging to that structure.
         """
+        if cov <= 0:
+            logger.warning(
+                "Cannot assign smudges with non-positive haploid coverage %.3f. Returning an empty smudge container.",
+                cov,
+            )
+            return {}
+
         smudge_container = defaultdict(pd.DataFrame)
 
         if method == "fishnet":
@@ -471,7 +503,6 @@ class Smudges:
         '{output}_centralities.{fmt}'. Lower centrality indicates better fit.
         """
         fig, axs = plt.subplots(figsize=(8, 8))
-        fontsize = 32
         plt.plot(
             self.centrality_df["coverage"],
             self.centrality_df["centrality"],
@@ -536,12 +567,12 @@ class SmudgeplotData:
     cov: float
     error_fraction: float = 0.0
     lims: dict = field(default_factory=dict)
-    error_string: Optional[str] = None
-    cov_string: Optional[str] = None
-    fig_title: Optional[str] = None
-    linear_plot_file: Optional[str] = None
-    log_plot_file: Optional[str] = None
-    json_report_file: Optional[str] = None
+    error_string: str | None = None
+    cov_string: str | None = None
+    fig_title: str | None = None
+    linear_plot_file: str | None = None
+    log_plot_file: str | None = None
+    json_report_file: str | None = None
 
     def calc_cov_columns(self) -> None:
         """
@@ -554,7 +585,7 @@ class SmudgeplotData:
         self.cov_tab["total_pair_cov"] = self.cov_tab[["covA", "covB"]].sum(axis=1)
         self.cov_tab["minor_variant_rel_cov"] = self.cov_tab["covB"] / self.cov_tab["total_pair_cov"]
 
-    def filter_cov_quant(self, cov_filter: float = None, quant_filter: float = None) -> None:
+    def filter_cov_quant(self, cov_filter: float | None = None, quant_filter: float | None = None) -> None:
         """
         Filter coverage data by minimum coverage or quantile threshold.
         
@@ -585,7 +616,7 @@ class SmudgeplotData:
             )
             self.cov_tab = self.cov_tab.loc[self.cov_tab["total_pair_cov"] < upper_quantile]
 
-    def get_ax_lims(self, upper_ylim: float = None) -> None:
+    def get_ax_lims(self, upper_ylim: float | None = None) -> None:
         """
         Calculate appropriate axis limits for plotting.
         
@@ -603,7 +634,7 @@ class SmudgeplotData:
 
         if self.cov == np.percentile(
             a=self.cov_tab["total_pair_cov"],
-            q=AnalysisConfig.quantile_95,
+            q=95,
             weights=self.cov_tab["freq"],
             method="inverted_cdf",
         ):
@@ -620,7 +651,7 @@ class SmudgeplotData:
             self.lims["ylim"][1] = upper_ylim
         self.lims["xlim"] = [0, 0.5]
 
-    def def_strings(self, title: str = None, output: str = "smudgeplot", fmt: str = "pdf") -> None: 
+    def def_strings(self, title: str | None = None, output: str = "smudgeplot", fmt: str = "pdf") -> None:
         """
         Define output file paths and figure title.
         
@@ -679,9 +710,9 @@ class CoverageValidator:
 
 # Too long
 def get_centrality(
-    smudge_container: Dict[str, pd.DataFrame], 
-    cov: float, 
-    centre: str = "mode", 
+    smudge_container: dict[str, pd.DataFrame],
+    cov: float,
+    centre: str = "mode",
     dist: str = "theoretical_center"
 ) -> float:
     """
@@ -713,8 +744,8 @@ def get_centrality(
     The centrality is calculated as the frequency-weighted mean of distances
     between observed and expected positions for all smudges.
     """
-    centralities: List[float] = []
-    freqs: List[float] = []
+    centralities: list[float] = []
+    freqs: list[float] = []
     for smudge, smudge_tab in smudge_container.items():
         As = smudge.count("A")
         Bs = smudge.count("B")
@@ -766,10 +797,10 @@ def generate_plots(
     smudge_size_cutoff: float,
     outfile: str,
     title: str,
-    fmt: str = None,
-    upper_ylim: str = None,
+    fmt: str | None = None,
+    upper_ylim: str | None = None,
     json_report: bool = False,
-    input_params: dict = None,
+    input_params: dict | None = None,
     palette: str = 'viridis',
     invert_cols: bool = False
 ) -> None:
@@ -819,8 +850,8 @@ def generate_plots(
     if json_report:
         write_json_report(smudgeplot_data, input_params)
 
-def write_json_report(smg_data: SmudgeplotData, 
-                     input_params: Optional[Dict] = None, 
+def write_json_report(smg_data: SmudgeplotData,
+                     input_params: dict | None = None,
                      min_size: float = AnalysisConfig.min_report_size_default) -> None:
     """
     Write JSON report with smudgeplot analysis results.
@@ -862,9 +893,9 @@ def write_json_report(smg_data: SmudgeplotData,
             json.dump(report, fh, indent=2)
             fh.write("\n")
         logger.info(f"JSON report written to {smg_data.json_report_file}")
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Failed to write JSON report: {e}")
-        raise IOError(f"Failed to write JSON report to {smg_data.json_report_file}: {e}")
+        raise OSError(f"Failed to write JSON report to {smg_data.json_report_file}: {e}")
 
 def save_hetmers_json_report(outfile, input_params=None):
     report = {
@@ -895,7 +926,7 @@ def read_hetmers_report_json(hetmers: str):
         return json.loads(report_file.read_text())
     return None
 
-def prepare_smudgeplot_data_for_plotting(smudgeplot_data: SmudgeplotData, output: str, title: str, fmt: str = None, upper_ylim: float = None) -> None:
+def prepare_smudgeplot_data_for_plotting(smudgeplot_data: SmudgeplotData, output: str, title: str, fmt: str | None = None, upper_ylim: float | None = None) -> None:
     """
     Prepare SmudgeplotData object for visualization.
     
@@ -954,22 +985,25 @@ def smudgeplot(data: SmudgeplotData, log: bool = False, config = None) -> None:
     smudgeplot_data = copy.deepcopy(data)
     fig, axes = _setup_smudgeplot_figure(smudgeplot_data.fig_title, config)
     colour_ramp = get_col_ramp(config.palette, delay=16 if log else 0, invert_cols=config.invert_colours)
+    freq_for_scale = smudgeplot_data.cov_tab["freq"].copy(deep=True)
+    freq_for_scale.loc[smudgeplot_data.cov_tab["covA"] == smudgeplot_data.cov_tab["covB"]] *= 2
+    kmer_max = np.log10(max(freq_for_scale)) if log else max(freq_for_scale)
 
     #plot components
-    _plot_main_smudges(data, axes['main'], colour_ramp, config, log)
-    _plot_legend( max(data.cov_tab["freq"]), axes['legend'], colour_ramp, config, log)
-    _plot_smudge_sizes(data.smudge_tab, data.cov, data.error_string, axes['size'])
-    if data.cov > 0:
-        _plot_expected_haplotype_structure(data, axes['main'], config)
     if config.show_histograms:
-        _plot_histograms(data, axes, config, log)
+        _plot_histograms(smudgeplot_data, axes, config, log)
+    _plot_main_smudges(smudgeplot_data, axes['main'], colour_ramp, config, log)
+    _plot_legend(kmer_max, axes['legend'], colour_ramp, config, log)
+    if smudgeplot_data.cov > 0:
+        _plot_expected_haplotype_structure(smudgeplot_data, axes['main'], config)
+    _plot_smudge_sizes(smudgeplot_data.smudge_tab, smudgeplot_data.cov, smudgeplot_data.error_string, axes['size'])
 
     # save
     outfile = data.log_plot_file if log else data.linear_plot_file
     fig.savefig(outfile, dpi=config.dpi)
     plt.close()
 
-def _setup_smudgeplot_figure(fig_title, config) -> Tuple[plt.Figure, Dict[str, plt.Axes]]:
+def _setup_smudgeplot_figure(fig_title, config) -> tuple[plt.Figure, dict[str, plt.Axes]]:
     """Define smudgeplot layout"""
     fig, ((top_ax, legend_ax), (main_ax, size_ax)) = plt.subplots(
         nrows=2, ncols=2, 
@@ -1014,13 +1048,13 @@ def _plot_histograms(data: SmudgeplotData, axes: dict, config: PlotConfig, log: 
             Whether to use log scale (default: False).
 
     """
-    cov_tab = data.cov_tab
+    cov_tab = data.cov_tab.copy(deep=True)
 
     # Right histogram - total coverage of kmer pair
     plot_hist(data = cov_tab['total_pair_cov'], 
               ax = axes['size'], 
               orientation = 'horizontal',
-              bins = max(cov_tab['total_pair_cov']) - min(cov_tab['total_pair_cov']),
+              bins = max(1, int(max(cov_tab['total_pair_cov']) - min(cov_tab['total_pair_cov']))),
               weights = cov_tab['freq'],
               log = log
     )
@@ -1079,7 +1113,7 @@ def _plot_main_smudges(data: SmudgeplotData, ax:  mpl.axes.Axes, colour_ramp: li
         log : bool, optional
             Use log10 scale for frequencies (default: False).
     """
-    cov_tab = data.cov_tab
+    cov_tab = data.cov_tab.copy(deep=True)
     mask = cov_tab["covA"] == cov_tab["covB"]
     cov_tab.loc[mask, "freq"] = cov_tab[mask]["freq"] * 2
 
@@ -1327,6 +1361,10 @@ def reduce_structure_representation(smudge_labels: pd.Series) -> pd.Series:
         Some redundancy with smudge2short() ?
     """
 
+    if smudge_labels.empty:
+        return smudge_labels
+
+    smudge_labels = smudge_labels.fillna("")
     structures_to_adjust = smudge_labels.str.len() > 4
     if not any(structures_to_adjust):
         return smudge_labels
@@ -1357,6 +1395,13 @@ def generate_smudge_report(smudges: Smudges, coverages: Coverages, cov: float, a
     """
 
     smudges.generate_smudge_table(smudges.local_agg_smudge_container)
+
+    if smudges.smudge_tab.empty or smudges.smudge_tab["structure"].empty:
+        logger.warning(
+            "No smudges passed filtering for the report. This usually indicates inappropriate input data, insufficient usable k-mer pairs, or an unsuitable coverage estimate."
+        )
+        write_smudge_report(smudges, coverages, cov, args, print_header=print_header)
+        return
 
     logger.info(
         f"Detected smudges / sizes:\n"
@@ -1398,14 +1443,18 @@ def write_smudge_report(smudges: Smudges, coverages: Coverages, cov: float, args
         }
     )
 
-    smudges.smudge_tab.loc[:, "label"] = reduce_structure_representation(smudges.smudge_tab["structure"])
+    if smudges.smudge_tab.empty or smudges.smudge_tab["structure"].empty:
+        logger.warning("Writing smudge report with zero reportable smudges.")
+    else:
+        smudges.smudge_tab.loc[:, "label"] = reduce_structure_representation(smudges.smudge_tab["structure"])
+
     for row in smudges.smudge_tab.itertuples():
         if smudge_dict.get(row.label, "Missing") != "Missing":
-            smudge_dict[row.label] = [row.size]
+            smudge_dict[row.label] = row.size
         else:
             logger.info(f"Unexpected smudge label {row.label} excluded from smudge report")
 
-    smudge_df = pd.DataFrame.from_dict(smudge_dict).fillna(0)
+    smudge_df = pd.DataFrame([smudge_dict]).fillna(0)
     out_df = pd.concat([meta_df, smudge_df], axis=1)
 
     out_df.to_csv(f"{args.o}.smudge_report.tsv", sep="\t", index=False, header=print_header)
@@ -1478,7 +1527,7 @@ def round_up_nice(x: float) -> int:
         rounded : int
             Rounded value.
     """
-    digits = ceil(log(x, 10))
+    digits = ceil(log10(x))
     if digits <= 1:
         multiplier = 10 ** (digits - 1)
     else:
@@ -1504,7 +1553,7 @@ def cutoff(kmer_hist: list, boundary: str = 'L') -> None:
     hist = [int(line.split()[1]) for line in kmer_hist]
     if boundary == "L":
         local_minima = local_min(hist)[0]
-        L = max(10, int(round(local_minima * LOCAL_MIN_MULTIPLIER)))
+        L = max(10, round(local_minima * AnalysisConfig.local_min_multiplier))
         logger.info(f"{L}")
     elif boundary == 'U':
         logger.info(
@@ -1514,7 +1563,7 @@ def cutoff(kmer_hist: list, boundary: str = 'L') -> None:
         number_of_kmers = np.sum(hist[1:])
         hist_rel_cumsum = [np.sum(hist[1 : i + 1]) / number_of_kmers for i in range(1, len(hist))]
         min(range(len(hist_rel_cumsum)))
-        U = round_up_nice(min([i for i, q in enumerate(hist_rel_cumsum) if q > QUANTILE_998]))
+        U = round_up_nice(min([i for i, q in enumerate(hist_rel_cumsum) if q > 0.998]))
         logger.info(f"{U}")
 
 
@@ -1560,7 +1609,7 @@ def get_cov_limits(Xs: int, cov: float) -> tuple[float, float]:
     return min_cov, max_cov
 
 
-def get_col_ramp(col_ramp: str = 'viridis', delay: int = 0, invert_cols: bool = False) -> List[str]:
+def get_col_ramp(col_ramp: str = 'viridis', delay: int = 0, invert_cols: bool = False) -> list[str]:
     """
     Generate color ramp for frequency visualization.
     
